@@ -94,10 +94,7 @@ function FilmCard({ film, onClick }:any) {
       </div>
       <div style={{padding:"7px 8px 10px"}}>
         <div style={{fontSize:12,fontWeight:600,color:C.txt,lineHeight:1.3,marginBottom:5}}>{film.title}</div>
-        <div style={{display:"flex",alignItems:"center",gap:4,marginBottom:3}}>
-          <span style={{color:C.red,fontSize:9}}>●</span>
-          <span style={{fontSize:11,color:C.red}}>{film.views?.toLocaleString()} үзсэн</span>
-        </div>
+
         {!film.free && <div style={{fontSize:10,color:C.muted,textDecoration:"line-through",marginBottom:1}}>{film.op?.toLocaleString()}₮</div>}
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:4}}>
           <span style={{fontSize:13,fontWeight:700,color:film.free?C.green:C.gold}}>
@@ -201,67 +198,69 @@ function BankModal({ film, onClose, onPaid }:any) {
   );
 }
 
+function getVideoEmbed(url: string): { type: "iframe"|"video"|"youtube", src: string } {
+  if (!url) return { type:"iframe", src:"" };
+  // YouTube
+  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) return { type:"youtube", src:`https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&playsinline=1` };
+  // MP4 / direct video
+  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return { type:"video", src: url };
+  // Google Drive
+  const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
+  if (gdMatch) return { type:"iframe", src:`https://drive.google.com/file/d/${gdMatch[1]}/preview` };
+  // Default iframe
+  return { type:"iframe", src: url };
+}
+
 function VideoPage({ film, onBack }:any) {
   const [showControls, setShowControls] = useState(true);
-  const embed = film.url
-    ? (film.url.replace("watch?v=","embed/").replace("youtu.be/","www.youtube.com/embed/") + "?autoplay=1&rel=0&modestbranding=1")
-    : "";
+  const { type, src } = getVideoEmbed(film.url || "");
 
   useEffect(() => {
-    const t = setTimeout(() => setShowControls(false), 3000);
+    const t = setTimeout(() => setShowControls(false), 4000);
     return () => clearTimeout(t);
   }, []);
 
   return (
     <div
       onClick={() => setShowControls(v => !v)}
-      style={{background:"#000", minHeight:"100vh", position:"relative", overflow:"hidden"}}
+      style={{background:"#000", position:"fixed", inset:0, zIndex:50}}
     >
       {/* Fullscreen video */}
-      <div style={{position:"fixed", inset:0, zIndex:1}}>
-        {embed
-          ? <iframe
-              src={embed}
-              style={{width:"100%", height:"100%", border:"none"}}
-              allowFullScreen
-              allow="autoplay; fullscreen"
+      {src ? (
+        type === "video"
+          ? <video
+              src={src}
+              autoPlay
+              controls
+              playsInline
+              style={{position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"contain"}}
             />
-          : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:C.muted,fontSize:14}}>
-              Видео холбоос байхгүй байна
-            </div>
-        }
-      </div>
+          : <iframe
+              src={src}
+              style={{position:"absolute", inset:0, width:"100%", height:"100%", border:"none"}}
+              allowFullScreen
+              allow="autoplay; fullscreen; picture-in-picture"
+            />
+      ) : (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:C.muted,fontSize:14}}>
+          Видео холбоос байхгүй байна
+        </div>
+      )}
 
-      {/* Top overlay - back button */}
+      {/* Back button */}
       <div style={{
-        position:"fixed", top:0, left:0, right:0, zIndex:10,
-        background:"linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
-        padding:"16px 16px 40px",
+        position:"absolute", top:0, left:0, right:0, zIndex:10,
+        background:"linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)",
+        padding:"16px",
         transition:"opacity 0.3s",
         opacity: showControls ? 1 : 0,
         pointerEvents: showControls ? "auto" : "none",
       }}>
-        <div style={{display:"flex", alignItems:"center", gap:12}}>
-          <button
-            onClick={(e) => { e.stopPropagation(); onBack(); }}
-            style={{background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", fontSize:20, cursor:"pointer", borderRadius:50, width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(10px)"}}
-          >←</button>
-          <span style={{fontSize:16, fontWeight:700, color:"#fff", textShadow:"0 1px 4px rgba(0,0,0,0.8)"}}>{film.title}</span>
-        </div>
-      </div>
-
-      {/* Bottom overlay - film info */}
-      <div style={{
-        position:"fixed", bottom:0, left:0, right:0, zIndex:10,
-        background:"linear-gradient(to top, rgba(0,0,0,0.9), transparent)",
-        padding:"40px 20px 30px",
-        transition:"opacity 0.3s",
-        opacity: showControls ? 1 : 0,
-        pointerEvents:"none",
-      }}>
-        <div style={{display:"inline-block", background:badgeColor(film.badge), borderRadius:5, padding:"2px 10px", fontSize:11, fontWeight:700, color:"#fff", marginBottom:8}}>{film.badge}</div>
-        <div style={{fontFamily:"Georgia,serif", fontSize:22, fontWeight:700, color:"#fff", marginBottom:4, textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>{film.title}</div>
-        <div style={{fontSize:13, color:"rgba(255,255,255,0.6)"}}>{film.views?.toLocaleString()} үзсэн</div>
+        <button
+          onClick={(e) => { e.stopPropagation(); onBack(); }}
+          style={{background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", fontSize:22, cursor:"pointer", borderRadius:50, width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(10px)"}}
+        >←</button>
       </div>
     </div>
   );
@@ -393,10 +392,16 @@ function AdminPage({ films, onBack, onRefresh }:any) {
               <input type="checkbox" id="cb-free" checked={form.free} onChange={setChk("free")} style={{width:18,height:18}} />
               <label htmlFor="cb-free" style={{fontSize:14,color:C.txt,cursor:"pointer"}}>🆓 Үнэгүй кино</label>
             </div>
-            <label style={{...lbl,marginTop:12}}>YouTube URL</label>
-            <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/xxxxx" />
-            <label style={{...lbl,marginTop:10}}>Зургийн URL</label>
-            <input style={inputSt} value={form.img} onChange={set("img")} placeholder="https://..." />
+            <label style={{...lbl,marginTop:12}}>Видео URL (YouTube / MP4 / Google Drive)</label>
+            <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/... эсвэл .mp4 холбоос" />
+            <label style={{...lbl,marginTop:10}}>Зургийн URL эсвэл файл</label>
+            <input style={inputSt} value={form.img} onChange={set("img")} placeholder="https://... эсвэл доор файл сонго" />
+            <input type="file" accept="image/*" onChange={(e:any)=>{
+              const file = e.target.files?.[0]; if(!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev:any) => setForm((f:any)=>({...f,img:ev.target.result}));
+              reader.readAsDataURL(file);
+            }} style={{marginTop:6,fontSize:12,color:C.muted,width:"100%"}} />
             <button onClick={save} disabled={saving} style={{...goldBtn,marginTop:16,opacity:saving?0.6:1}}>
               {saving ? "Хадгалж байна..." : "✅ Хадгалах"}
             </button>
@@ -427,12 +432,18 @@ function AdminPage({ films, onBack, onRefresh }:any) {
               </div>
               {editId===f.id && (
                 <div style={{marginTop:10,borderTop:`0.5px solid ${C.bd}`,paddingTop:10}}>
-                  <label style={lbl}>Зургийн URL</label>
+                  <label style={lbl}>Зургийн URL эсвэл файл</label>
                   <div style={{display:"flex",gap:6}}>
                     <input defaultValue={f.img} onChange={(e:any)=>setImgVal(e.target.value)} style={{...inputSt,flex:1}} placeholder="https://..." />
                     <button onClick={()=>updateImg(f.id,imgVal)} style={{background:C.gold,border:"none",borderRadius:8,padding:"0 12px",fontWeight:700,cursor:"pointer",color:"#000",fontSize:12}}>OK</button>
                   </div>
-                  <label style={{...lbl,marginTop:8}}>YouTube URL</label>
+                  <input type="file" accept="image/*" onChange={(e:any)=>{
+                    const file = e.target.files?.[0]; if(!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev:any) => { setImgVal(ev.target.result as string); updateImg(f.id, ev.target.result as string); };
+                    reader.readAsDataURL(file);
+                  }} style={{marginTop:4,fontSize:12,color:C.muted,width:"100%"}} />
+                  <label style={{...lbl,marginTop:8}}>Видео URL (YouTube / MP4 / Drive)</label>
                   <div style={{display:"flex",gap:6}}>
                     <input defaultValue={f.url} onChange={(e:any)=>setUrlVal(e.target.value)} style={{...inputSt,flex:1}} placeholder="https://youtu.be/..." />
                     <button onClick={()=>updateUrl(f.id,urlVal)} style={{background:C.gold,border:"none",borderRadius:8,padding:"0 12px",fontWeight:700,cursor:"pointer",color:"#000",fontSize:12}}>OK</button>
