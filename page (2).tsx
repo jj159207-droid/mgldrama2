@@ -202,66 +202,23 @@ function BankModal({ film, onClose, onPaid }:any) {
 }
 
 function VideoPage({ film, onBack }:any) {
-  const [showControls, setShowControls] = useState(true);
-  const embed = film.url
-    ? (film.url.replace("watch?v=","embed/").replace("youtu.be/","www.youtube.com/embed/") + "?autoplay=1&rel=0&modestbranding=1")
-    : "";
-
-  useEffect(() => {
-    const t = setTimeout(() => setShowControls(false), 3000);
-    return () => clearTimeout(t);
-  }, []);
-
+  const embed = film.url ? film.url.replace("watch?v=","embed/").replace("youtu.be/","www.youtube.com/embed/") : "";
   return (
-    <div
-      onClick={() => setShowControls(v => !v)}
-      style={{background:"#000", minHeight:"100vh", position:"relative", overflow:"hidden"}}
-    >
-      {/* Fullscreen video */}
-      <div style={{position:"fixed", inset:0, zIndex:1}}>
+    <div style={{background:"#000",minHeight:"100vh"}}>
+      <div style={{background:C.card,padding:"14px 16px",display:"flex",alignItems:"center",gap:10}}>
+        <button onClick={onBack} style={{background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer"}}>←</button>
+        <span style={{fontSize:15,fontWeight:600,color:C.txt,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{film.title}</span>
+      </div>
+      <div style={{width:"100%",aspectRatio:"16/9",background:"#111",position:"relative",display:"flex",alignItems:"center",justifyContent:"center"}}>
         {embed
-          ? <iframe
-              src={embed}
-              style={{width:"100%", height:"100%", border:"none"}}
-              allowFullScreen
-              allow="autoplay; fullscreen"
-            />
-          : <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:C.muted,fontSize:14}}>
-              Видео холбоос байхгүй байна
-            </div>
+          ? <iframe src={embed} style={{position:"absolute",inset:0,width:"100%",height:"100%",border:"none"}} allowFullScreen allow="autoplay" />
+          : <div style={{color:C.muted,fontSize:14}}>Видео холбоос байхгүй байна</div>
         }
       </div>
-
-      {/* Top overlay - back button */}
-      <div style={{
-        position:"fixed", top:0, left:0, right:0, zIndex:10,
-        background:"linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)",
-        padding:"16px 16px 40px",
-        transition:"opacity 0.3s",
-        opacity: showControls ? 1 : 0,
-        pointerEvents: showControls ? "auto" : "none",
-      }}>
-        <div style={{display:"flex", alignItems:"center", gap:12}}>
-          <button
-            onClick={(e) => { e.stopPropagation(); onBack(); }}
-            style={{background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", fontSize:20, cursor:"pointer", borderRadius:50, width:40, height:40, display:"flex", alignItems:"center", justifyContent:"center", backdropFilter:"blur(10px)"}}
-          >←</button>
-          <span style={{fontSize:16, fontWeight:700, color:"#fff", textShadow:"0 1px 4px rgba(0,0,0,0.8)"}}>{film.title}</span>
-        </div>
-      </div>
-
-      {/* Bottom overlay - film info */}
-      <div style={{
-        position:"fixed", bottom:0, left:0, right:0, zIndex:10,
-        background:"linear-gradient(to top, rgba(0,0,0,0.9), transparent)",
-        padding:"40px 20px 30px",
-        transition:"opacity 0.3s",
-        opacity: showControls ? 1 : 0,
-        pointerEvents:"none",
-      }}>
-        <div style={{display:"inline-block", background:badgeColor(film.badge), borderRadius:5, padding:"2px 10px", fontSize:11, fontWeight:700, color:"#fff", marginBottom:8}}>{film.badge}</div>
-        <div style={{fontFamily:"Georgia,serif", fontSize:22, fontWeight:700, color:"#fff", marginBottom:4, textShadow:"0 2px 8px rgba(0,0,0,0.8)"}}>{film.title}</div>
-        <div style={{fontSize:13, color:"rgba(255,255,255,0.6)"}}>{film.views?.toLocaleString()} үзсэн</div>
+      <div style={{padding:20}}>
+        <div style={{display:"inline-block",background:badgeColor(film.badge),borderRadius:5,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#fff",marginBottom:10}}>{film.badge}</div>
+        <div style={{fontFamily:"Georgia,serif",fontSize:20,fontWeight:700,color:C.txt,marginBottom:8}}>{film.title}</div>
+        <div style={{fontSize:13,color:C.red}}>{film.views?.toLocaleString()} үзсэн</div>
       </div>
     </div>
   );
