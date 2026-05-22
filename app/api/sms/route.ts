@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) as string;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+
 
 async function dbFetch(path: string, opts?: RequestInit) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
