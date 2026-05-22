@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const ref = extractRef(text);
     if (!ref) return NextResponse.json({ ok: false, reason: "No KN code" });
     const amount = extractAmount(text);
-    const rows = await dbFetch(`pending_payments?ref_code=eq.${ref}&status=eq.pending&select=*`);
+    const rows = await dbFetch(`pending_payments?ref_code=eq.${ref}&select=*`);
     if (!Array.isArray(rows) || rows.length === 0) {
       await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "not_found" }) });
       return NextResponse.json({ ok: false, reason: "No pending payment for " + ref });
