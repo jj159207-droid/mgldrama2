@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -20,9 +20,9 @@ async function dbFetch(path: string, opts?: RequestInit) {
 const ADMIN_KEY = "admin2024";
 // ══════ ТАНЫ ДАНСНЫ МЭДЭЭЛЭЛ — ЭНД ӨӨРЧИЛНӨ ══════
 const MY_ACCOUNT = {
-  number: "5***4824",       // дансны дугаар
+  number: "MN11000500 5402504824",
   bank: "Хаан банк",
-  name: "Та өөрийн нэрийг",  // эзэмшигчийн нэр
+  name: "Т.Жаргалбаяр",
 };
 // ════════════════════════════════════════════════════
 
