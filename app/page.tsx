@@ -149,9 +149,10 @@ function LoginPage({ onLogin, onBack }:any) {
             📲 Гар утас дээр суулгах
           </button>
         ) : (
-          <div style={{fontSize:12,color:C.muted,textAlign:"center",lineHeight:"1.6"}}>
-            📲 <b style={{color:C.txt}}>Гар утас дээр суулгах:</b><br/>
-            Chrome → ⋮ → <b style={{color:C.gold}}>"Нүүр дэлгэцэд нэмэх"</b>
+          <div style={{fontSize:13,color:C.txt,textAlign:"center",lineHeight:"1.8",padding:"4px 0"}}>
+            📲 <b>Гар утас дээр суулгах:</b><br/>
+            <span style={{color:C.muted,fontSize:12}}>Chrome ашиглан нээгээд</span><br/>
+            <span style={{color:C.gold,fontWeight:700}}>⋮ → Нүүр дэлгэцэд нэмэх</span>
           </div>
         )}
       <div style={{display:"none"}}
