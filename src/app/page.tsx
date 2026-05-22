@@ -25,6 +25,8 @@ function clearSession() { localStorage.removeItem("kino_session"); }
 function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
 
 // Гүйлгээний утга үүсгэх — кино id + санамсаргүй 4 тоо
+const MY_ACCOUNT = { number: "MN11000500 5402504824", bank: "Хаан банк", name: "Т.Жаргалбаяр" };
+
 function genRef(filmId: number): string {
   const rand = Math.floor(1000 + Math.random() * 9000);
   return `KN${filmId}${rand}`;
