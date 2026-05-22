@@ -17,7 +17,7 @@ async function dbFetch(path: string, opts?: RequestInit) {
   return res.json();
 }
 
-const ADMIN_KEY = "admin2024";
+const ADMIN_KEY = "admin2024"; // v2
 // ══════ ТАНЫ ДАНСНЫ МЭДЭЭЛЭЛ — ЭНД ӨӨРЧИЛНӨ ══════
 const MY_ACCOUNT = {
   number: "MN11000500 5402504824",
