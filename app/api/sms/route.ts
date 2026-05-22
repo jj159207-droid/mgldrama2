@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
 const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) as string;
-
 
 async function dbFetch(path: string, opts?: RequestInit) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
@@ -39,15 +39,11 @@ export async function POST(req: NextRequest) {
     const ref = extractRef(text);
     if (!ref) return NextResponse.json({ ok: false, reason: "No KN code" });
     const amount = extractAmount(text);
-
-    // pending_payments шалгах
     const rows = await dbFetch(`pending_payments?ref_code=eq.${ref}&select=*`);
     if (!Array.isArray(rows) || rows.length === 0) {
       await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "not_found" }) });
       return NextResponse.json({ ok: false, reason: "No payment for " + ref });
     }
-
-    // pending_payments confirmed болгох — Supabase REST PATCH
     const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}`, {
       method: "PATCH",
       headers: {
@@ -59,8 +55,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString(), sms_text: text }),
     });
     const patchData = await patchRes.text();
-
-    await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "confirmed", film_id: rows[0].film_id }) });
+    await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "confirmed", film_id: rows[0].film_id, patch_result: patchData }) });
     return NextResponse.json({ ok: true, ref_code: ref, film_id: rows[0].film_id, amount, patch: patchData });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
