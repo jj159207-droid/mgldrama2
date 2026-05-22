@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useRef, useEffect } from "react";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -365,28 +365,7 @@ function AdminSmsTab() {
 // ══════════════════════════════════════════════
 // Дараах компонентууд өмнөхтэй адил үлдсэн
 // ══════════════════════════════════════════════
-function QRCanvas({ text }: { text: string }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-    const S = 140, N = 21, sz = Math.floor(S / N);
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, S, S);
-    ctx.fillStyle = "#000";
-    const seed = [...text].reduce((a, ch) => a + ch.charCodeAt(0), 0);
-    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
-      const v = (r * N + c + seed) % 7;
-      const corner = (r < 7 && c < 7) || (r < 7 && c >= N - 7) || (r >= N - 7 && c < 7);
-      if (corner || v < 3) ctx.fillRect(c * sz, r * sz, sz, sz);
-    }
-    ([[0, 0], [0, N - 7], [N - 7, 0]] as number[][]).forEach(([r, c]) => {
-      ctx.strokeStyle = "#000"; ctx.lineWidth = sz;
-      ctx.strokeRect((c + .5) * sz, (r + .5) * sz, 6 * sz, 6 * sz);
-      ctx.fillRect((c + 2) * sz, (r + 2) * sz, 3 * sz, 3 * sz);
-    });
-  }, [text]);
-  return <canvas ref={ref} width={140} height={140} style={{ borderRadius: 6, display: "block" }} />;
-}
+
 
 function FilmCard({ film, onClick }: any) {
   return (
