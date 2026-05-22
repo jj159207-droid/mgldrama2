@@ -19,6 +19,16 @@ async function dbFetch(path: string, opts?: RequestInit) {
 
 const ADMIN_KEY = "admin2024";
 
+// ══════════════════════════════════════════════
+// ДАНСНЫ МЭДЭЭЛЭЛ
+// ══════════════════════════════════════════════
+const BANK_ACCOUNT = {
+  bank: "Хаан банк",
+  number: "5402504824",
+  name: "Т.Жаргалбаяр",
+  shortNumber: "MN11000500",
+};
+
 function saveSession(user: any) { const s = { user, expires: Date.now() + 7 * 24 * 60 * 60 * 1000 }; localStorage.setItem("kino_session", JSON.stringify(s)); }
 function loadSession() { try { const s = JSON.parse(localStorage.getItem("kino_session") || "{}"); if (s.user && s.expires > Date.now()) return s.user; localStorage.removeItem("kino_session"); } catch { } return null; }
 function clearSession() { localStorage.removeItem("kino_session"); }
@@ -124,66 +134,121 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 }
 
 // ══════════════════════════════════════════════
-// ТӨЛБӨРИЙН MODAL — гүйлгээний утга харуулна
+// ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid }: any) {
-  const [step, setStep] = useState<"banks" | "waiting" | "sms">("banks");
+  const [step, setStep] = useState<"banks" | "waiting">("banks");
   const [selectedBank, setSelectedBank] = useState<any>(null);
   const [refCode] = useState(() => genRef(film.id));
-  const [checking, setChecking] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
+  const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid" | "timeout">("waiting");
   const [showSms, setShowSms] = useState(false);
+  const [manualChecking, setManualChecking] = useState(false);
+  const intervalRef = useRef<any>(null);
+  const timeoutRef = useRef<any>(null);
+
+  const copyText = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(key);
+      setTimeout(() => setCopied(null), 2000);
+    });
+  };
 
   const selectBank = (bank: any) => {
     setSelectedBank(bank);
-    // Банкны апп нээх оролдлого
     window.location.href = `${bank.deep}${film.price}&memo=${refCode}`;
-    setTimeout(() => setStep("waiting"), 1200);
+    setTimeout(() => setStep("waiting"), 1000);
   };
 
-  // SMS мэссэжнээс олдсон ref-ийг шалгах
+  // Төлбөр үүсгэх + автомат polling эхлүүлэх
+  useEffect(() => {
+    if (step !== "waiting") return;
+
+    // Supabase-д pending_payments үүсгэх
+    dbFetch("pending_payments", {
+      method: "POST",
+      body: JSON.stringify({
+        ref_code: refCode,
+        film_id: film.id,
+        amount: film.price,
+        status: "pending",
+      }),
+    });
+
+    // Автомат 5 секунд тутамд шалгах
+    intervalRef.current = setInterval(async () => {
+      setAutoStatus("checking");
+      const rows = await dbFetch(
+        `pending_payments?ref_code=eq.${refCode}&status=eq.confirmed&select=id`
+      );
+      if (Array.isArray(rows) && rows.length > 0) {
+        clearInterval(intervalRef.current);
+        clearTimeout(timeoutRef.current);
+        setAutoStatus("paid");
+        setTimeout(() => onPaid(), 1200);
+      } else {
+        setAutoStatus("waiting");
+      }
+    }, 5000);
+
+    // 15 минутын дараа timeout
+    timeoutRef.current = setTimeout(() => {
+      clearInterval(intervalRef.current);
+      setAutoStatus("timeout");
+    }, 15 * 60 * 1000);
+
+    return () => {
+      clearInterval(intervalRef.current);
+      clearTimeout(timeoutRef.current);
+    };
+  }, [step]);
+
+  // SMS мэссэжнээс ref олсны дараа гараар шалгах
   const handleSmsFound = async (foundRef: string) => {
     setShowSms(false);
-    setChecking(true);
-
-    // Supabase-с pending_payments хүснэгтэд шалгах
-    const rows = await dbFetch(`pending_payments?ref_code=eq.${foundRef}&film_id=eq.${film.id}&select=*`);
-
+    setManualChecking(true);
+    const rows = await dbFetch(
+      `pending_payments?ref_code=eq.${foundRef}&film_id=eq.${film.id}&select=*`
+    );
     if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "pending") {
-      // Төлбөр зөв — confirmed болгох
       await dbFetch(`pending_payments?ref_code=eq.${foundRef}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: "confirmed" }),
+        body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString() }),
       });
-      setChecking(false);
-      onPaid();
+      setManualChecking(false);
+      setAutoStatus("paid");
+      setTimeout(() => onPaid(), 1200);
+    } else if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "confirmed") {
+      setManualChecking(false);
+      setAutoStatus("paid");
+      setTimeout(() => onPaid(), 1200);
     } else {
-      setChecking(false);
+      setManualChecking(false);
       alert(`"${foundRef}" кодтой төлбөр олдсонгүй. Гүйлгээний утгыг зөв бичсэн эсэхийг шалгана уу.`);
     }
   };
 
-  // Төлбөр үүсгэх (ref_code Supabase-д хадгалах)
-  useEffect(() => {
-    if (step === "waiting") {
-      dbFetch("pending_payments", {
-        method: "POST",
-        body: JSON.stringify({
-          ref_code: refCode,
-          film_id: film.id,
-          amount: film.price,
-          status: "pending",
-        }),
-      });
-    }
-  }, [step]);
+  // ✅ Төлбөр баталгаажсан
+  if (autoStatus === "paid") {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.97)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 72, marginBottom: 12 }}>✅</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>Кино эхэлж байна...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "waiting") {
     return (
       <>
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 200 }}>
-          <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
+          <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 36px", width: "100%", border: `0.5px solid ${C.bd}`, maxHeight: "92vh", overflowY: "auto" }}>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <button onClick={() => setStep("banks")} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>←</button>
                 <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{film.title}</span>
@@ -192,54 +257,67 @@ function BankModal({ film, onClose, onPaid }: any) {
             </div>
 
             {/* Үнэ */}
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: C.gold }}>{film.price?.toLocaleString()}₮</div>
-              <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{selectedBank?.name || "Банкны апп"}-д шилжүүлнэ үү</div>
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 32, fontWeight: 900, color: C.gold }}>{film.price?.toLocaleString()}₮</div>
+              <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>дараах данс руу шилжүүлнэ үү</div>
             </div>
 
-            {/* Гүйлгээний утга — ТОМ харуулна */}
-            <div style={{
-              background: "#0a1628",
-              border: `1.5px solid ${C.gold}`,
-              borderRadius: 14,
-              padding: "16px 20px",
-              marginBottom: 20,
-              textAlign: "center",
-            }}>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                Гүйлгээний утга (заавал бичнэ)
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: C.gold, letterSpacing: "0.12em", fontFamily: "monospace" }}>
-                {refCode}
-              </div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
-                ⚠️ Энэ кодыг гүйлгээний утга талбарт бичихгүй бол таних боломжгүй
-              </div>
-            </div>
-
-            {/* Алхамууд */}
-            <div style={{ marginBottom: 20 }}>
+            {/* Дансны мэдээлэл */}
+            <div style={{ background: "#050d1a", border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 10, letterSpacing: "0.08em", textTransform: "uppercase" }}>🏦 Дансны мэдээлэл</div>
               {[
-                `${selectedBank?.name || "Банк"}-ны апп нээнэ`,
-                `${film.price?.toLocaleString()}₮ шилжүүлнэ`,
-                `Гүйлгээний утга: ${refCode}`,
-                "Доорх товч дарна",
-              ].map((t, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.card2, border: `0.5px solid ${C.bd}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: C.gold, flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ fontSize: 13, color: i === 2 ? C.gold : C.muted, paddingTop: 3, fontWeight: i === 2 ? 700 : 400 }}>{t}</div>
+                { label: "Банк", value: BANK_ACCOUNT.bank },
+                { label: "Дансны дугаар", value: BANK_ACCOUNT.number, copy: true },
+                { label: "Эзэмшигч", value: BANK_ACCOUNT.name },
+              ].map(({ label, value, copy }) => (
+                <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <span style={{ fontSize: 12, color: C.muted }}>{label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.txt, fontFamily: copy ? "monospace" : "inherit" }}>{value}</span>
+                    {copy && (
+                      <button onClick={() => copyText(value, "account")} style={{ background: copied === "account" ? C.green : C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 6, padding: "3px 8px", fontSize: 11, color: copied === "account" ? "#fff" : C.muted, cursor: "pointer" }}>
+                        {copied === "account" ? "✓" : "Хуулах"}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
 
+            {/* Гүйлгээний утга */}
+            <div style={{ background: "#1a0a00", border: `1.5px solid #f97316`, borderRadius: 14, padding: "14px 16px", marginBottom: 14, textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "#f97316", marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                ⚠️ Гүйлгээний утга — заавал бичнэ!
+              </div>
+              <div style={{ fontSize: 30, fontWeight: 900, color: "#fb923c", letterSpacing: "0.15em", fontFamily: "monospace", marginBottom: 8 }}>
+                {refCode}
+              </div>
+              <button onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? C.green : "#2a1500", border: `0.5px solid #f97316`, borderRadius: 8, padding: "8px 20px", fontSize: 13, color: copied === "ref" ? "#fff" : "#fb923c", cursor: "pointer", fontWeight: 700 }}>
+                {copied === "ref" ? "✅ Хуулагдлаа!" : "📋 Код хуулах"}
+              </button>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>Энэ кодыг бичихгүй бол автоматаар таних боломжгүй</div>
+            </div>
+
+            {/* Автомат хүлээж байна */}
+            <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontSize: 20 }}>{autoStatus === "checking" ? "🔄" : "⏳"}</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.txt }}>
+                  {autoStatus === "checking" ? "Шалгаж байна..." : "Төлбөрийг хүлээж байна"}
+                </div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Мөнгө шилжүүлсний дараа автоматаар нээгдэнэ</div>
+              </div>
+            </div>
+
+            {/* Гараар тулгах */}
             <button
               onClick={() => setShowSms(true)}
-              disabled={checking}
-              style={{ ...goldBtn, opacity: checking ? 0.6 : 1 }}
+              disabled={manualChecking}
+              style={{ ...goldBtn, opacity: manualChecking ? 0.6 : 1, marginBottom: 8 }}
             >
-              {checking ? "Шалгаж байна..." : "📩 Мэссэж тулгах — Кино үзэх"}
+              {manualChecking ? "Шалгаж байна..." : "📩 Банкны мэссэж тулгах"}
             </button>
-            <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Буцах</button>
+            <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Буцах</button>
           </div>
         </div>
 
