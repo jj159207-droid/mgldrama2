@@ -19,6 +19,11 @@ async function dbFetch(path: string, opts?: RequestInit) {
 
 const ADMIN_KEY = "admin2024";
 
+function saveSession(user:any){const s={user,expires:Date.now()+7*24*60*60*1000};localStorage.setItem("kino_session",JSON.stringify(s));}
+function loadSession(){try{const s=JSON.parse(localStorage.getItem("kino_session")||"{}");if(s.user&&s.expires>Date.now())return s.user;localStorage.removeItem("kino_session");}catch{}return null;}
+function clearSession(){localStorage.removeItem("kino_session");}
+function genUserId(id:number){return "#"+String(id).padStart(6,"0");}
+
 const BANKS = [
   { id:"khanbank",  name:"Хаан банк",   color:"#00a651", icon:"🏦", deep:"khanbank://qpay?amount=" },
   { id:"golomt",    name:"Голомт банк", color:"#e4002b", icon:"🏦", deep:"golomtbank://qpay?amount=" },
@@ -50,7 +55,96 @@ const goldBtn:any = {
 };
 const lbl:any = { fontSize:12, color:C.muted, display:"block", marginBottom:5 };
 
-function QRCanvas({ text }:{ text:string }) {
+function LoginPage({ onLogin, onBack }:any) {
+  const [mode, setMode] = useState<"login"|"register"|"reset">("login");
+  const [phone, setPhone] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const register = async () => {
+    if (phone.length < 8) { setErr("Утасны дугаар буруу байна"); return; }
+    if (pin.length !== 4 || !/^\d+$/.test(pin)) { setErr("PIN 4 оронтой тоо байх ёстой"); return; }
+    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
+    setLoading(true); setErr("");
+    const exists = await dbFetch(`users?phone=eq.${phone}&select=id`);
+    if (Array.isArray(exists) && exists.length > 0) { setErr("Энэ дугаар бүртгэлтэй байна"); setLoading(false); return; }
+    const data = await dbFetch("users", { method:"POST", body: JSON.stringify({ phone, pin, user_id: "tmp", failed_attempts:0 }) });
+    if (data?.[0]?.id) {
+      const uid = genUserId(data[0].id);
+      await dbFetch(`users?id=eq.${data[0].id}`, { method:"PATCH", body: JSON.stringify({ user_id: uid }) });
+      saveSession({ ...data[0], user_id: uid });
+      onLogin({ ...data[0], user_id: uid });
+    } else { setErr("Бүртгэл амжилтгүй"); }
+    setLoading(false);
+  };
+
+  const login = async () => {
+    if (!phone || !pin) { setErr("Дугаар болон PIN оруулна уу"); return; }
+    setLoading(true); setErr("");
+    const data = await dbFetch(`users?phone=eq.${phone}&select=*`);
+    if (!Array.isArray(data) || data.length === 0) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
+    const user = data[0];
+    if (user.locked_until && new Date(user.locked_until) > new Date()) {
+      setErr("Хэт олон удаа буруу оруулсан. Түр хүлээнэ үү"); setLoading(false); return;
+    }
+    if (user.pin !== pin) {
+      const attempts = (user.failed_attempts || 0) + 1;
+      const locked = attempts >= 3 ? { locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() } : {};
+      await dbFetch(`users?id=eq.${user.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts: attempts, ...locked }) });
+      setErr(attempts >= 3 ? "3 удаа буруу оруулсан. 15 минут хүлээнэ үү" : `PIN буруу байна (${3 - attempts} оролдлого үлдсэн)`);
+      setLoading(false); return;
+    }
+    await dbFetch(`users?id=eq.${user.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts: 0, locked_until: null }) });
+    saveSession(user); onLogin(user);
+    setLoading(false);
+  };
+
+  const resetPin = async () => {
+    if (phone.length < 8) { setErr("Утасны дугаар буруу байна"); return; }
+    if (pin.length !== 4 || !/^\d+$/.test(pin)) { setErr("Шинэ PIN 4 оронтой тоо байх ёстой"); return; }
+    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
+    setLoading(true); setErr("");
+    const data = await dbFetch(`users?phone=eq.${phone}&select=id`);
+    if (!Array.isArray(data) || data.length === 0) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
+    await dbFetch(`users?id=eq.${data[0].id}`, { method:"PATCH", body: JSON.stringify({ pin, failed_attempts: 0, locked_until: null }) });
+    setErr(""); setMode("login"); alert("PIN амжилттай солигдлоо!");
+    setLoading(false);
+  };
+
+  return (
+    <div style={{background:C.bg,minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{fontSize:40,marginBottom:8}}>🎬</div>
+      <div style={{fontSize:20,fontWeight:800,color:C.txt,marginBottom:4,fontFamily:"Georgia,serif"}}>кино үзэх самбар</div>
+      <div style={{fontSize:13,color:C.muted,marginBottom:24}}>{mode==="login"?"Нэвтрэх":mode==="register"?"Бүртгүүлэх":"PIN сэргээх"}</div>
+      <div style={{width:"100%",maxWidth:340,background:C.card,borderRadius:16,padding:20,border:`0.5px solid ${C.bd}`}}>
+        <div style={{display:"flex",gap:6,marginBottom:16}}>
+          {(["login","register","reset"] as const).map(m=>(
+            <button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,padding:"8px 4px",borderRadius:8,border:"none",background:mode===m?C.gold:C.card2,color:mode===m?"#000":C.muted,fontWeight:700,cursor:"pointer",fontSize:11}}>
+              {m==="login"?"Нэвтрэх":m==="register"?"Бүртгүүлэх":"PIN сэргээх"}
+            </button>
+          ))}
+        </div>
+        <label style={lbl}>Утасны дугаар</label>
+        <input style={inputSt} value={phone} onChange={(e:any)=>setPhone(e.target.value)} placeholder="99001234" type="tel" maxLength={8} />
+        <label style={{...lbl,marginTop:10}}>{mode==="reset"?"Шинэ PIN":"PIN код (4 оронтой)"}</label>
+        <input style={inputSt} value={pin} onChange={(e:any)=>setPin(e.target.value)} placeholder="****" type="password" maxLength={4} />
+        {mode!=="login" && <>
+          <label style={{...lbl,marginTop:10}}>PIN давтах</label>
+          <input style={inputSt} value={pin2} onChange={(e:any)=>setPin2(e.target.value)} placeholder="****" type="password" maxLength={4} />
+        </>}
+        {err && <div style={{color:C.red,fontSize:12,marginTop:8}}>{err}</div>}
+        <button onClick={mode==="login"?login:mode==="register"?register:resetPin} disabled={loading} style={{...goldBtn,marginTop:14,opacity:loading?0.6:1}}>
+          {loading?"Түр хүлээнэ үү...":mode==="login"?"🔓 Нэвтрэх":mode==="register"?"✅ Бүртгүүлэх":"🔄 PIN солих"}
+        </button>
+        <button onClick={onBack} style={{width:"100%",background:"none",border:`0.5px solid ${C.bd}`,color:C.muted,padding:11,borderRadius:10,fontSize:13,cursor:"pointer",marginTop:8}}>Буцах</button>
+      </div>
+    </div>
+  );
+}
+
+
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current; if (!canvas) return;
@@ -110,14 +204,21 @@ function FilmCard({ film, onClick }:any) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading }:any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout }:any) {
   return (
     <div style={{background:C.bg,minHeight:"100vh",paddingBottom:20}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 16px",background:C.bg,position:"sticky",top:0,zIndex:10,borderBottom:`0.5px solid ${C.bd}`}}>
         <div style={{fontFamily:"Georgia,serif",fontSize:20,fontWeight:800,color:C.txt}}>кино үзэх самбар</div>
-        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
           <button onClick={onSearch} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:20}}>🔍</button>
-          <button onClick={onAdmin} style={{background:C.card2,border:`0.5px solid ${C.bd}`,color:C.muted,cursor:"pointer",fontSize:12,borderRadius:8,padding:"6px 10px"}}>⚙️ Админ</button>
+          {user
+            ? <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{fontSize:11,color:C.gold,fontWeight:700}}>{user.user_id}</span>
+                <button onClick={onLogout} style={{background:C.card2,border:`0.5px solid ${C.bd}`,color:C.muted,cursor:"pointer",fontSize:11,borderRadius:8,padding:"5px 8px"}}>Гарах</button>
+              </div>
+            : <button onClick={onLogin} style={{background:C.gold,border:"none",color:"#000",cursor:"pointer",fontSize:12,borderRadius:8,padding:"6px 10px",fontWeight:700}}>Нэвтрэх</button>
+          }
+          <button onClick={onAdmin} style={{background:C.card2,border:`0.5px solid ${C.bd}`,color:C.muted,cursor:"pointer",fontSize:12,borderRadius:8,padding:"6px 10px"}}>⚙️</button>
         </div>
       </div>
       <div style={{margin:"12px 12px 8px",background:"linear-gradient(90deg,#0369a1,#0ea5e9)",borderRadius:14,padding:"14px 18px",display:"flex",alignItems:"center",gap:12}}>
@@ -466,6 +567,12 @@ export default function Home() {
   const [curFilm, setCurFilm] = useState<any>(null);
   const [adminAuth, setAdminAuth] = useState(false);
   const [unlockedIds, setUnlockedIds] = useState<number[]>([]);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const s = loadSession();
+    if (s) setUser(s);
+  }, []);
 
   const loadFilms = async () => {
     setLoading(true);
@@ -489,12 +596,16 @@ export default function Home() {
     setPage("video");
   };
 
+  const handleLogin = (u:any) => { setUser(u); setPage("home"); };
+  const handleLogout = () => { clearSession(); setUser(null); };
+
   const filmsWithUnlock = films.map(f => unlockedIds.includes(f.id) ? {...f, locked:false} : f);
 
   return (
     <div style={{maxWidth:430,margin:"0 auto",fontFamily:"system-ui,sans-serif",background:C.bg}}>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0d0d14}input,select,button{font-family:inherit}input:focus,select:focus{outline:none;border-color:#e8a020!important}::-webkit-scrollbar{width:0}`}</style>
-      {page==="home"       && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={()=>setPage("search")} onAdmin={()=>setPage("adminlogin")} loading={loading} />}
+      {page==="home"       && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={()=>setPage("search")} onAdmin={()=>setPage("adminlogin")} loading={loading} user={user} onLogin={()=>setPage("login")} onLogout={handleLogout} />}
+      {page==="login"      && <LoginPage onLogin={handleLogin} onBack={()=>setPage("home")} />}
       {page==="video"      && curFilm && <VideoPage film={curFilm} onBack={()=>setPage("home")} />}
       {page==="search"     && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={()=>setPage("home")} />}
       {page==="adminlogin" && <AdminLogin onEnter={()=>{setAdminAuth(true);setPage("admin");}} onBack={()=>setPage("home")} />}
