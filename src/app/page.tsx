@@ -1,5 +1,5 @@
-﻿"use client";
-import { useState, useRef, useEffect } from "react";
+"use client";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -18,387 +18,346 @@ async function dbFetch(path: string, opts?: RequestInit) {
 }
 
 const ADMIN_KEY = "admin2024";
+// ══════ ТАНЫ ДАНСНЫ МЭДЭЭЛЭЛ — ЭНД ӨӨРЧИЛНӨ ══════
+const MY_ACCOUNT = {
+  number: "5***4824",       // дансны дугаар
+  bank: "Хаан банк",
+  name: "Та өөрийн нэрийг",  // эзэмшигчийн нэр
+};
+// ════════════════════════════════════════════════════
 
 function saveSession(user: any) { const s = { user, expires: Date.now() + 7 * 24 * 60 * 60 * 1000 }; localStorage.setItem("kino_session", JSON.stringify(s)); }
 function loadSession() { try { const s = JSON.parse(localStorage.getItem("kino_session") || "{}"); if (s.user && s.expires > Date.now()) return s.user; localStorage.removeItem("kino_session"); } catch { } return null; }
 function clearSession() { localStorage.removeItem("kino_session"); }
 function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
-
-// Гүйлгээний утга үүсгэх — кино id + санамсаргүй 4 тоо
-const MY_ACCOUNT = { number: "MN11000500 5402504824", bank: "Хаан банк", name: "Т.Жаргалбаяр" };
-
 function genRef(filmId: number): string {
   const rand = Math.floor(1000 + Math.random() * 9000);
   return `KN${filmId}${rand}`;
 }
-
-const BANKS = [
-  { id: "khanbank", name: "Хаан банк", color: "#00a651", icon: "🏦", deep: "khanbank://qpay?amount=" },
-  { id: "golomt", name: "Голомт банк", color: "#e4002b", icon: "🏦", deep: "golomtbank://qpay?amount=" },
-  { id: "tdbbank", name: "ХАС банк", color: "#0033a0", icon: "🏦", deep: "tdb://qpay?amount=" },
-  { id: "statebank", name: "Төрийн банк", color: "#2c5f9e", icon: "🏦", deep: "statebank://qpay?amount=" },
-  { id: "mbank", name: "М банк", color: "#e8281e", icon: "📱", deep: "mbank://qpay?amount=" },
-  { id: "most", name: "MOST", color: "#6c3fa0", icon: "📱", deep: "most://payment?amount=" },
-  { id: "upoint", name: "U-Point", color: "#f97316", icon: "📱", deep: "upoint://pay?amount=" },
-  { id: "socialpay", name: "SocialPay", color: "#0ea5e9", icon: "📱", deep: "socialpay://payment?amount=" },
-];
 
 const C = {
   bg: "#0d0d14", card: "#13131c", card2: "#1a1a26", bd: "#1e1e2e",
   txt: "#f0eefa", muted: "#6b6a90",
   red: "#e8281e", gold: "#e8a020", green: "#16a34a", blue: "#2563eb", amber: "#ca8a04",
 };
-
 const badgeColor = (b: string) => b === "Хадмал" ? C.amber : C.blue;
-
-const inputSt: any = {
-  width: "100%", background: "#0d0d18", border: `0.5px solid #1e1e2e`,
-  borderRadius: 8, padding: "11px 13px", color: "#f0eefa", fontSize: 14,
-  outline: "none", boxSizing: "border-box", fontFamily: "inherit",
-};
-const goldBtn: any = {
-  width: "100%", background: C.gold, border: "none", color: "#000",
-  padding: 13, borderRadius: 10, fontSize: 15, fontWeight: 700,
-  cursor: "pointer", fontFamily: "inherit",
-};
+const inputSt: any = { width: "100%", background: "#0d0d18", border: `0.5px solid #1e1e2e`, borderRadius: 8, padding: "11px 13px", color: "#f0eefa", fontSize: 14, outline: "none", boxSizing: "border-box", fontFamily: "inherit" };
+const goldBtn: any = { width: "100%", background: C.gold, border: "none", color: "#000", padding: 13, borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
 const lbl: any = { fontSize: 12, color: C.muted, display: "block", marginBottom: 5 };
 
 // ══════════════════════════════════════════════
-// БАНКНЫ МЭССЭЖ ОРЛУУЛАХ MODAL (Админ)
-// Таны утасны орлогын мэссэжийг энд paste хийнэ
+// ТӨЛБӨРИЙН MODAL — данс + гүйлгээний утга
+// Автомат polling: SMS Forwarder webhook-оос шалгана
 // ══════════════════════════════════════════════
-function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (ref: string) => void }) {
-  const [smsText, setSmsText] = useState("");
-  const [err, setErr] = useState("");
-
-  // Мэссэжнээс гүйлгээний утга олох
-  // Жишээ мэссэж: "Орлого: 5,000₮ Гүйлгээний утга: KN3420 ..."
-  // Хэд хэдэн форматыг дэмжинэ
-  const extractRef = (text: string): string | null => {
-    // KNxxxxxx pattern шалгах
-    const match = text.match(/KN\d{5,8}/i);
-    if (match) return match[0].toUpperCase();
-    return null;
-  };
-
-  const verify = () => {
-    const ref = extractRef(smsText);
-    if (!ref) {
-      setErr("Мэссэжнээс гүйлгээний утга олдсонгүй. 'KN' эхэлсэн кодыг шалгана уу.");
-      return;
-    }
-    onFound(ref);
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 300 }}>
-      <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>📩 Банкны мэссэж оруулах</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
-        </div>
-
-        <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, border: `0.5px solid ${C.bd}` }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>📌 Жишээ мэссэж</div>
-          <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "monospace", lineHeight: 1.6 }}>
-            Орлого 5,000₮ Гүйлгээний утга: <span style={{ color: C.gold }}>KN34208</span> Данс: XXXX1234 ...
-          </div>
-        </div>
-
-        <label style={lbl}>Банкнаас ирсэн мэссэжийг доор хуулж тавина уу</label>
-        <textarea
-          value={smsText}
-          onChange={(e: any) => { setSmsText(e.target.value); setErr(""); }}
-          placeholder="Мэссэжийг энд paste хийнэ үү..."
-          style={{
-            ...inputSt, height: 110, resize: "none",
-            lineHeight: 1.6, verticalAlign: "top",
-          }}
-        />
-        {err && <div style={{ color: C.red, fontSize: 12, marginTop: 6 }}>{err}</div>}
-        <button onClick={verify} style={{ ...goldBtn, marginTop: 14 }}>
-          ✅ Тулгах
-        </button>
-        <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Буцах</button>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════
-// ТӨЛБӨРИЙН MODAL — гүйлгээний утга харуулна
-// ══════════════════════════════════════════════
-function BankModal({ film, onClose, onPaid }: any) {
-  const [step, setStep] = useState<"banks" | "waiting" | "sms">("banks");
-  const [selectedBank, setSelectedBank] = useState<any>(null);
+function PayModal({ film, onClose, onPaid }: any) {
   const [refCode] = useState(() => genRef(film.id));
-  const [checking, setChecking] = useState(false);
-  const [showSms, setShowSms] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"waiting" | "checking" | "paid" | "timeout">("waiting");
+  const intervalRef = useRef<any>(null);
+  const timeoutRef = useRef<any>(null);
 
-  const selectBank = (bank: any) => {
-    setSelectedBank(bank);
-    // Банкны апп нээх оролдлого
-    window.location.href = `${bank.deep}${film.price}&memo=${refCode}`;
-    setTimeout(() => setStep("waiting"), 1200);
-  };
-
-  // SMS мэссэжнээс олдсон ref-ийг шалгах
-  const handleSmsFound = async (foundRef: string) => {
-    setShowSms(false);
-    setChecking(true);
-
-    // Supabase-с pending_payments хүснэгтэд шалгах
-    const rows = await dbFetch(`pending_payments?ref_code=eq.${foundRef}&film_id=eq.${film.id}&select=*`);
-
-    if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "pending") {
-      // Төлбөр зөв — confirmed болгох
-      await dbFetch(`pending_payments?ref_code=eq.${foundRef}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: "confirmed" }),
-      });
-      setChecking(false);
-      onPaid();
-    } else {
-      setChecking(false);
-      alert(`"${foundRef}" кодтой төлбөр олдсонгүй. Гүйлгээний утгыг зөв бичсэн эсэхийг шалгана уу.`);
-    }
-  };
-
-  // Төлбөр үүсгэх (ref_code Supabase-д хадгалах)
+  // Supabase-д pending_payments үүсгэх
   useEffect(() => {
-    if (step === "waiting") {
-      dbFetch("pending_payments", {
-        method: "POST",
-        body: JSON.stringify({
-          ref_code: refCode,
-          film_id: film.id,
-          amount: film.price,
-          status: "pending",
-        }),
-      });
-    }
-  }, [step]);
+    dbFetch("pending_payments", {
+      method: "POST",
+      body: JSON.stringify({ ref_code: refCode, film_id: film.id, amount: film.price, status: "pending" }),
+    });
 
-  if (step === "waiting") {
+    // 10 минут polling — confirmed болсон эсэх шалгана
+    intervalRef.current = setInterval(async () => {
+      const rows = await dbFetch(`pending_payments?ref_code=eq.${refCode}&select=status`);
+      if (Array.isArray(rows) && rows[0]?.status === "confirmed") {
+        clearInterval(intervalRef.current);
+        clearTimeout(timeoutRef.current);
+        setStatus("paid");
+        setTimeout(() => onPaid(), 1500);
+      }
+    }, 4000); // 4 секунд тутамд шалгана
+
+    // 10 минутын дараа timeout
+    timeoutRef.current = setTimeout(() => {
+      clearInterval(intervalRef.current);
+      setStatus("timeout");
+    }, 10 * 60 * 1000);
+
+    return () => {
+      clearInterval(intervalRef.current);
+      clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const copyRef = () => {
+    navigator.clipboard.writeText(refCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  if (status === "paid") {
     return (
-      <>
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 200 }}>
-          <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button onClick={() => setStep("banks")} style={{ background: "none", border: "none", color: C.muted, fontSize: 20, cursor: "pointer" }}>←</button>
-                <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{film.title}</span>
-              </div>
-              <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
-            </div>
-
-            {/* Үнэ */}
-            <div style={{ textAlign: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 28, fontWeight: 800, color: C.gold }}>{film.price?.toLocaleString()}₮</div>
-              <div style={{ fontSize: 13, color: C.muted, marginTop: 4 }}>{selectedBank?.name || "Банкны апп"}-д шилжүүлнэ үү</div>
-            </div>
-
-            {/* Гүйлгээний утга — ТОМ харуулна */}
-            <div style={{
-              background: "#0a1628",
-              border: `1.5px solid ${C.gold}`,
-              borderRadius: 14,
-              padding: "16px 20px",
-              marginBottom: 20,
-              textAlign: "center",
-            }}>
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 6, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                Гүйлгээний утга (заавал бичнэ)
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: C.gold, letterSpacing: "0.12em", fontFamily: "monospace" }}>
-                {refCode}
-              </div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
-                ⚠️ Энэ кодыг гүйлгээний утга талбарт бичихгүй бол таних боломжгүй
-              </div>
-            </div>
-
-            {/* Алхамууд */}
-            <div style={{ marginBottom: 20 }}>
-              {[
-                `${selectedBank?.name || "Банк"}-ны апп нээнэ`,
-                `${film.price?.toLocaleString()}₮ шилжүүлнэ`,
-                `Гүйлгээний утга: ${refCode}`,
-                "Доорх товч дарна",
-              ].map((t, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                  <div style={{ width: 22, height: 22, borderRadius: "50%", background: C.card2, border: `0.5px solid ${C.bd}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: C.gold, flexShrink: 0 }}>{i + 1}</div>
-                  <div style={{ fontSize: 13, color: i === 2 ? C.gold : C.muted, paddingTop: 3, fontWeight: i === 2 ? 700 : 400 }}>{t}</div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setShowSms(true)}
-              disabled={checking}
-              style={{ ...goldBtn, opacity: checking ? 0.6 : 1 }}
-            >
-              {checking ? "Шалгаж байна..." : "📩 Мэссэж тулгах — Кино үзэх"}
-            </button>
-            <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Буцах</button>
-          </div>
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>Кино эхэлж байна...</div>
         </div>
-
-        {showSms && (
-          <SmsVerifyModal
-            onClose={() => setShowSms(false)}
-            onFound={handleSmsFound}
-          />
-        )}
-      </>
+      </div>
     );
   }
 
-  // Банк сонгох хэсэг
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-end", zIndex: 200 }}>
-      <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 36px", width: "100%", border: `0.5px solid ${C.bd}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.txt }}>{film.title}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: C.gold, marginTop: 2 }}>{film.price?.toLocaleString()}₮</div>
+  if (status === "timeout") {
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 200 }}>
+        <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "24px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
+          <div style={{ textAlign: "center", marginBottom: 20 }}>
+            <div style={{ fontSize: 40, marginBottom: 10 }}>⏰</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.txt }}>Хугацаа дууслаа</div>
+            <div style={{ fontSize: 13, color: C.muted, marginTop: 6 }}>Төлбөр 10 минутын дотор баталгаажаагүй байна</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 26, cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} style={goldBtn}>Буцах</button>
         </div>
-        <p style={{ fontSize: 13, color: C.muted, marginBottom: 14 }}>Банкаа сонгоно уу</p>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, maxHeight: "50vh", overflowY: "auto" }}>
-          {BANKS.map(bank => (
-            <button key={bank.id} onClick={() => selectBank(bank)} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "14px 10px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: bank.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>{bank.icon}</div>
-              <span style={{ fontSize: 12, fontWeight: 600, color: C.txt, textAlign: "center" }}>{bank.name}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 200 }}>
+      <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 44px", width: "100%", border: `0.5px solid ${C.bd}` }}>
+
+        {/* Гарчиг */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{film.title}</div>
+            <div style={{ fontSize: 24, fontWeight: 900, color: C.gold, marginTop: 2 }}>{film.price?.toLocaleString()}₮</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 26, cursor: "pointer", lineHeight: 1 }}>✕</button>
+        </div>
+
+        {/* Дансны мэдээлэл */}
+        <div style={{ background: "#0a0f1e", border: `0.5px solid #1e3a5f`, borderRadius: 14, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.07em" }}>Шилжүүлэх данс</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: C.muted }}>Банк</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.txt }}>{MY_ACCOUNT.bank}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: C.muted }}>Данс</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: C.txt, fontFamily: "monospace", letterSpacing: "0.05em" }}>{MY_ACCOUNT.number}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: C.muted }}>Нэр</span>
+            <span style={{ fontSize: 13, color: C.txt }}>{MY_ACCOUNT.name}</span>
+          </div>
+        </div>
+
+        {/* Гүйлгээний утга — хуулах товчтой */}
+        <div style={{ background: "#0a1628", border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "14px 16px", marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.07em" }}>
+            ⚠️ Гүйлгээний утга — заавал бичнэ
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: C.gold, letterSpacing: "0.1em", fontFamily: "monospace" }}>
+              {refCode}
+            </div>
+            <button
+              onClick={copyRef}
+              style={{
+                background: copied ? C.green : C.card2,
+                border: `0.5px solid ${copied ? C.green : C.bd}`,
+                color: copied ? "#fff" : C.muted,
+                borderRadius: 8, padding: "8px 14px",
+                fontSize: 12, fontWeight: 700, cursor: "pointer",
+                transition: "all 0.2s", whiteSpace: "nowrap",
+              }}
+            >
+              {copied ? "✓ Хуулагдлаа" : "📋 Хуулах"}
             </button>
-          ))}
+          </div>
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 8, lineHeight: 1.5 }}>
+            Энэ кодыг гүйлгээний утга талбарт бичнэ үү
+          </div>
         </div>
+
+        {/* Хүлээж байгаа байдал */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, background: C.card2, borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+          <div style={{
+            width: 10, height: 10, borderRadius: "50%", background: C.gold,
+            animation: "pulse 1.5s ease-in-out infinite",
+            flexShrink: 0,
+          }} />
+          <div>
+            <div style={{ fontSize: 13, color: C.txt, fontWeight: 600 }}>Төлбөр хүлээж байна...</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Мөнгө шилжүүлсний дараа автоматаар нээгдэнэ</div>
+          </div>
+        </div>
+
+        <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
+
+        <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Буцах</button>
       </div>
     </div>
   );
 }
 
 // ══════════════════════════════════════════════
-// ADMIN — мэссэж шалгах таб нэмэгдлээ
+// ADMIN SMS TAB — pending жагсаалт + нэг товч
 // ══════════════════════════════════════════════
-function AdminSmsTab() {
-  const [smsText, setSmsText] = useState("");
-  const [result, setResult] = useState<any>(null);
-  const [status, setStatus] = useState<"idle" | "checking" | "found" | "notfound">("idle");
+function AdminSmsTab({ films }: { films: any[] }) {
+  const [payments, setPayments] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const extractRef = (text: string): string | null => {
-    const match = text.match(/KN\d{5,8}/i);
-    if (match) return match[0].toUpperCase();
-    return null;
+  const load = async () => {
+    setLoading(true);
+    const rows = await dbFetch("pending_payments?order=created_at.desc&limit=50&select=*");
+    setPayments(Array.isArray(rows) ? rows : []);
+    setLoading(false);
   };
 
-  const check = async () => {
-    const ref = extractRef(smsText);
-    if (!ref) { setStatus("notfound"); setResult(null); return; }
-    setStatus("checking");
-    const rows = await dbFetch(`pending_payments?ref_code=eq.${ref}&select=*`);
-    if (Array.isArray(rows) && rows.length > 0) {
-      setResult(rows[0]);
-      setStatus("found");
-    } else {
-      setResult(null);
-      setStatus("notfound");
-    }
-  };
+  useEffect(() => { load(); }, []);
 
-  const confirm = async () => {
-    if (!result) return;
-    await dbFetch(`pending_payments?ref_code=eq.${result.ref_code}`, {
+  const confirm = async (refCode: string) => {
+    await dbFetch(`pending_payments?ref_code=eq.${refCode}`, {
       method: "PATCH",
       body: JSON.stringify({ status: "confirmed" }),
     });
-    setResult((r: any) => ({ ...r, status: "confirmed" }));
+    load();
   };
+
+  const reject = async (refCode: string) => {
+    await dbFetch(`pending_payments?ref_code=eq.${refCode}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "rejected" }),
+    });
+    load();
+  };
+
+  const filmName = (id: number) => films.find(f => f.id === id)?.title || `Кино #${id}`;
+
+  const pending = payments.filter(p => p.status === "pending");
+  const done = payments.filter(p => p.status !== "pending");
 
   return (
     <div style={{ padding: "0 14px" }}>
-      <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12 }}>📩 Банкны мэссэж шалгах</div>
-        <label style={lbl}>Орлогын мэссэжийг paste хийнэ үү</label>
-        <textarea
-          value={smsText}
-          onChange={(e: any) => { setSmsText(e.target.value); setStatus("idle"); setResult(null); }}
-          placeholder={"Орлого 5,000₮ Гүйлгээний утга: KN34208 ..."}
-          style={{ ...inputSt, height: 100, resize: "none", lineHeight: 1.6 }}
-        />
-        <button onClick={check} style={{ ...goldBtn, marginTop: 10 }}>
-          🔍 Шалгах
-        </button>
+
+      {/* Хэрхэн ажиллуулах зааварчилгаа */}
+      <div style={{ background: "#0a1628", border: `0.5px solid #1e3a5f`, borderRadius: 12, padding: 14, marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#60a5fa", marginBottom: 8 }}>📱 SMS Forwarder тохируулга</div>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
+          1. Play Store → <span style={{ color: C.txt }}>"SMS Forwarder"</span> апп татна<br />
+          2. New Rule → HTTP POST<br />
+          3. URL: <span style={{ color: C.gold, fontFamily: "monospace", fontSize: 11 }}>https://таны-сайт.vercel.app/api/sms</span><br />
+          4. Filter: <span style={{ color: C.gold, fontFamily: "monospace" }}>Khan Bank</span><br />
+          5. Body: <span style={{ color: C.gold, fontFamily: "monospace", fontSize: 11 }}>{`{"text":"[message]"}`}</span>
+        </div>
       </div>
 
-      {status === "checking" && (
-        <div style={{ textAlign: "center", color: C.muted, padding: 16 }}>Шалгаж байна...</div>
-      )}
-
-      {status === "found" && result && (
-        <div style={{ background: result.status === "confirmed" ? "#052e16" : "#1c1400", border: `0.5px solid ${result.status === "confirmed" ? "#166534" : C.gold}`, borderRadius: 12, padding: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: result.status === "confirmed" ? "#4ade80" : C.gold, marginBottom: 10 }}>
-            {result.status === "confirmed" ? "✅ Баталгаажсан" : "⏳ Хүлээгдэж байна"}
-          </div>
-          <div style={{ fontSize: 12, color: C.muted, lineHeight: 2 }}>
-            Код: <span style={{ color: C.txt, fontFamily: "monospace" }}>{result.ref_code}</span><br />
-            Кино ID: <span style={{ color: C.txt }}>{result.film_id}</span><br />
-            Дүн: <span style={{ color: C.gold }}>{result.amount?.toLocaleString()}₮</span>
-          </div>
-          {result.status === "pending" && (
-            <button onClick={confirm} style={{ ...goldBtn, marginTop: 12 }}>
-              ✅ Гараар баталгаажуулах
-            </button>
-          )}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>
+          📩 Хүлээгдэж байгаа{pending.length > 0 && <span style={{ background: C.red, color: "#fff", borderRadius: 20, padding: "1px 8px", fontSize: 11, marginLeft: 8 }}>{pending.length}</span>}
         </div>
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, borderRadius: 8, padding: "6px 12px", fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+      </div>
+
+      {loading && <div style={{ textAlign: "center", color: C.muted, padding: 20 }}>Ачааллаж байна...</div>}
+
+      {!loading && pending.length === 0 && (
+        <div style={{ textAlign: "center", color: C.muted, padding: 30, fontSize: 13 }}>Хүлээгдэж буй төлбөр байхгүй</div>
       )}
 
-      {status === "notfound" && (
-        <div style={{ background: "#1a0808", border: `0.5px solid #3a1a1a`, borderRadius: 12, padding: 14, color: "#f05555", fontSize: 13 }}>
-          ❌ Мэссэжнээс тохирох гүйлгээ олдсонгүй
+      {/* Хүлээгдэж буй төлбөрүүд */}
+      {pending.map(p => (
+        <div key={p.id} style={{ background: "#1c1400", border: `0.5px solid ${C.gold}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 4 }}>{filmName(p.film_id)}</div>
+              <div style={{ fontSize: 12, color: C.muted }}>
+                Код: <span style={{ color: C.gold, fontFamily: "monospace", fontWeight: 700 }}>{p.ref_code}</span>
+              </div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                Дүн: <span style={{ color: C.txt }}>{p.amount?.toLocaleString()}₮</span>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>
+                {new Date(p.created_at).toLocaleString("mn-MN")}
+              </div>
+            </div>
+            <div style={{ background: "#2d1a00", border: `0.5px solid ${C.gold}`, borderRadius: 6, padding: "3px 10px", fontSize: 11, color: C.gold, fontWeight: 700 }}>⏳ Хүлээгдэж байна</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => confirm(p.ref_code)}
+              style={{ flex: 1, background: "#166534", border: `0.5px solid #16a34a`, color: "#4ade80", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            >
+              ✅ Зөвшөөрөх
+            </button>
+            <button
+              onClick={() => reject(p.ref_code)}
+              style={{ flex: 1, background: "#7f1d1d", border: `0.5px solid #dc2626`, color: "#f87171", padding: "10px", borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+            >
+              ❌ Татгалзах
+            </button>
+          </div>
+        </div>
+      ))}
+
+      {/* Өмнөх төлбөрүүд */}
+      {done.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Өмнөх төлбөрүүд</div>
+          {done.slice(0, 10).map(p => (
+            <div key={p.id} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px", marginBottom: 6, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 12, color: C.txt }}>{filmName(p.film_id)} · <span style={{ fontFamily: "monospace", color: C.gold }}>{p.ref_code}</span></div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{p.amount?.toLocaleString()}₮</div>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: p.status === "confirmed" ? C.green : C.red }}>
+                {p.status === "confirmed" ? "✅" : "❌"}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// ══════════════════════════════════════════════
-// Дараах компонентууд өмнөхтэй адил үлдсэн
-// ══════════════════════════════════════════════
-
+function QRCanvas({ text }: { text: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current; if (!canvas) return;
+    const ctx = canvas.getContext("2d")!;
+    const S = 140, N = 21, sz = Math.floor(S / N);
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, S, S); ctx.fillStyle = "#000";
+    const seed = [...text].reduce((a, ch) => a + ch.charCodeAt(0), 0);
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+      const v = (r * N + c + seed) % 7;
+      const corner = (r < 7 && c < 7) || (r < 7 && c >= N - 7) || (r >= N - 7 && c < 7);
+      if (corner || v < 3) ctx.fillRect(c * sz, r * sz, sz, sz);
+    }
+    ([[0, 0], [0, N - 7], [N - 7, 0]] as number[][]).forEach(([r, c]) => {
+      ctx.strokeStyle = "#000"; ctx.lineWidth = sz;
+      ctx.strokeRect((c + .5) * sz, (r + .5) * sz, 6 * sz, 6 * sz);
+      ctx.fillRect((c + 2) * sz, (r + 2) * sz, 3 * sz, 3 * sz);
+    });
+  }, [text]);
+  return <canvas ref={ref} width={140} height={140} style={{ borderRadius: 6, display: "block" }} />;
+}
 
 function FilmCard({ film, onClick }: any) {
   return (
     <div onClick={onClick} style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${C.bd}`, WebkitTapHighlightColor: "transparent" }}>
       <div style={{ position: "relative", aspectRatio: "3/4", overflow: "hidden" }}>
-        {film.img
-          ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg,${film.bg || "#1a0820"} 0%,#000 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 44 }}>🎬</span>
-          </div>
-        }
-        <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
-          {film.badge}
-        </div>
-        {!film.free && film.locked && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 28 }}>🔒</span>
-          </div>
-        )}
+        {film.img ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg,${film.bg || "#1a0820"} 0%,#000 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 44 }}>🎬</span></div>}
+        <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>{film.badge}</div>
+        {!film.free && film.locked && <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: 28 }}>🔒</span></div>}
       </div>
       <div style={{ padding: "7px 8px 10px" }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: C.txt, lineHeight: 1.3, marginBottom: 5 }}>{film.title}</div>
         {!film.free && <div style={{ fontSize: 10, color: C.muted, textDecoration: "line-through", marginBottom: 1 }}>{film.op?.toLocaleString()}₮</div>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : C.gold }}>
-            {film.free ? "Үнэгүй" : `${film.price?.toLocaleString()}₮`}
-          </span>
-          {film.free
-            ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
-            : <button style={{ background: C.gold, border: "none", color: "#000", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>💳</button>
-          }
+          <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : C.gold }}>{film.free ? "Үнэгүй" : `${film.price?.toLocaleString()}₮`}</span>
+          {film.free ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
+            : <button style={{ background: C.gold, border: "none", color: "#000", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>💳</button>}
         </div>
       </div>
     </div>
@@ -499,13 +458,6 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
           <button onClick={onAdmin} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
         </div>
       </div>
-      <div onClick={onLogin} style={{ margin: "12px 12px 8px", background: "linear-gradient(90deg,#0369a1,#0ea5e9)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-        <span style={{ fontSize: 26 }}>🎬</span>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
-          <div style={{ fontSize: 13, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
-        </div>
-      </div>
       <div style={{ padding: "8px 12px 6px" }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{films.length} кино байна</span>
       </div>
@@ -549,7 +501,7 @@ function VideoPage({ film, onBack }: any) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Видео холбоос байхгүй байна</div>
       )}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)", padding: "16px", transition: "opacity 0.3s", opacity: showControls ? 1 : 0, pointerEvents: showControls ? "auto" : "none" }}>
-        <button onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>←</button>
+        <button onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center" }}>←</button>
       </div>
     </div>
   );
@@ -601,7 +553,7 @@ function AdminLogin({ onEnter, onBack }: any) {
 }
 
 function AdminPage({ films, onBack, onRefresh }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms">("list");
+  const [tab, setTab] = useState<"list" | "add" | "sms">("sms");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
@@ -635,12 +587,12 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         <span style={{ fontSize: 12, color: C.muted }}>{films.length} кино</span>
       </div>
       <div style={{ display: "flex", padding: "10px 14px", gap: 6 }}>
+        <button onClick={() => setTab("sms")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>📩 Төлбөр</button>
         <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>📋 Жагсаалт</button>
         <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>➕ Нэмэх</button>
-        <button onClick={() => setTab("sms")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>📩 Мэссэж</button>
       </div>
 
-      {tab === "sms" && <AdminSmsTab />}
+      {tab === "sms" && <AdminSmsTab films={films} />}
 
       {tab === "add" && (
         <div style={{ padding: "0 14px" }}>
@@ -659,8 +611,8 @@ function AdminPage({ films, onBack, onRefresh }: any) {
               <input type="checkbox" id="cb-free" checked={form.free} onChange={setChk("free")} style={{ width: 18, height: 18 }} />
               <label htmlFor="cb-free" style={{ fontSize: 14, color: C.txt, cursor: "pointer" }}>🆓 Үнэгүй кино</label>
             </div>
-            <label style={{ ...lbl, marginTop: 12 }}>Видео URL (YouTube / MP4 / Google Drive)</label>
-            <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/... эсвэл .mp4 холбоос" />
+            <label style={{ ...lbl, marginTop: 12 }}>Видео URL</label>
+            <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/..." />
             <label style={{ ...lbl, marginTop: 10 }}>Зургийн URL эсвэл файл</label>
             <input style={inputSt} value={form.img} onChange={set("img")} placeholder="https://..." />
             <input type="file" accept="image/*" onChange={(e: any) => {
@@ -750,6 +702,7 @@ export default function Home() {
     else setPayFilm(f);
   };
   const handlePaid = () => {
+    if (!payFilm) return;
     setUnlockedIds(ids => [...ids, payFilm.id]);
     setCurFilm({ ...payFilm, locked: false });
     setPayFilm(null);
@@ -768,7 +721,7 @@ export default function Home() {
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
-      {payFilm && <BankModal film={payFilm} onClose={() => setPayFilm(null)} onPaid={handlePaid} />}
+      {payFilm && <PayModal film={payFilm} onClose={() => setPayFilm(null)} onPaid={handlePaid} />}
     </div>
   );
 }
