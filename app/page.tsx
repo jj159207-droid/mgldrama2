@@ -222,11 +222,11 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
           <button onClick={onAdmin} style={{background:C.card2,border:`0.5px solid ${C.bd}`,color:C.muted,cursor:"pointer",fontSize:12,borderRadius:8,padding:"6px 10px"}}>⚙️</button>
         </div>
       </div>
-      <div style={{margin:"12px 12px 8px",background:"linear-gradient(90deg,#0369a1,#0ea5e9)",borderRadius:14,padding:"14px 18px",display:"flex",alignItems:"center",gap:12}}>
-        <span style={{fontSize:26}}>💳</span>
+      <div onClick={onLogin} style={{margin:"12px 12px 8px",background:"linear-gradient(90deg,#0369a1,#0ea5e9)",borderRadius:14,padding:"14px 18px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}>
+        <span style={{fontSize:26}}>🎬</span>
         <div>
-          <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>QPay-ээр төлбөрөө төлөөд</div>
-          <div style={{fontSize:13,color:"#bae6fd"}}>киногоо үзээрэй</div>
+          <div style={{fontSize:14,fontWeight:700,color:"#fff"}}>Нэвтрэх / Бүртгүүлэх</div>
+          <div style={{fontSize:13,color:"#bae6fd"}}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
         </div>
       </div>
       <div style={{padding:"8px 12px 6px"}}>
