@@ -142,15 +142,18 @@ function LoginPage({ onLogin, onBack }:any) {
       </div>
       <div style={{width:"100%",maxWidth:340,marginTop:12,background:C.card,borderRadius:16,padding:16,border:`1.5px solid ${C.gold}`}}>
         <div style={{fontSize:12,color:C.muted,marginBottom:8,textAlign:"center"}}>📲 Апп болгон хэрэглэх</div>
-        {!installed && installPrompt && (
+        {installed ? (
+          <div style={{textAlign:"center",color:"#16a34a",fontSize:13,padding:8}}>✅ Суулгагдлаа!</div>
+        ) : installPrompt ? (
           <button onClick={installApp} style={{width:"100%",background:C.gold,border:"none",color:"#000",padding:12,borderRadius:10,fontSize:14,cursor:"pointer",fontWeight:700}}>
             📲 Гар утас дээр суулгах
           </button>
+        ) : (
+          <div style={{fontSize:12,color:C.muted,textAlign:"center",lineHeight:"1.6"}}>
+            📲 <b style={{color:C.txt}}>Гар утас дээр суулгах:</b><br/>
+            Chrome → ⋮ → <b style={{color:C.gold}}>"Нүүр дэлгэцэд нэмэх"</b>
+          </div>
         )}
-        {!installPrompt && (
-          <div style={{fontSize:12,color:C.muted,textAlign:"center"}}>Chrome цэс → "Нүүр дэлгэцэд нэмэх"</div>
-        )}
-        {installed && <div style={{textAlign:"center",color:C.green,fontSize:13}}>✅ Суулгагдлаа!</div>}
       <div style={{display:"none"}}
       </div>
     </div>
