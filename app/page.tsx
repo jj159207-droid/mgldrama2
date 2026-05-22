@@ -320,7 +320,11 @@ function VideoPage({ film, onBack }:any) {
 
   useEffect(() => {
     const t = setTimeout(() => setShowControls(false), 4000);
-    return () => clearTimeout(t);
+    // Push state to prevent browser back
+    window.history.pushState({ video: true }, "");
+    const handlePop = () => { onBack(); };
+    window.addEventListener("popstate", handlePop);
+    return () => { clearTimeout(t); window.removeEventListener("popstate", handlePop); };
   }, []);
 
   return (
