@@ -145,6 +145,7 @@ function LoginPage({ onLogin, onBack }:any) {
 }
 
 
+function QRCanvas({ text }:{ text:string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current; if (!canvas) return;
