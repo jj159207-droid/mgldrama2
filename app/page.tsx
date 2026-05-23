@@ -462,16 +462,15 @@ function FilmCard({ film, onClick }: any) {
 
 function ContactModal({ onClose, user }: any) {
   const [msg, setMsg] = useState("");
-  const [phone, setPhone] = useState(user?.phone || "");
   const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
 
   const send = async () => {
-    if (!phone || !msg.trim()) return;
+    if (!msg.trim()) return;
     setSending(true);
     await dbFetch("contact_messages", {
       method: "POST",
-      body: JSON.stringify({ phone, message: msg.trim(), user_id: user?.id || null, read: false }),
+      body: JSON.stringify({ phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false }),
     });
     setSent(true);
     setSending(false);
@@ -493,16 +492,15 @@ function ContactModal({ onClose, user }: any) {
           </div>
         ) : (
           <>
-            <label style={lbl}>Утасны дугаар</label>
-            <input style={inputSt} value={phone} onChange={(e: any) => setPhone(e.target.value)} placeholder="99001234" type="tel" maxLength={8} />
-            <label style={{ ...lbl, marginTop: 12 }}>Мессеж</label>
+            <label style={lbl}>Мессеж бичнэ үү</label>
             <textarea
               value={msg}
               onChange={(e: any) => setMsg(e.target.value)}
               placeholder="Асуудал эсвэл асуулт бичнэ үү..."
-              style={{ ...inputSt, height: 100, resize: "none", lineHeight: 1.6 }}
+              style={{ ...inputSt, height: 120, resize: "none", lineHeight: 1.6 }}
+              autoFocus
             />
-            <button onClick={send} disabled={sending || !phone || !msg.trim()} style={{ ...goldBtn, marginTop: 14, opacity: sending || !phone || !msg.trim() ? 0.6 : 1 }}>
+            <button onClick={send} disabled={sending || !msg.trim()} style={{ ...goldBtn, marginTop: 14, opacity: sending || !msg.trim() ? 0.6 : 1 }}>
               {sending ? "Илгээж байна..." : "📨 Илгээх"}
             </button>
             <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 11, borderRadius: 10, fontSize: 13, cursor: "pointer", marginTop: 8 }}>Буцах</button>
@@ -598,10 +596,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
           {user
-            ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11, color: C.gold, fontWeight: 700 }}>{user.user_id}</span>
-              <button onClick={onLogout} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 11, borderRadius: 8, padding: "5px 8px" }}>Гарах</button>
-            </div>
+            ? <button onClick={onLogout} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 11, borderRadius: 8, padding: "5px 8px" }}>Гарах</button>
             : <button onClick={onLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
           }
           <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
