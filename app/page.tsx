@@ -459,8 +459,8 @@ function FilmCard({ film, onClick, expiry }: any) {
           {film.badge}
         </div>
         {!film.free && film.locked && !expiry && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 28 }}>🔒</span>
+          <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 16 }}>🔒</span>
           </div>
         )}
         {expiry && (
