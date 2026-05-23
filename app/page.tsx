@@ -599,10 +599,10 @@ function LoginPage({ onLogin, onBack }: any) {
         <label style={lbl}>Утасны дугаар</label>
         <input style={inputSt} value={phone} onChange={(e: any) => setPhone(e.target.value)} placeholder="99001234" type="tel" maxLength={8} />
         <label style={{ ...lbl, marginTop: 10 }}>{mode === "reset" ? "Шинэ PIN" : "PIN код (4 оронтой)"}</label>
-        <input style={inputSt} value={pin} onChange={(e: any) => setPin(e.target.value)} placeholder="****" type="password" maxLength={4} />
+        <input style={inputSt} value={pin} onChange={(e: any) => setPin(e.target.value)} placeholder="****" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} />
         {mode !== "login" && <>
           <label style={{ ...lbl, marginTop: 10 }}>PIN давтах</label>
-          <input style={inputSt} value={pin2} onChange={(e: any) => setPin2(e.target.value)} placeholder="****" type="password" maxLength={4} />
+          <input style={inputSt} value={pin2} onChange={(e: any) => setPin2(e.target.value)} placeholder="****" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} />
         </>}
         {err && <div style={{ color: C.red, fontSize: 12, marginTop: 8 }}>{err}</div>}
         <button onClick={mode === "login" ? login : mode === "register" ? register : resetPin} disabled={loading} style={{ ...goldBtn, marginTop: 14, opacity: loading ? 0.6 : 1 }}>
