@@ -1426,6 +1426,11 @@ export default function Home() {
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
       <script dangerouslySetInnerHTML={{ __html: `
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js');
+          });
+        }
         window.addEventListener('beforeinstallprompt', function(e) {
           e.preventDefault();
           window.__pwaPrompt = e;
