@@ -445,9 +445,9 @@ function QRCanvas({ text }: { text: string }) {
   return <canvas ref={ref} width={140} height={140} style={{ borderRadius: 6, display: "block" }} />;
 }
 
-function FilmCard({ film, onClick }: any) {
+function FilmCard({ film, onClick, expiry }: any) {
   return (
-    <div onClick={onClick} style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${C.bd}`, WebkitTapHighlightColor: "transparent" }}>
+    <div onClick={onClick} style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${expiry ? C.green : C.bd}`, WebkitTapHighlightColor: "transparent" }}>
       <div style={{ position: "relative", aspectRatio: "3/4", overflow: "hidden" }}>
         {film.img
           ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -458,9 +458,14 @@ function FilmCard({ film, onClick }: any) {
         <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
           {film.badge}
         </div>
-        {!film.free && film.locked && (
+        {!film.free && film.locked && !expiry && (
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <span style={{ fontSize: 28 }}>🔒</span>
+          </div>
+        )}
+        {expiry && (
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(22,163,74,0.85)", padding: "4px 6px", textAlign: "center" }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>{expiry}</span>
           </div>
         )}
       </div>
@@ -468,10 +473,10 @@ function FilmCard({ film, onClick }: any) {
         <div style={{ fontSize: 12, fontWeight: 600, color: C.txt, lineHeight: 1.3, marginBottom: 5 }}>{film.title}</div>
         {!film.free && <div style={{ fontSize: 10, color: C.muted, textDecoration: "line-through", marginBottom: 1 }}>{film.op?.toLocaleString()}₮</div>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : C.gold }}>
-            {film.free ? "Үнэгүй" : `${film.price?.toLocaleString()}₮`}
+          <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : expiry ? C.green : C.gold }}>
+            {film.free ? "Үнэгүй" : expiry ? "Нээлттэй" : `${film.price?.toLocaleString()}₮`}
           </span>
-          {film.free
+          {film.free || expiry
             ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
             : <button style={{ background: C.gold, border: "none", color: "#000", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>💳</button>
           }
@@ -609,7 +614,20 @@ function LoginPage({ onLogin, onBack }: any) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap }: any) {
+  const getExpiry = (filmId: number): string | null => {
+    const now = Date.now();
+    if (accessMap?.["monthly"] && accessMap["monthly"] > now) {
+      const h = Math.ceil((accessMap["monthly"] - now) / 3600000);
+      return h > 24 ? `👑 ${Math.ceil(h/24)} хоног үлдсэн` : `👑 ${h}ц үлдсэн`;
+    }
+    const key = `film_${filmId}`;
+    if (accessMap?.[key] && accessMap[key] > now) {
+      const h = Math.ceil((accessMap[key] - now) / 3600000);
+      return h > 1 ? `🕐 ${h}ц үлдсэн` : "🕐 <1ц үлдсэн";
+    }
+    return null;
+  };
   return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
@@ -654,7 +672,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
       {loading
         ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
         : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-          {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} />)}
+          {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
         </div>
       }
     </div>
@@ -774,11 +792,18 @@ function AdminOrdersTab() {
     setConfirming(null);
   };
 
-  const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
+  const revokeOrder = async (ref_code: string) => {
+    if (!window.confirm("Эрхийг хасах уу?")) return;
+    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "revoked" }),
+    });
+    await load();
+  };
   const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
 
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.muted;
-  const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : "⏳ Хүлээгдэж байна";
+  const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
   return (
     <div style={{ padding: "0 14px" }}>
@@ -792,7 +817,7 @@ function AdminOrdersTab() {
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Захиалга байхгүй байна</div>
       ) : (
         orders.map((o: any) => (
-          <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+          <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : o.status === "revoked" ? C.red : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
@@ -805,17 +830,23 @@ function AdminOrdersTab() {
                 <div style={{ fontSize: 11, color: statusColor(o.status), marginTop: 2 }}>{statusLabel(o.status)}</div>
               </div>
             </div>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: o.status === "pending" ? 10 : 0 }}>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
               {new Date(o.created_at).toLocaleString("mn-MN")}
             </div>
             {o.status === "pending" && (
-              <button
-                onClick={() => confirmOrder(o.ref_code)}
-                disabled={confirming === o.ref_code}
-                style={{ width: "100%", background: confirming === o.ref_code ? C.card2 : "#166534", border: "none", borderRadius: 8, padding: "10px", color: confirming === o.ref_code ? C.muted : "#4ade80", fontSize: 13, fontWeight: 700, cursor: confirming === o.ref_code ? "default" : "pointer" }}
-              >
+              <button onClick={() => confirmOrder(o.ref_code)} disabled={confirming === o.ref_code}
+                style={{ width: "100%", background: confirming === o.ref_code ? C.card2 : "#166534", border: "none", borderRadius: 8, padding: "10px", color: confirming === o.ref_code ? C.muted : "#4ade80", fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 6 }}>
                 {confirming === o.ref_code ? "Баталгаажуулж байна..." : "✅ Гараар баталгаажуулах"}
               </button>
+            )}
+            {o.status === "confirmed" && (
+              <button onClick={() => revokeOrder(o.ref_code)}
+                style={{ width: "100%", background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                🚫 Эрх хасах
+              </button>
+            )}
+            {o.status === "revoked" && (
+              <div style={{ fontSize: 12, color: C.red, textAlign: "center" }}>🚫 Эрх хасагдсан</div>
             )}
           </div>
         ))
@@ -1060,8 +1091,12 @@ export default function Home() {
   };
   useEffect(() => { loadFilms(); }, []);
 
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   const handleFilm = (f: any) => {
-    if (f.free || !f.locked || hasAccess(f.id)) { setCurFilm({ ...f, locked: false }); setPage("video"); }
+    if (f.free) { setCurFilm({ ...f, locked: false }); setPage("video"); return; }
+    if (!user) { setShowLoginPrompt(true); return; }
+    if (!f.locked || hasAccess(f.id)) { setCurFilm({ ...f, locked: false }); setPage("video"); }
     else setPayFilm(f);
   };
 
@@ -1089,7 +1124,7 @@ export default function Home() {
   return (
     <div style={{ maxWidth: 430, margin: "0 auto", fontFamily: "system-ui,sans-serif", background: C.bg }}>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0d0d14}input,select,button,textarea{font-family:inherit}input:focus,select:focus,textarea:focus{outline:none;border-color:#e8a020!important}::-webkit-scrollbar{width:0}`}</style>
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
@@ -1097,6 +1132,17 @@ export default function Home() {
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
       {payFilm && <BankModal film={payFilm} onClose={() => setPayFilm(null)} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
+      {showLoginPrompt && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 24 }}>
+          <div style={{ background: C.card, borderRadius: 18, padding: 28, width: "100%", maxWidth: 320, textAlign: "center", border: `0.5px solid ${C.bd}` }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.txt, marginBottom: 8 }}>Нэвтрэх шаардлагатай</div>
+            <div style={{ fontSize: 13, color: C.muted, marginBottom: 24, lineHeight: 1.6 }}>Кино үзэхийн тулд бүртгүүлж эсвэл нэвтэрч орно уу</div>
+            <button onClick={() => { setShowLoginPrompt(false); setPage("login"); }} style={{ ...goldBtn, marginBottom: 10 }}>🔓 Нэвтрэх / Бүртгүүлэх</button>
+            <button onClick={() => setShowLoginPrompt(false)} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 11, borderRadius: 10, fontSize: 13, cursor: "pointer" }}>Буцах</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
