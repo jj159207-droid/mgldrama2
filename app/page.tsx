@@ -324,9 +324,6 @@ function BankModal({ film, onClose, onPaid, user }: any) {
             </div>
           </div>
 
-          <button onClick={() => setShowSms(true)} disabled={manualChecking} style={{ ...goldBtn, opacity: manualChecking ? 0.6 : 1, marginBottom: 8 }}>
-            {manualChecking ? "Шалгаж байна..." : "📩 Банкны мэссэж тулгах"}
-          </button>
           <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Буцах</button>
         </div>
       </div>
