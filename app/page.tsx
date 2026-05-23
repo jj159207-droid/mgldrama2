@@ -672,8 +672,19 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
         <div id="install-btn" onClick={() => {
           const e = (window as any).__pwaPrompt;
-          if (e) { e.prompt(); }
-          else { alert("Браузерын цэс → 'Нүүр дэлгэцэнд нэмэх' дарна уу"); }
+          if (e) {
+            e.prompt();
+            e.userChoice.then((c: any) => {
+              if (c.outcome === 'accepted') (window as any).__pwaPrompt = null;
+            });
+          } else {
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            if (isIOS) {
+              alert('iPhone дээр суулгах:\n1. Safari-д нээнэ үү\n2. Share товч (□↑) дарна\n3. "Add to Home Screen" дарна');
+            } else {
+              alert('Chrome цэс (⋮) → "Нүүр дэлгэцэнд нэмэх" дарна уу');
+            }
+          }
         }} style={{ fontFamily: "Georgia,serif", fontSize: 16, fontWeight: 800, color: C.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
           📲 Утсанд суулгах
         </div>
@@ -1426,11 +1437,6 @@ export default function Home() {
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
       <script dangerouslySetInnerHTML={{ __html: `
-        if ('serviceWorker' in navigator) {
-          window.addEventListener('load', function() {
-            navigator.serviceWorker.register('/sw.js');
-          });
-        }
         window.addEventListener('beforeinstallprompt', function(e) {
           e.preventDefault();
           window.__pwaPrompt = e;
