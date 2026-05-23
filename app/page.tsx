@@ -497,15 +497,21 @@ function ContactModal({ onClose, user }: any) {
     setLoading(false);
   };
 
-  useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    load();
+    const t = setInterval(() => { load(); }, 5000);
+    return () => clearInterval(t);
+  }, [user?.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const send = async () => {
     if (!msg.trim()) return;
     setSending(true);
     const newMsg = { phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false };
-    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
+    // Optimistic update - шууд дэлгэцэнд харуулах
+    setMsgs((prev: any[]) => [...prev, { ...newMsg, id: Date.now(), created_at: new Date().toISOString() }]);
     setMsg("");
+    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
     await load();
     setSending(false);
   };
