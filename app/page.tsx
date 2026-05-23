@@ -989,6 +989,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [payFilm, setPayFilm] = useState<any>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
+  const [adminAuth, setAdminAuth] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [user, setUser] = useState<any>(null);
   // { filmId: expiresAt (ms) } эсвэл monthly expiresAt
