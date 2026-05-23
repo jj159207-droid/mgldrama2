@@ -860,6 +860,9 @@ function AdminOrdersTab() {
 function AdminMembersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<any>(null);
+  const [userPayments, setUserPayments] = useState<any[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -870,11 +873,71 @@ function AdminMembersTab() {
 
   useEffect(() => { load(); }, []);
 
+  const openUser = async (u: any) => {
+    setSelected(u);
+    setLoadingPayments(true);
+    const payments = await dbFetch(`pending_payments?user_id=eq.${u.id}&order=created_at.desc&select=*`);
+    setUserPayments(Array.isArray(payments) ? payments : []);
+    setLoadingPayments(false);
+  };
+
+  const revokeAccess = async (ref_code: string) => {
+    if (!window.confirm("Энэ эрхийг хасах уу?")) return;
+    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "revoked" }),
+    });
+    setUserPayments(ps => ps.map(p => p.ref_code === ref_code ? { ...p, status: "revoked" } : p));
+  };
+
   const deleteUser = async (id: number) => {
     if (!window.confirm("Хэрэглэгчийг устгах уу?")) return;
     await dbFetch(`users?id=eq.${id}`, { method: "DELETE" });
     setUsers(us => us.filter(u => u.id !== id));
+    setSelected(null);
   };
+
+  const statusColor = (s: string) => s === "confirmed" ? C.green : s === "revoked" ? C.red : C.gold;
+  const statusLabel = (s: string) => s === "confirmed" ? "✅ Идэвхтэй" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
+  const planLabel = (p: any) => p.plan === "monthly" ? "👑 Сарын багц" : `🎬 Кино #${p.film_id}`;
+
+  if (selected) return (
+    <div style={{ padding: "0 14px" }}>
+      <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>← Буцах</button>
+      <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.gold, marginBottom: 4 }}>📞 {selected.phone}</div>
+        <div style={{ fontSize: 12, color: C.muted }}>ID: {selected.user_id}</div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Бүртгэгдсэн: {new Date(selected.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+        <button onClick={() => deleteUser(selected.id)} style={{ marginTop: 12, background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px 16px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️ Гишүүн устгах</button>
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>Захиалгын түүх</div>
+      {loadingPayments ? (
+        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
+      ) : userPayments.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Захиалга байхгүй</div>
+      ) : userPayments.map(p => (
+        <div key={p.id} style={{ background: C.card, border: `0.5px solid ${p.status === "confirmed" ? C.green : p.status === "revoked" ? C.red : C.gold}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{p.ref_code}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{planLabel(p)}</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>{p.amount?.toLocaleString()}₮</div>
+              <div style={{ fontSize: 11, color: statusColor(p.status), marginTop: 2 }}>{statusLabel(p.status)}</div>
+            </div>
+          </div>
+          {p.status === "confirmed" && (
+            <button onClick={() => revokeAccess(p.ref_code)} style={{ width: "100%", background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              🚫 Эрх хасах
+            </button>
+          )}
+          {p.status === "revoked" && <div style={{ fontSize: 12, color: C.red, textAlign: "center" }}>🚫 Эрх хасагдсан</div>}
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div style={{ padding: "0 14px" }}>
@@ -888,14 +951,13 @@ function AdminMembersTab() {
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Гишүүн байхгүй байна</div>
       ) : (
         users.map(u => (
-          <div key={u.id} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div key={u.id} onClick={() => openUser(u)} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Бүртгэгдсэн: {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
               </div>
-              <button onClick={() => deleteUser(u.id)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 10px", color: C.red, fontSize: 11, cursor: "pointer" }}>🗑️</button>
+              <span style={{ color: C.muted, fontSize: 16 }}>›</span>
             </div>
           </div>
         ))
