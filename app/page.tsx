@@ -136,7 +136,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ══════════════════════════════════════════════
 // ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
-function BankModal({ film, onClose, onPaid }: any) {
+function BankModal({ film, onClose, onPaid, user }: any) {
   const [step, setStep] = useState<"banks" | "waiting">("banks");
   const [selectedBank, setSelectedBank] = useState<any>(null);
   const [refCode] = useState(() => genRef(film.id));
@@ -172,6 +172,8 @@ function BankModal({ film, onClose, onPaid }: any) {
         film_id: film.id,
         amount: film.price,
         status: "pending",
+        user_id: user?.id || null,
+        plan: film.monthly ? "monthly" : "single",
       }),
     });
 
@@ -579,7 +581,7 @@ function LoginPage({ onLogin, onBack }: any) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly }: any) {
   return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
@@ -601,6 +603,20 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         <div>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
           <div style={{ fontSize: 13, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
+        </div>
+      </div>
+      {/* Сарын багц товч */}
+      <div onClick={onMonthly} style={{ margin: "0 12px 12px", background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 26 }}>👑</span>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
+            <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+          </div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>11,500₮</div>
+          <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
         </div>
       </div>
       <div style={{ padding: "8px 12px 6px" }}>
@@ -702,15 +718,18 @@ function AdminOrdersTab() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [films, setFilms] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
 
   const load = async () => {
     setLoading(true);
-    const [pend, fl] = await Promise.all([
-      dbFetch("pending_payments?order=created_at.desc&limit=30&select=*"),
+    const [pend, fl, us] = await Promise.all([
+      dbFetch("pending_payments?order=created_at.desc&limit=50&select=*"),
       dbFetch("films?select=id,title"),
+      dbFetch("users?select=id,phone,user_id"),
     ]);
     setOrders(Array.isArray(pend) ? pend : []);
     setFilms(Array.isArray(fl) ? fl : []);
+    setUsers(Array.isArray(us) ? us : []);
     setLoading(false);
   };
 
@@ -726,7 +745,8 @@ function AdminOrdersTab() {
     setConfirming(null);
   };
 
-  const getFilmTitle = (id: number) => films.find((f: any) => f.id === id)?.title || `#${id}`;
+  const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
+  const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
 
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.muted;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : "⏳ Хүлээгдэж байна";
@@ -748,6 +768,8 @@ function AdminOrdersTab() {
               <div>
                 <div style={{ fontSize: 16, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
                 <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
+                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id)}</div>
+                {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Сарын багц</div>}
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{o.amount?.toLocaleString()}₮</div>
@@ -907,10 +929,31 @@ export default function Home() {
   const [payFilm, setPayFilm] = useState<any>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
   const [adminAuth, setAdminAuth] = useState(false);
-  const [unlockedIds, setUnlockedIds] = useState<number[]>([]);
   const [user, setUser] = useState<any>(null);
+  // { filmId: expiresAt (ms) } эсвэл monthly expiresAt
+  const [accessMap, setAccessMap] = useState<Record<string, number>>({});
 
-  useEffect(() => { const s = loadSession(); if (s) setUser(s); }, []);
+  useEffect(() => {
+    const s = loadSession(); if (s) setUser(s);
+    // localStorage-с access map уншина
+    try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
+  }, []);
+
+  const saveAccess = (key: string, ms: number) => {
+    setAccessMap(prev => {
+      const next = { ...prev, [key]: ms };
+      localStorage.setItem("kino_access", JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const hasAccess = (filmId: number): boolean => {
+    const now = Date.now();
+    if (accessMap["monthly"] && accessMap["monthly"] > now) return true;
+    if (accessMap[`film_${filmId}`] && accessMap[`film_${filmId}`] > now) return true;
+    return false;
+  };
+
   const loadFilms = async () => {
     setLoading(true);
     const data = await dbFetch("films?order=created_at.desc&select=*");
@@ -920,30 +963,41 @@ export default function Home() {
   useEffect(() => { loadFilms(); }, []);
 
   const handleFilm = (f: any) => {
-    const unlocked = unlockedIds.includes(f.id);
-    if (f.free || !f.locked || unlocked) { setCurFilm({ ...f, locked: false }); setPage("video"); }
+    if (f.free || !f.locked || hasAccess(f.id)) { setCurFilm({ ...f, locked: false }); setPage("video"); }
     else setPayFilm(f);
   };
+
   const handlePaid = () => {
-    setUnlockedIds(ids => [...ids, payFilm.id]);
+    const expires = Date.now() + 72 * 60 * 60 * 1000; // 72 цаг
+    if (payFilm.monthly) {
+      saveAccess("monthly", Date.now() + 30 * 24 * 60 * 60 * 1000);
+    } else {
+      saveAccess(`film_${payFilm.id}`, expires);
+    }
+    // DB-д expires_at шинэчлэх
+    dbFetch(`pending_payments?ref_code=eq.${payFilm._lastRef || ""}`, {
+      method: "PATCH",
+      body: JSON.stringify({ expires_at: new Date(expires).toISOString() }),
+    }).catch(() => {});
     setCurFilm({ ...payFilm, locked: false });
     setPayFilm(null);
     setPage("video");
   };
+
   const handleLogin = (u: any) => { setUser(u); setPage("home"); };
   const handleLogout = () => { clearSession(); setUser(null); };
-  const filmsWithUnlock = films.map(f => unlockedIds.includes(f.id) ? { ...f, locked: false } : f);
+  const filmsWithUnlock = films.map(f => hasAccess(f.id) ? { ...f, locked: false } : f);
 
   return (
     <div style={{ maxWidth: 430, margin: "0 auto", fontFamily: "system-ui,sans-serif", background: C.bg }}>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0d0d14}input,select,button,textarea{font-family:inherit}input:focus,select:focus,textarea:focus{outline:none;border-color:#e8a020!important}::-webkit-scrollbar{width:0}`}</style>
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
-      {payFilm && <BankModal film={payFilm} onClose={() => setPayFilm(null)} onPaid={handlePaid} />}
+      {payFilm && <BankModal film={payFilm} onClose={() => setPayFilm(null)} onPaid={handlePaid} user={user} />}
     </div>
   );
 }
