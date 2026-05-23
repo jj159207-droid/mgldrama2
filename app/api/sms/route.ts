@@ -1,65 +1,55 @@
-import { NextRequest, NextResponse } from "next/server";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const SUPABASE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) as string;
+﻿import { NextRequest, NextResponse } from "next/server";
 
-async function dbFetch(path: string, opts?: RequestInit) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      "Prefer": "return=representation",
-    },
-    ...opts,
-  });
-  const text = await res.text();
-  try { return JSON.parse(text); } catch { return text; }
-}
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY!;
 
-function extractRef(text: string): string | null {
-  const m = text.match(/Utga[:\s]*([Kk][Nn]\d{4,8})/);
-  if (m) return m[1].toUpperCase();
-  const b = text.match(/KN\d{4,8}/i);
-  if (b) return b[0].toUpperCase();
+function parseRef(smsText: string): string | null {
+  const match = smsText.match(/[Uu]tga[:\s.]*([A-Z0-9]+)/i);
+  if (match) return match[1].toUpperCase().trim();
   return null;
 }
 
-function extractAmount(text: string): number | null {
-  const m = text.match(/ORLOGO[:\s]*([\d,]+)\.?\d*MNT/i);
-  if (m) return parseInt(m[1].replace(/,/g, ""));
+function parseAmount(smsText: string): number | null {
+  const match = smsText.match(/ORLOGO[:\s]+([\d,]+\.?\d*)\s*MNT/i);
+  if (match) return Math.round(parseFloat(match[1].replace(/,/g, "")));
   return null;
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const text: string = body.text || body.message || body.sms || "";
-    if (!text) return NextResponse.json({ ok: false, error: "No text" }, { status: 400 });
-    if (!text.toUpperCase().includes("ORLOGO")) return NextResponse.json({ ok: false, reason: "Not income SMS" });
-    const ref = extractRef(text);
-    if (!ref) return NextResponse.json({ ok: false, reason: "No KN code" });
-    const amount = extractAmount(text);
-    const rows = await dbFetch(`pending_payments?ref_code=eq.${ref}&select=*`);
-    if (!Array.isArray(rows) || rows.length === 0) {
-      await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "not_found" }) });
-      return NextResponse.json({ ok: false, reason: "No payment for " + ref });
+    const smsText: string = body.text || body.message || body.sms || "";
+    if (!smsText) return NextResponse.json({ error: "No SMS text" }, { status: 400 });
+    if (!smsText.includes("ORLOGO")) {
+      return NextResponse.json({ ok: false, reason: "Not an income SMS" });
     }
-    await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirm_payment`, {
+    const ref = parseRef(smsText);
+    const amount = parseAmount(smsText);
+    await fetch(`${SUPABASE_URL}/rest/v1/sms_logs`, {
       method: "POST",
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ p_ref_code: ref }),
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=minimal" },
+      body: JSON.stringify({ raw_text: smsText, ref_code: ref, amount, status: ref ? "processing" : "no_ref" }),
     });
-    await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "confirmed", film_id: rows[0].film_id }) });
-    return NextResponse.json({ ok: true, ref_code: ref, film_id: rows[0].film_id, amount });
+    if (!ref) return NextResponse.json({ ok: false, reason: "No ref code found" });
+    const checkRes = await fetch(
+      `${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}&select=*`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+    );
+    const rows = await checkRes.json();
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return NextResponse.json({ ok: false, reason: "Ref not found", ref });
+    }
+    const payment = rows[0];
+    if (payment.status === "confirmed") {
+      return NextResponse.json({ ok: true, ref, amount, already: true });
+    }
+    await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}`, {
+      method: "PATCH",
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
+      body: JSON.stringify({ status: "confirmed", paid_amount: amount, confirmed_at: new Date().toISOString() }),
+    });
+    return NextResponse.json({ ok: true, ref, amount, film_id: payment.film_id });
   } catch (err: any) {
-    return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-}
-
-export async function GET() {
-  return NextResponse.json({ status: "SMS webhook running" });
 }
