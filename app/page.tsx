@@ -35,9 +35,10 @@ function loadSession() { try { const s = JSON.parse(localStorage.getItem("kino_s
 function clearSession() { localStorage.removeItem("kino_session"); }
 function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
 
-// Гүйлгээний утга үүсгэх — кино id + санамсаргүй 4 тоо
-function genRef(filmId: number): string {
+// Гүйлгээний утга үүсгэх
+function genRef(filmId: number, monthly?: boolean): string {
   const rand = Math.floor(1000 + Math.random() * 9000);
+  if (monthly) return `KNM${rand}`;
   return `KN${filmId}${rand}`;
 }
 
@@ -139,7 +140,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid, user }: any) {
   const [step, setStep] = useState<"waiting">("waiting");
-  const [refCode] = useState(() => genRef(film.id));
+  const [refCode] = useState(() => genRef(film.id, film.monthly));
   const [copied, setCopied] = useState<string | null>(null);
   const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid" | "timeout">("waiting");
   const [showSms, setShowSms] = useState(false);
@@ -264,8 +265,8 @@ function BankModal({ film, onClose, onPaid, user }: any) {
 
           {/* Үнэ */}
           <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: C.gold }}>5,000₮</div>
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>дараах данс руу шилжүүлнэ үү</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: film.monthly ? "#a855f7" : C.gold }}>{film.price?.toLocaleString()}₮</div>
+            <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{film.monthly ? "1 сарын хязгааргүй эрх" : "дараах данс руу шилжүүлнэ үү"}</div>
           </div>
 
           {/* Дансны мэдээлэл */}
@@ -1062,20 +1063,20 @@ export default function Home() {
   };
 
   const handlePaid = () => {
-    const expires = Date.now() + 72 * 60 * 60 * 1000; // 72 цаг
     if (payFilm.monthly) {
+      // 1 сарын эрх
       saveAccess("monthly", Date.now() + 30 * 24 * 60 * 60 * 1000);
+      setPayFilm(null);
+      // Бүх кино нээлттэй болно — нүүр хуудас руу буцах
+      setPage("home");
     } else {
+      // 72 цагийн эрх
+      const expires = Date.now() + 72 * 60 * 60 * 1000;
       saveAccess(`film_${payFilm.id}`, expires);
+      setCurFilm({ ...payFilm, locked: false });
+      setPayFilm(null);
+      setPage("video");
     }
-    // DB-д expires_at шинэчлэх
-    dbFetch(`pending_payments?ref_code=eq.${payFilm._lastRef || ""}`, {
-      method: "PATCH",
-      body: JSON.stringify({ expires_at: new Date(expires).toISOString() }),
-    }).catch(() => {});
-    setCurFilm({ ...payFilm, locked: false });
-    setPayFilm(null);
-    setPage("video");
   };
 
   const handleLogin = (u: any) => { setUser(u); setPage("home"); };
