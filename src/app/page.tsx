@@ -657,7 +657,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
   const handleLogoTap = () => {
     tapRef.current.count += 1;
     if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
-    if (tapRef.current.count >= 4) {
+    if (tapRef.current.count >= 3) {
       tapRef.current.count = 0;
       onAdmin();
     } else {
@@ -700,7 +700,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             : <button onClick={onLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
           }
           <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
-          
+          <button onClick={onAdmin} style={{ background: "none", border: "none", color: "transparent", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", userSelect: "none" }}>⚙️</button>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
@@ -1335,7 +1335,6 @@ export default function Home() {
   const [adminAuth, setAdminAuth] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
@@ -1509,7 +1508,6 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showLoginPrompt && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 24 }}>
           <div style={{ background: C.card, borderRadius: 18, padding: 28, width: "100%", maxWidth: 320, textAlign: "center", border: `0.5px solid ${C.bd}` }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>

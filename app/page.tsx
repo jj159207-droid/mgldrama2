@@ -201,7 +201,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       } else {
         setAutoStatus("waiting");
       }
-    }, 3000);
+    }, 10000);
 
     // 15 минутын дараа timeout
     timeoutRef.current = setTimeout(() => {
