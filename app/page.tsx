@@ -697,8 +697,84 @@ function AdminLogin({ onEnter, onBack }: any) {
   );
 }
 
+function AdminOrdersTab() {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const [films, setFilms] = useState<any[]>([]);
+
+  const load = async () => {
+    setLoading(true);
+    const [pend, fl] = await Promise.all([
+      dbFetch("pending_payments?order=created_at.desc&limit=30&select=*"),
+      dbFetch("films?select=id,title"),
+    ]);
+    setOrders(Array.isArray(pend) ? pend : []);
+    setFilms(Array.isArray(fl) ? fl : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const confirmOrder = async (ref_code: string) => {
+    setConfirming(ref_code);
+    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "confirmed" }),
+    });
+    await load();
+    setConfirming(null);
+  };
+
+  const getFilmTitle = (id: number) => films.find((f: any) => f.id === id)?.title || `#${id}`;
+
+  const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.muted;
+  const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : "⏳ Хүлээгдэж байна";
+
+  return (
+    <div style={{ padding: "0 14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontSize: 13, color: C.muted }}>{orders.filter((o: any) => o.status === "pending").length} хүлээгдэж байна</span>
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+      ) : orders.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Захиалга байхгүй байна</div>
+      ) : (
+        orders.map((o: any) => (
+          <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{o.amount?.toLocaleString()}₮</div>
+                <div style={{ fontSize: 11, color: statusColor(o.status), marginTop: 2 }}>{statusLabel(o.status)}</div>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: o.status === "pending" ? 10 : 0 }}>
+              {new Date(o.created_at).toLocaleString("mn-MN")}
+            </div>
+            {o.status === "pending" && (
+              <button
+                onClick={() => confirmOrder(o.ref_code)}
+                disabled={confirming === o.ref_code}
+                style={{ width: "100%", background: confirming === o.ref_code ? C.card2 : "#166534", border: "none", borderRadius: 8, padding: "10px", color: confirming === o.ref_code ? C.muted : "#4ade80", fontSize: 13, fontWeight: 700, cursor: confirming === o.ref_code ? "default" : "pointer" }}
+              >
+                {confirming === o.ref_code ? "Баталгаажуулж байна..." : "✅ Гараар баталгаажуулах"}
+              </button>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function AdminPage({ films, onBack, onRefresh }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms">("list");
+  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
@@ -733,10 +809,12 @@ function AdminPage({ films, onBack, onRefresh }: any) {
       </div>
       <div style={{ display: "flex", padding: "10px 14px", gap: 6 }}>
         <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>📋 Жагсаалт</button>
+        <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>🧾 Захиалга</button>
         <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>➕ Нэмэх</button>
         <button onClick={() => setTab("sms")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>📩 Мэссэж</button>
       </div>
 
+      {tab === "orders" && <AdminOrdersTab />}
       {tab === "sms" && <AdminSmsTab />}
 
       {tab === "add" && (
