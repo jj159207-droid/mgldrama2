@@ -904,6 +904,10 @@ function AdminOrdersTab() {
             {o.status === "revoked" && (
               <div style={{ fontSize: 12, color: C.red, textAlign: "center" }}>🚫 Эрх хасагдсан</div>
             )}
+            <button onClick={async () => { if (!window.confirm("Устгах уу?")) return; await dbFetch(`pending_payments?ref_code=eq.${o.ref_code}`, { method: "DELETE" }); load(); }}
+              style={{ width: "100%", background: "#1a0a0a", border: `0.5px solid #3a1a1a`, borderRadius: 8, padding: "8px", color: "#f05555", fontSize: 12, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
+              🗑️ Устгах
+            </button>
           </div>
         ))
       )}
@@ -1296,7 +1300,12 @@ function AdminPage({ films, onBack, onRefresh }: any) {
               </div>
               {editId === f.id && (
                 <div style={{ marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
-                  <label style={lbl}>Зургийн URL эсвэл файл</label>
+                  <label style={lbl}>Кино нэр</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input defaultValue={f.title} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="Кино нэр" />
+                    <button onClick={() => { dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ title: imgVal }) }); setEditId(null); onRefresh(); }} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
+                  </div>
+                  <label style={{ ...lbl, marginTop: 8 }}>Зургийн URL эсвэл файл</label>
                   <div style={{ display: "flex", gap: 6 }}>
                     <input defaultValue={f.img} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://..." />
                     <button onClick={() => updateImg(f.id, imgVal)} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
