@@ -700,7 +700,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             : <button onClick={onLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
           }
           <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
-          <button onClick={onAdmin} style={{ background: "none", border: "none", color: "transparent", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", userSelect: "none" }}>⚙️</button>
+          
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
