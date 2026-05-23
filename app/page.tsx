@@ -707,11 +707,10 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         </div>
       </div>
       <div style={{ padding: "4px 20px 8px" }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{films.length} кино байна</span>
       </div>
       {loading
         ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-        : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10, padding: "0 16px" }}>
+        : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
           {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
         </div>
       }
