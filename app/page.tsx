@@ -487,51 +487,88 @@ function FilmCard({ film, onClick, expiry }: any) {
 }
 
 function ContactModal({ onClose, user }: any) {
+  const [msgs, setMsgs] = useState<any[]>([]);
   const [msg, setMsg] = useState("");
-  const [sent, setSent] = useState(false);
   const [sending, setSending] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const bottomRef = useRef<any>(null);
+
+  const load = async () => {
+    if (!user?.id) { setLoading(false); return; }
+    const data = await dbFetch(`contact_messages?user_id=eq.${user.id}&order=created_at.asc&select=*`);
+    setMsgs(Array.isArray(data) ? data : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const send = async () => {
     if (!msg.trim()) return;
     setSending(true);
-    await dbFetch("contact_messages", {
-      method: "POST",
-      body: JSON.stringify({ phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false }),
-    });
-    setSent(true);
+    const newMsg = { phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false };
+    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
+    setMsg("");
+    await load();
     setSending(false);
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 300 }}>
-      <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Админтай холбогдох</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
-        </div>
-        {sent ? (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.green }}>Мессеж илгээгдлээ!</div>
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 8 }}>Удахгүй холбогдох болно</div>
-            <button onClick={onClose} style={{ ...goldBtn, marginTop: 20 }}>Хаах</button>
+    <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 300, display: "flex", flexDirection: "column" }}>
+      {/* Header */}
+      <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Админтай холбогдох</div>
+            <div style={{ fontSize: 11, color: C.green }}>● Онлайн</div>
           </div>
+        </div>
+      </div>
+
+      {/* Чатын мессежүүд */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {loading ? (
+          <div style={{ textAlign: "center", color: C.muted, marginTop: 40 }}>Ачааллаж байна...</div>
+        ) : msgs.length === 0 ? (
+          <div style={{ textAlign: "center", color: C.muted, marginTop: 40, fontSize: 13 }}>Асуулт, санал хүсэлтээ бичнэ үү</div>
         ) : (
-          <>
-            <label style={lbl}>Мессеж бичнэ үү</label>
-            <textarea
-              value={msg}
-              onChange={(e: any) => setMsg(e.target.value)}
-              placeholder="Асуудал эсвэл асуулт бичнэ үү..."
-              style={{ ...inputSt, height: 120, resize: "none", lineHeight: 1.6 }}
-              autoFocus
-            />
-            <button onClick={send} disabled={sending || !msg.trim()} style={{ ...goldBtn, marginTop: 14, opacity: sending || !msg.trim() ? 0.6 : 1 }}>
-              {sending ? "Илгээж байна..." : "📨 Илгээх"}
-            </button>
-            <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 11, borderRadius: 10, fontSize: 13, cursor: "pointer", marginTop: 8 }}>Буцах</button>
-          </>
+          msgs.map(m => (
+            <div key={m.id}>
+              {/* Хэрэглэгчийн мессеж — баруун тал */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+                <div style={{ background: C.blue, borderRadius: "16px 16px 4px 16px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: "#fff" }}>
+                  {m.message}
+                </div>
+              </div>
+              {/* Админы хариу — зүүн тал */}
+              {m.reply && (
+                <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 4 }}>
+                  <div style={{ background: C.card2, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: C.txt, border: `0.5px solid ${C.bd}` }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Админ</div>
+                    {m.reply}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
         )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Мессеж бичих хэсэг */}
+      <div style={{ background: C.card, borderTop: `0.5px solid ${C.bd}`, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
+        <textarea
+          value={msg}
+          onChange={(e: any) => setMsg(e.target.value)}
+          onKeyDown={(e: any) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="Мессеж бичнэ үү..."
+          style={{ ...inputSt, flex: 1, height: 44, resize: "none", lineHeight: 1.5, borderRadius: 22, padding: "11px 16px" }}
+        />
+        <button onClick={send} disabled={sending || !msg.trim()}
+          style={{ background: msg.trim() ? C.blue : C.card2, border: "none", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: 18 }}>
+          ➤
+        </button>
       </div>
     </div>
   );
@@ -1000,11 +1037,25 @@ function AdminContactTab() {
     setSending(false);
   };
 
+  const deleteAll = async () => {
+    if (!window.confirm("Бүх чатыг устгах уу?")) return;
+    await dbFetch("contact_messages?id=gt.0", { method: "DELETE" });
+    setMsgs([]);
+  };
+
+  const deleteOne = async (id: number) => {
+    await dbFetch(`contact_messages?id=eq.${id}`, { method: "DELETE" });
+    setMsgs(ms => ms.filter(m => m.id !== id));
+  };
+
   return (
     <div style={{ padding: "0 14px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{msgs.filter(m => !m.read).length} шинэ мессеж</span>
-        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+        <span style={{ fontSize: 13, color: C.muted }}>{msgs.filter(m => !m.read).length} шинэ · {msgs.length} нийт</span>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
+          <button onClick={deleteAll} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️ Бүгдийг устгах</button>
+        </div>
       </div>
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
@@ -1018,7 +1069,10 @@ function AdminContactTab() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {m.phone}</div>
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(m.created_at).toLocaleString("mn-MN")}</div>
               </div>
-              {!m.read && <span style={{ fontSize: 11, background: C.gold, color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>Шинэ</span>}
+              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                {!m.read && <span style={{ fontSize: 11, background: C.gold, color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>Шинэ</span>}
+                <button onClick={() => deleteOne(m.id)} style={{ background: "none", border: "none", color: C.red, fontSize: 14, cursor: "pointer" }}>🗑️</button>
+              </div>
             </div>
             {/* Хэрэглэгчийн мессеж */}
             <div style={{ fontSize: 13, color: C.txt, background: C.card2, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>{m.message}</div>
@@ -1228,10 +1282,36 @@ export default function Home() {
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    const s = loadSession(); if (s) setUser(s);
+    const s = loadSession(); if (s) { setUser(s); syncAccessFromDB(s.id); }
     // localStorage-с access map уншина
     try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
   }, []);
+
+  // DB-с confirmed төлбөрүүдийг татаж access олгох
+  const syncAccessFromDB = async (userId: number) => {
+    const payments = await dbFetch(
+      `pending_payments?user_id=eq.${userId}&status=eq.confirmed&select=film_id,plan,created_at`
+    );
+    if (!Array.isArray(payments)) return;
+    const now = Date.now();
+    const newAccess: Record<string, number> = {};
+    payments.forEach((p: any) => {
+      if (p.plan === "monthly") {
+        // Сарын багц — created_at-с 30 хоног
+        const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
+        if (exp > now) newAccess["monthly"] = exp;
+      } else {
+        // Нэг кино — created_at-с 72 цаг
+        const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
+        if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
+      }
+    });
+    setAccessMap(prev => {
+      const merged = { ...prev, ...newAccess };
+      localStorage.setItem("kino_access", JSON.stringify(merged));
+      return merged;
+    });
+  };
 
   const saveAccess = (key: string, ms: number) => {
     setAccessMap(prev => {
@@ -1283,7 +1363,7 @@ export default function Home() {
     }
   };
 
-  const handleLogin = (u: any) => { setUser(u); setPage("home"); };
+  const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setPage("home"); };
   const handleLogout = () => { clearSession(); setUser(null); };
   const filmsWithUnlock = films.map(f => hasAccess(f.id) ? { ...f, locked: false } : f);
 
