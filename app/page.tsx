@@ -861,10 +861,7 @@ function AdminMembersTab() {
 
   const load = async () => {
     setLoading(true);
-    const [us, payments] = await Promise.all([
-      dbFetch("users?order=id.desc&select=*"),
-      dbFetch("pending_payments?status=eq.confirmed&select=user_id,plan,film_id,created_at&order=created_at.desc"),
-    ]);
+    const us = await dbFetch("users?order=id.desc&select=*");
     setUsers(Array.isArray(us) ? us : []);
     setLoading(false);
   };
