@@ -651,7 +651,7 @@ function LoginPage({ onLogin, onBack }: any) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall }: any) {
   const getExpiry = (filmId: number): string | null => {
     if (!user) return null;
     const now = Date.now();
@@ -674,24 +674,8 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
           const e = (window as any).__pwaPrompt;
           if (e) {
             e.prompt();
-            e.userChoice.then((c: any) => {
-              if (c.outcome === 'accepted') (window as any).__pwaPrompt = null;
-            });
           } else {
-            // Event ирэхийг хүлээж байна — flag тавина
-            (window as any).__pwaClicked = true;
-            // 3 секундын дараа ирэхгүй бол заавар харуулна
-            setTimeout(() => {
-              if ((window as any).__pwaClicked) {
-                (window as any).__pwaClicked = false;
-                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-                if (isIOS) {
-                  alert('Safari → Share (□↑) → "Add to Home Screen"');
-                } else {
-                  alert('Chrome цэс ⋮ → "Нүүр дэлгэцэнд нэмэх"');
-                }
-              }
-            }, 3000);
+            onInstall();
           }
         }} style={{ fontFamily: "Georgia,serif", fontSize: 16, fontWeight: 800, color: C.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
           📲 Утсанд суулгах
@@ -1400,7 +1384,7 @@ export default function Home() {
   };
   useEffect(() => { loadFilms(); }, []);
 
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
 
   const handleFilm = (f: any) => {
     if (f.free) { setCurFilm({ ...f, locked: false }); setPage("video"); return; }
@@ -1462,7 +1446,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={() => setShowInstall(true)} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
@@ -1470,7 +1454,32 @@ export default function Home() {
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
       {payFilm && <BankModal film={payFilm} onClose={() => setPayFilm(null)} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
-      {showLoginPrompt && (
+      {showInstall && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-end", zIndex: 400 }}>
+          <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "24px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.txt }}>📲 Утсанд суулгах заавар</div>
+              <button onClick={() => setShowInstall(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ background: C.card2, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 10 }}>🤖 Android (Chrome)</div>
+              <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
+                1. Chrome цэс <span style={{ color: C.gold, fontWeight: 700 }}>⋮</span> дарна<br/>
+                2. <span style={{ color: C.gold, fontWeight: 700 }}>"Нүүр дэлгэцэнд нэмэх"</span> дарна<br/>
+                3. <span style={{ color: C.gold, fontWeight: 700 }}>"Суулгах"</span> дарна
+              </div>
+            </div>
+            <div style={{ background: C.card2, borderRadius: 12, padding: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.blue, marginBottom: 10 }}>🍎 iPhone (Safari)</div>
+              <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
+                1. Safari дээр нээнэ<br/>
+                2. Share товч <span style={{ color: C.blue, fontWeight: 700 }}>□↑</span> дарна<br/>
+                3. <span style={{ color: C.blue, fontWeight: 700 }}>"Add to Home Screen"</span> дарна
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 24 }}>
           <div style={{ background: C.card, borderRadius: 18, padding: 28, width: "100%", maxWidth: 320, textAlign: "center", border: `0.5px solid ${C.bd}` }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>
