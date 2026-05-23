@@ -1368,6 +1368,28 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
 
+  // DB-с confirmed төлбөрүүдийг татаж access олгох
+  const syncAccessFromDB = async (userId: number) => {
+    const payments = await dbFetch(
+      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
+    );
+    if (!Array.isArray(payments)) return;
+    const now = Date.now();
+    const newAccess: Record<string, number> = {};
+    payments.forEach((p: any) => {
+      if (p.status !== "confirmed") return;
+      if (p.plan === "monthly") {
+        const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
+        if (exp > now) newAccess["monthly"] = exp;
+      } else {
+        const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
+        if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
+      }
+    });
+    localStorage.setItem("kino_access", JSON.stringify(newAccess));
+    setAccessMap(newAccess);
+  };
+
   // Unread reply шалгах
   useEffect(() => {
     if (!user?.id) return;
@@ -1414,32 +1436,6 @@ export default function Home() {
     // localStorage-с access map уншина
     try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
   }, []);
-
-  // DB-с confirmed төлбөрүүдийг татаж access олгох
-  const syncAccessFromDB = async (userId: number) => {
-    // Бүх захиалгыг татах (confirmed + revoked)
-    const payments = await dbFetch(
-      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
-    );
-    if (!Array.isArray(payments)) return;
-    const now = Date.now();
-    const newAccess: Record<string, number> = {};
-
-    payments.forEach((p: any) => {
-      if (p.status !== "confirmed") return; // revoked болон pending-г орхино
-      if (p.plan === "monthly") {
-        const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
-        if (exp > now) newAccess["monthly"] = exp;
-      } else {
-        const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
-        if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
-      }
-    });
-
-    // localStorage-г бүрэн солих — revoked эрхүүд автоматаар арилна
-    localStorage.setItem("kino_access", JSON.stringify(newAccess));
-    setAccessMap(newAccess);
-  };
 
   const saveAccess = (key: string, ms: number) => {
     setAccessMap(prev => {
