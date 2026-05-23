@@ -1321,6 +1321,16 @@ function AdminPage({ films, onBack, onRefresh }: any) {
                     <input defaultValue={f.url} onChange={(e: any) => setUrlVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://youtu.be/..." />
                     <button onClick={() => updateUrl(f.id, urlVal)} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
                   </div>
+                  <label style={{ ...lbl, marginTop: 8 }}>Зарах үнэ ₮</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input defaultValue={f.price} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} type="number" placeholder="4000" />
+                    <button onClick={() => { dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ price: parseInt(imgVal) || f.price }) }); setEditId(null); onRefresh(); }} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
+                  </div>
+                  <label style={{ ...lbl, marginTop: 8 }}>Хуучин үнэ ₮</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input defaultValue={f.op} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} type="number" placeholder="6000" />
+                    <button onClick={() => { dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ op: parseInt(imgVal) || f.op }) }); setEditId(null); onRefresh(); }} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
+                  </div>
                 </div>
               )}
             </div>
