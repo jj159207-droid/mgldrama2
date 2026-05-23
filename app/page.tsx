@@ -861,18 +861,26 @@ function AdminOrdersTab() {
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.muted;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
+  const [filter, setFilter] = useState<"all"|"monthly"|"film">("all");
+  const filtered = orders.filter((o: any) => filter === "all" ? true : filter === "monthly" ? o.film_id === 0 : o.film_id !== 0);
+
   return (
     <div style={{ padding: "0 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{orders.filter((o: any) => o.status === "pending").length} хүлээгдэж байна</span>
-        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {(["all","monthly","film"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, background: filter === f ? C.gold : C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 0", color: filter === f ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {f === "all" ? "Бүгд" : f === "monthly" ? "👑 Сарын эрх" : "🎬 Кино"}
+          </button>
+        ))}
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
       </div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>{filtered.filter((o: any) => o.status === "pending").length} хүлээгдэж байна · нийт {filtered.length}</div>
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-      ) : orders.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Захиалга байхгүй байна</div>
       ) : (
-        orders.map((o: any) => (
+        filtered.map((o: any) => (
           <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : o.status === "revoked" ? C.red : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div>
@@ -1493,7 +1501,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => { if (!user) { setPage("login"); return; } setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true }); }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
