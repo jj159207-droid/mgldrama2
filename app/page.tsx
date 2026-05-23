@@ -668,8 +668,9 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
   };
   return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
-        <div style={{ fontFamily: "Georgia,serif", fontSize: 20, fontWeight: 800, color: C.txt }}>кино үзэх самбар</div>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
+        <div style={{ fontFamily: "Georgia,serif", fontSize: 22, fontWeight: 800, color: C.txt }}>кино үзэх самбар</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
           {user
@@ -683,36 +684,38 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
           <button onClick={onAdmin} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
         </div>
       </div>
-      <div onClick={onLogin} style={{ margin: "12px 12px 8px", background: "linear-gradient(90deg,#0369a1,#0ea5e9)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-        <span style={{ fontSize: 26 }}>🎬</span>
-        <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
-          <div style={{ fontSize: 13, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
-        </div>
-      </div>
-      {/* Сарын багц товч */}
-      <div onClick={onMonthly} style={{ margin: "0 12px 12px", background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 26 }}>👑</span>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
+        <div onClick={onLogin} style={{ background: "linear-gradient(90deg,#0369a1,#0ea5e9)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+          <span style={{ fontSize: 26 }}>🎬</span>
           <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
-            <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
+            <div style={{ fontSize: 13, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
           </div>
         </div>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>11,500₮</div>
-          <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
+        <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 26 }}>👑</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
+              <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+            </div>
+          </div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>11,500₮</div>
+            <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
+          </div>
         </div>
       </div>
-      <div style={{ padding: "8px 12px 6px" }}>
+      <div style={{ padding: "4px 20px 8px" }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{films.length} кино байна</span>
       </div>
       {loading
         ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-        : <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
+        : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10, padding: "0 16px" }}>
           {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
         </div>
       }
+      </div>
     </div>
   );
 }
@@ -1325,28 +1328,28 @@ export default function Home() {
 
   // DB-с confirmed төлбөрүүдийг татаж access олгох
   const syncAccessFromDB = async (userId: number) => {
+    // Бүх захиалгыг татах (confirmed + revoked)
     const payments = await dbFetch(
-      `pending_payments?user_id=eq.${userId}&status=eq.confirmed&select=film_id,plan,created_at`
+      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
     );
     if (!Array.isArray(payments)) return;
     const now = Date.now();
     const newAccess: Record<string, number> = {};
+
     payments.forEach((p: any) => {
+      if (p.status !== "confirmed") return; // revoked болон pending-г орхино
       if (p.plan === "monthly") {
-        // Сарын багц — created_at-с 30 хоног
         const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
         if (exp > now) newAccess["monthly"] = exp;
       } else {
-        // Нэг кино — created_at-с 72 цаг
         const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
         if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
       }
     });
-    setAccessMap(prev => {
-      const merged = { ...prev, ...newAccess };
-      localStorage.setItem("kino_access", JSON.stringify(merged));
-      return merged;
-    });
+
+    // localStorage-г бүрэн солих — revoked эрхүүд автоматаар арилна
+    localStorage.setItem("kino_access", JSON.stringify(newAccess));
+    setAccessMap(newAccess);
   };
 
   const saveAccess = (key: string, ms: number) => {
@@ -1404,8 +1407,26 @@ export default function Home() {
   const filmsWithUnlock = films.map(f => hasAccess(f.id) ? { ...f, locked: false } : f);
 
   return (
-    <div style={{ maxWidth: 430, margin: "0 auto", fontFamily: "system-ui,sans-serif", background: C.bg }}>
-      <style>{`*{box-sizing:border-box;margin:0;padding:0}html,body{background:#0d0d14}input,select,button,textarea{font-family:inherit}input:focus,select:focus,textarea:focus{outline:none;border-color:#e8a020!important}::-webkit-scrollbar{width:0}`}</style>
+    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0}
+        html,body{background:#0d0d14}
+        input,select,button,textarea{font-family:inherit}
+        input:focus,select:focus,textarea:focus{outline:none;border-color:#e8a020!important}
+        ::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar-track{background:#0d0d14}
+        ::-webkit-scrollbar-thumb{background:#1e1e2e;border-radius:4px}
+        .main-wrap{max-width:1200px;margin:0 auto;padding:0}
+        @media(min-width:768px){
+          .main-wrap{display:grid;grid-template-columns:360px 1fr;min-height:100vh}
+          .sidebar{border-right:0.5px solid #1e1e2e;position:sticky;top:0;height:100vh;overflow-y:auto}
+          .content{padding:20px}
+          .film-grid{grid-template-columns:repeat(3,1fr)!important}
+        }
+        @media(min-width:1100px){
+          .film-grid{grid-template-columns:repeat(4,1fr)!important}
+        }
+      `}</style>
       {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
