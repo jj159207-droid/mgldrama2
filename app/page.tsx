@@ -616,6 +616,7 @@ function LoginPage({ onLogin, onBack }: any) {
 
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap }: any) {
   const getExpiry = (filmId: number): string | null => {
+    if (!user) return null;
     const now = Date.now();
     if (accessMap?.["monthly"] && accessMap["monthly"] > now) {
       const h = Math.ceil((accessMap["monthly"] - now) / 3600000);
@@ -1179,6 +1180,7 @@ export default function Home() {
   };
 
   const hasAccess = (filmId: number): boolean => {
+    if (!user) return false;
     const now = Date.now();
     if (accessMap["monthly"] && accessMap["monthly"] > now) return true;
     if (accessMap[`film_${filmId}`] && accessMap[`film_${filmId}`] > now) return true;
