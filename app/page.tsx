@@ -855,9 +855,62 @@ function AdminOrdersTab() {
   );
 }
 
+function AdminMembersTab() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const [us, payments] = await Promise.all([
+      dbFetch("users?order=id.desc&select=*"),
+      dbFetch("pending_payments?status=eq.confirmed&select=user_id,plan,film_id,created_at&order=created_at.desc"),
+    ]);
+    setUsers(Array.isArray(us) ? us : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const deleteUser = async (id: number) => {
+    if (!window.confirm("Хэрэглэгчийг устгах уу?")) return;
+    await dbFetch(`users?id=eq.${id}`, { method: "DELETE" });
+    setUsers(us => us.filter(u => u.id !== id));
+  };
+
+  return (
+    <div style={{ padding: "0 14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontSize: 13, color: C.muted }}>{users.length} гишүүн</span>
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+      ) : users.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Гишүүн байхгүй байна</div>
+      ) : (
+        users.map(u => (
+          <div key={u.id} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Бүртгэгдсэн: {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+              </div>
+              <button onClick={() => deleteUser(u.id)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 10px", color: C.red, fontSize: 11, cursor: "pointer" }}>🗑️</button>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 function AdminContactTab() {
   const [msgs, setMsgs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [replyId, setReplyId] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const [sending, setSending] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -871,6 +924,19 @@ function AdminContactTab() {
   const markRead = async (id: number) => {
     await dbFetch(`contact_messages?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ read: true }) });
     setMsgs(ms => ms.map(m => m.id === id ? { ...m, read: true } : m));
+  };
+
+  const sendReply = async (id: number) => {
+    if (!replyText.trim()) return;
+    setSending(true);
+    await dbFetch(`contact_messages?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ reply: replyText.trim(), read: true }),
+    });
+    setMsgs(ms => ms.map(m => m.id === id ? { ...m, reply: replyText.trim(), read: true } : m));
+    setReplyId(null);
+    setReplyText("");
+    setSending(false);
   };
 
   return (
@@ -893,11 +959,47 @@ function AdminContactTab() {
               </div>
               {!m.read && <span style={{ fontSize: 11, background: C.gold, color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>Шинэ</span>}
             </div>
+            {/* Хэрэглэгчийн мессеж */}
             <div style={{ fontSize: 13, color: C.txt, background: C.card2, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>{m.message}</div>
-            {!m.read && (
-              <button onClick={() => markRead(m.id)} style={{ background: "#166534", border: "none", borderRadius: 8, padding: "8px 16px", color: "#4ade80", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                ✅ Уншсан
-              </button>
+            {/* Хариу байвал харуулах */}
+            {m.reply && (
+              <div style={{ background: "#0a1628", border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
+                <div style={{ fontSize: 10, color: C.blue, marginBottom: 4, fontWeight: 700 }}>АДМИНЫ ХАРИУ</div>
+                <div style={{ fontSize: 13, color: C.txt }}>{m.reply}</div>
+              </div>
+            )}
+            {/* Хариу бичих */}
+            {replyId === m.id ? (
+              <div>
+                <textarea
+                  value={replyText}
+                  onChange={(e: any) => setReplyText(e.target.value)}
+                  placeholder="Хариу бичнэ үү..."
+                  style={{ ...inputSt, height: 80, resize: "none", lineHeight: 1.5, marginBottom: 8 }}
+                  autoFocus
+                />
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={() => sendReply(m.id)} disabled={sending || !replyText.trim()}
+                    style={{ flex: 1, background: C.blue, border: "none", borderRadius: 8, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: sending ? 0.6 : 1 }}>
+                    {sending ? "Илгээж байна..." : "📨 Хариу илгээх"}
+                  </button>
+                  <button onClick={() => { setReplyId(null); setReplyText(""); }}
+                    style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 14px", color: C.muted, fontSize: 12, cursor: "pointer" }}>Цуцлах</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button onClick={() => { setReplyId(m.id); setReplyText(""); }}
+                  style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "8px", color: C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  💬 {m.reply ? "Дахин хариулах" : "Хариулах"}
+                </button>
+                {!m.read && (
+                  <button onClick={() => markRead(m.id)}
+                    style={{ background: "#166534", border: "none", borderRadius: 8, padding: "8px 14px", color: "#4ade80", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    ✅ Уншсан
+                  </button>
+                )}
+              </div>
             )}
           </div>
         ))
@@ -907,7 +1009,7 @@ function AdminContactTab() {
 }
 
 function AdminPage({ films, onBack, onRefresh }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders">("list");
+  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -952,11 +1054,12 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         </div>
         <span style={{ fontSize: 12, color: C.muted }}>{films.length} кино</span>
       </div>
-      <div style={{ display: "flex", padding: "10px 14px", gap: 6 }}>
-        <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>📋 Жагсаалт</button>
-        <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>🧾 Захиалга</button>
-        <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>➕ Нэмэх</button>
-        <button onClick={() => { setTab("sms"); setUnreadCount(0); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12, position: "relative" }}>
+      <div style={{ display: "flex", flexWrap: "wrap", padding: "10px 14px", gap: 6 }}>
+        <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📋 Жагсаалт</button>
+        <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🧾 Захиалга</button>
+        <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>👥 Гишүүд</button>
+        <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>➕ Нэмэх</button>
+        <button onClick={() => { setTab("sms"); setUnreadCount(0); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11, position: "relative" }}>
           💬 Холбогдох
           {unreadCount > 0 && tab !== "sms" && (
             <span style={{ position: "absolute", top: 4, right: 4, background: C.red, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount}</span>
@@ -965,6 +1068,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
       </div>
 
       {tab === "orders" && <AdminOrdersTab />}
+      {tab === "members" && <AdminMembersTab />}
       {tab === "sms" && <AdminContactTab />}
 
       {tab === "add" && (
