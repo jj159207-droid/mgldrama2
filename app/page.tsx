@@ -187,7 +187,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       }),
     });
 
-    // Автомат 5 секунд тутамд шалгах
+    // Автомат 3 секунд тутамд шалгах
     intervalRef.current = setInterval(async () => {
       setAutoStatus("checking");
       const rows = await dbFetch(
@@ -201,7 +201,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       } else {
         setAutoStatus("waiting");
       }
-    }, 5000);
+    }, 3000);
 
     // 15 минутын дараа timeout
     timeoutRef.current = setTimeout(() => {
@@ -1424,6 +1424,13 @@ export default function Home() {
 
   useEffect(() => {
     const s = loadSession(); if (s) { setUser(s); syncAccessFromDB(s.id); }
+  }, []);
+
+  // 60 секунд тутам access шинэчлэх
+  useEffect(() => {
+    if (!user?.id) return;
+    const t = setInterval(() => syncAccessFromDB(user.id), 60000);
+    return () => clearInterval(t);
     // localStorage-с access map уншина
     try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
   }, []);
@@ -1485,11 +1492,11 @@ export default function Home() {
     else setPayFilm(f);
   };
 
-  const handlePaid = () => {
+  const handlePaid = async () => {
     if (payFilm.monthly) {
-      // 1 сарын эрх
       saveAccess("monthly", Date.now() + 30 * 24 * 60 * 60 * 1000);
       setPayFilm(null);
+      if (user?.id) await syncAccessFromDB(user.id);
       // Бүх кино нээлттэй болно — нүүр хуудас руу буцах
       setPage("home");
     } else {
