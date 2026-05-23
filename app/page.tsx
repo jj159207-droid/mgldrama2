@@ -670,7 +670,13 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
-        <div style={{ fontFamily: "Georgia,serif", fontSize: 22, fontWeight: 800, color: C.txt }}>кино үзэх самбар</div>
+        <div id="install-btn" onClick={() => {
+          const e = (window as any).__pwaPrompt;
+          if (e) { e.prompt(); }
+          else { alert("Браузерын цэс → 'Нүүр дэлгэцэнд нэмэх' дарна уу"); }
+        }} style={{ fontFamily: "Georgia,serif", fontSize: 16, fontWeight: 800, color: C.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+          📲 Утсанд суулгах
+        </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
           {user
@@ -1415,17 +1421,19 @@ export default function Home() {
         ::-webkit-scrollbar{width:4px}
         ::-webkit-scrollbar-track{background:#0d0d14}
         ::-webkit-scrollbar-thumb{background:#1e1e2e;border-radius:4px}
-        .main-wrap{max-width:1200px;margin:0 auto;padding:0}
-        @media(min-width:768px){
-          .main-wrap{display:grid;grid-template-columns:360px 1fr;min-height:100vh}
-          .sidebar{border-right:0.5px solid #1e1e2e;position:sticky;top:0;height:100vh;overflow-y:auto}
-          .content{padding:20px}
-          .film-grid{grid-template-columns:repeat(3,1fr)!important}
-        }
-        @media(min-width:1100px){
-          .film-grid{grid-template-columns:repeat(4,1fr)!important}
-        }
+        .film-grid{grid-template-columns:repeat(3,1fr)!important}
+        @media(min-width:1100px){.film-grid{grid-template-columns:repeat(5,1fr)!important}}
+        @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
+      <script dangerouslySetInnerHTML={{ __html: `
+        window.addEventListener('beforeinstallprompt', function(e) {
+          e.preventDefault();
+          window.__pwaPrompt = e;
+        });
+        window.addEventListener('appinstalled', function() {
+          window.__pwaPrompt = null;
+        });
+      `}} />
       {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
