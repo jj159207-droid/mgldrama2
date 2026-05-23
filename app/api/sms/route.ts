@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 function parseRef(smsText: string): string | null {
@@ -21,16 +21,16 @@ export async function POST(req: NextRequest) {
     const amount = parseAmount(smsText);
     if (!ref) return NextResponse.json({ ok: false, reason: "No ref code found" });
     const checkRes = await fetch(
-      ${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.&select=*,
-      { headers: { apikey: SUPABASE_KEY, Authorization: Bearer  } }
+      `${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}&select=*`,
+      { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
     );
     const rows = await checkRes.json();
     if (!Array.isArray(rows) || rows.length === 0) return NextResponse.json({ ok: false, reason: "Ref not found", ref });
     const payment = rows[0];
     if (payment.status === "confirmed") return NextResponse.json({ ok: true, ref, amount, already: true });
-    await fetch(${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq., {
+    await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}`, {
       method: "PATCH",
-      headers: { apikey: SUPABASE_KEY, Authorization: Bearer , "Content-Type": "application/json", Prefer: "return=representation" },
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", Prefer: "return=representation" },
       body: JSON.stringify({ status: "confirmed", paid_amount: amount, confirmed_at: new Date().toISOString() }),
     });
     return NextResponse.json({ ok: true, ref, amount, film_id: payment.film_id });
