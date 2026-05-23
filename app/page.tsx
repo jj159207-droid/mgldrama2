@@ -139,14 +139,11 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid, user }: any) {
-  const [step, setStep] = useState<"waiting">("waiting");
   const [refCode] = useState(() => genRef(film.id, film.monthly));
   const [copied, setCopied] = useState<string | null>(null);
-  const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid" | "timeout">("waiting");
+  const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid">("waiting");
   const [showSms, setShowSms] = useState(false);
   const [manualChecking, setManualChecking] = useState(false);
-  const intervalRef = useRef<any>(null);
-  const timeoutRef = useRef<any>(null);
 
   const copyText = (text: string, key: string) => {
     try {
@@ -170,11 +167,8 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Төлбөр үүсгэх + автомат polling эхлүүлэх
+  // Төлбөр үүсгэх
   useEffect(() => {
-    if (step !== "waiting") return;
-
-    // Supabase-д pending_payments үүсгэх
     dbFetch("pending_payments", {
       method: "POST",
       body: JSON.stringify({
@@ -186,34 +180,22 @@ function BankModal({ film, onClose, onPaid, user }: any) {
         plan: film.monthly ? "monthly" : "single",
       }),
     });
+  }, []);
 
-    // Автомат 3 секунд тутамд шалгах
-    intervalRef.current = setInterval(async () => {
-      setAutoStatus("checking");
-      const rows = await dbFetch(
-        `pending_payments?ref_code=eq.${refCode}&status=eq.confirmed&select=id`
-      );
-      if (Array.isArray(rows) && rows.length > 0) {
-        clearInterval(intervalRef.current);
-        clearTimeout(timeoutRef.current);
-        setAutoStatus("paid");
-        setTimeout(() => onPaid(), 1200);
-      } else {
-        setAutoStatus("waiting");
-      }
-    }, 10000);
-
-    // 15 минутын дараа timeout
-    timeoutRef.current = setTimeout(() => {
-      clearInterval(intervalRef.current);
-      setAutoStatus("timeout");
-    }, 15 * 60 * 1000);
-
-    return () => {
-      clearInterval(intervalRef.current);
-      clearTimeout(timeoutRef.current);
-    };
-  }, [step]);
+  // Гараар шалгах товч
+  const checkPayment = async () => {
+    setAutoStatus("checking");
+    const rows = await dbFetch(
+      `pending_payments?ref_code=eq.${refCode}&select=status`
+    );
+    if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "confirmed") {
+      setAutoStatus("paid");
+      setTimeout(() => onPaid(), 1200);
+    } else {
+      setAutoStatus("waiting");
+      alert("Төлбөр баталгаажаагүй байна. Гүйлгээний утга зөв бичсэн эсэхийг шалгаад дахин дарна уу.");
+    }
+  };
 
   // SMS мэссэжнээс ref олсны дараа гараар шалгах
   const handleSmsFound = async (foundRef: string) => {
@@ -313,16 +295,14 @@ function BankModal({ film, onClose, onPaid, user }: any) {
             </div>
           </div>
 
-          {/* Автомат хүлээж байна */}
-          <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 20 }}>{autoStatus === "checking" ? "🔄" : "⏳"}</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.txt }}>
-                {autoStatus === "checking" ? "Шалгаж байна..." : "Төлбөрийг хүлээж байна"}
-              </div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Мөнгө шилжүүлсний дараа автоматаар нээгдэнэ</div>
-            </div>
-          </div>
+          {/* Шалгах товч */}
+          <button
+            onClick={checkPayment}
+            disabled={autoStatus === "checking"}
+            style={{ width: "100%", background: autoStatus === "checking" ? C.card2 : C.gold, border: "none", color: autoStatus === "checking" ? C.muted : "#000", padding: 14, borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: autoStatus === "checking" ? "not-allowed" : "pointer", marginBottom: 10 }}
+          >
+            {autoStatus === "checking" ? "🔄 Шалгаж байна..." : "✅ Төлбөр шилжүүллээ — Шалгах"}
+          </button>
 
           <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Буцах</button>
         </div>
