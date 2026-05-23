@@ -1508,6 +1508,7 @@ export default function Home() {
           </div>
         </div>
       )}
+      {showLoginPrompt && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 24 }}>
           <div style={{ background: C.card, borderRadius: 18, padding: 28, width: "100%", maxWidth: 320, textAlign: "center", border: `0.5px solid ${C.bd}` }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>
