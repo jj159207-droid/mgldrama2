@@ -44,19 +44,17 @@ export async function POST(req: NextRequest) {
       await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "not_found" }) });
       return NextResponse.json({ ok: false, reason: "No payment for " + ref });
     }
-    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}`, {
-      method: "PATCH",
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/confirm_payment`, {
+      method: "POST",
       headers: {
         apikey: SUPABASE_KEY,
         Authorization: `Bearer ${SUPABASE_KEY}`,
         "Content-Type": "application/json",
-        "Prefer": "return=representation",
       },
-      body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString(), sms_text: text }),
+      body: JSON.stringify({ p_ref_code: ref }),
     });
-    const patchData = await patchRes.text();
-    await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "confirmed", film_id: rows[0].film_id, patch_result: patchData }) });
-    return NextResponse.json({ ok: true, ref_code: ref, film_id: rows[0].film_id, amount, patch: patchData });
+    await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ raw_text: text, ref_code: ref, amount, status: "confirmed", film_id: rows[0].film_id }) });
+    return NextResponse.json({ ok: true, ref_code: ref, film_id: rows[0].film_id, amount });
   } catch (err: any) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
