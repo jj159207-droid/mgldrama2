@@ -648,7 +648,7 @@ function LoginPage({ onLogin, onBack }: any) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, unreadReply }: any) {
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
 
   const handleLogoTap = () => {
@@ -694,7 +694,10 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               </div>
             : <button onClick={onLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
           }
-          <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
+          <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", position: "relative" }}>
+            💬
+            {unreadReply > 0 && <span style={{ position: "absolute", top: -4, right: -4, background: C.red, color: "#fff", borderRadius: "50%", width: 16, height: 16, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadReply}</span>}
+          </button>
           <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
           
         </div>
@@ -1374,9 +1377,25 @@ export default function Home() {
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [unreadReply, setUnreadReply] = useState(0);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
+
+  // Unread reply шалгах
+  useEffect(() => {
+    if (!user?.id) return;
+    const check = async () => {
+      const data = await dbFetch(`contact_messages?user_id=eq.${user.id}&select=reply,user_read`);
+      if (Array.isArray(data)) {
+        const count = data.filter((m: any) => m.reply && !m.user_read).length;
+        setUnreadReply(count);
+      }
+    };
+    check();
+    const t = setInterval(check, 5000);
+    return () => clearInterval(t);
+  }, [user]);
 
   // PWA install prompt барих
   useEffect(() => {
@@ -1513,7 +1532,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => { if (!user) { setPage("login"); return; } setPayFilm({ id: 0, title: "1 Сарын багц", price: 14500, monthly: true, locked: true }); }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => { if (!user) { setPage("login"); return; } setPayFilm({ id: 0, title: "1 Сарын багц", price: 14500, monthly: true, locked: true }); }} onContact={() => { setShowContact(true); setUnreadReply(0); if (user?.id) dbFetch(`contact_messages?user_id=eq.${user.id}&reply=not.is.null`, { method: "PATCH", body: JSON.stringify({ user_read: true }) }); }} accessMap={accessMap} onInstall={handleInstallClick} unreadReply={unreadReply} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
