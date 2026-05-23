@@ -1324,9 +1324,29 @@ export default function Home() {
   const [curFilm, setCurFilm] = useState<any>(null);
   const [adminAuth, setAdminAuth] = useState(false);
   const [showContact, setShowContact] = useState(false);
+  const [showInstall, setShowInstall] = useState(false);
+  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
-  // { filmId: expiresAt (ms) } эсвэл monthly expiresAt
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
+
+  // PWA install prompt барих
+  useEffect(() => {
+    const handler = (e: any) => {
+      e.preventDefault();
+      setPwaPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler as any);
+    return () => window.removeEventListener('beforeinstallprompt', handler as any);
+  }, []);
+
+  const handleInstallClick = () => {
+    if (pwaPrompt) {
+      pwaPrompt.prompt();
+      pwaPrompt.userChoice.then(() => setPwaPrompt(null));
+    } else {
+      setShowInstall(true);
+    }
+  };
 
   useEffect(() => {
     const s = loadSession(); if (s) { setUser(s); syncAccessFromDB(s.id); }
@@ -1383,8 +1403,6 @@ export default function Home() {
     setLoading(false);
   };
   useEffect(() => { loadFilms(); }, []);
-
-  const [showInstall, setShowInstall] = useState(false);
 
   const handleFilm = (f: any) => {
     if (f.free) { setCurFilm({ ...f, locked: false }); setPage("video"); return; }
@@ -1446,7 +1464,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={() => setShowInstall(true)} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
