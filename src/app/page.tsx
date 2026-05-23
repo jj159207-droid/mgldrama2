@@ -139,14 +139,11 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid, user }: any) {
-  const [step, setStep] = useState<"waiting">("waiting");
   const [refCode] = useState(() => genRef(film.id, film.monthly));
   const [copied, setCopied] = useState<string | null>(null);
-  const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid" | "timeout">("waiting");
+  const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid">("waiting");
   const [showSms, setShowSms] = useState(false);
   const [manualChecking, setManualChecking] = useState(false);
-  const intervalRef = useRef<any>(null);
-  const timeoutRef = useRef<any>(null);
 
   const copyText = (text: string, key: string) => {
     try {
@@ -170,11 +167,8 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Төлбөр үүсгэх + автомат polling эхлүүлэх
+  // Төлбөр үүсгэх
   useEffect(() => {
-    if (step !== "waiting") return;
-
-    // Supabase-д pending_payments үүсгэх
     dbFetch("pending_payments", {
       method: "POST",
       body: JSON.stringify({
@@ -186,34 +180,22 @@ function BankModal({ film, onClose, onPaid, user }: any) {
         plan: film.monthly ? "monthly" : "single",
       }),
     });
+  }, []);
 
-    // Автомат 5 секунд тутамд шалгах
-    intervalRef.current = setInterval(async () => {
-      setAutoStatus("checking");
-      const rows = await dbFetch(
-        `pending_payments?ref_code=eq.${refCode}&status=eq.confirmed&select=id`
-      );
-      if (Array.isArray(rows) && rows.length > 0) {
-        clearInterval(intervalRef.current);
-        clearTimeout(timeoutRef.current);
-        setAutoStatus("paid");
-        setTimeout(() => onPaid(), 1200);
-      } else {
-        setAutoStatus("waiting");
-      }
-    }, 5000);
-
-    // 15 минутын дараа timeout
-    timeoutRef.current = setTimeout(() => {
-      clearInterval(intervalRef.current);
-      setAutoStatus("timeout");
-    }, 15 * 60 * 1000);
-
-    return () => {
-      clearInterval(intervalRef.current);
-      clearTimeout(timeoutRef.current);
-    };
-  }, [step]);
+  // Гараар шалгах товч
+  const checkPayment = async () => {
+    setAutoStatus("checking");
+    const rows = await dbFetch(
+      `pending_payments?ref_code=eq.${refCode}&select=status`
+    );
+    if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "confirmed") {
+      setAutoStatus("paid");
+      setTimeout(() => onPaid(), 1200);
+    } else {
+      setAutoStatus("waiting");
+      alert("Төлбөр баталгаажаагүй байна. Гүйлгээний утга зөв бичсэн эсэхийг шалгаад дахин дарна уу.");
+    }
+  };
 
   // SMS мэссэжнээс ref олсны дараа гараар шалгах
   const handleSmsFound = async (foundRef: string) => {
@@ -313,20 +295,15 @@ function BankModal({ film, onClose, onPaid, user }: any) {
             </div>
           </div>
 
-          {/* Автомат хүлээж байна */}
-          <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 20 }}>{autoStatus === "checking" ? "🔄" : "⏳"}</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.txt }}>
-                {autoStatus === "checking" ? "Шалгаж байна..." : "Төлбөрийг хүлээж байна"}
-              </div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Мөнгө шилжүүлсний дараа автоматаар нээгдэнэ</div>
-            </div>
-          </div>
-
-          <button onClick={() => setShowSms(true)} disabled={manualChecking} style={{ ...goldBtn, opacity: manualChecking ? 0.6 : 1, marginBottom: 8 }}>
-            {manualChecking ? "Шалгаж байна..." : "📩 Банкны мэссэж тулгах"}
+          {/* Шалгах товч */}
+          <button
+            onClick={checkPayment}
+            disabled={autoStatus === "checking"}
+            style={{ width: "100%", background: autoStatus === "checking" ? C.card2 : C.gold, border: "none", color: autoStatus === "checking" ? C.muted : "#000", padding: 14, borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: autoStatus === "checking" ? "not-allowed" : "pointer", marginBottom: 10 }}
+          >
+            {autoStatus === "checking" ? "🔄 Шалгаж байна..." : "✅ Төлбөр шилжүүллээ — Шалгах"}
           </button>
+
           <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Буцах</button>
         </div>
       </div>
@@ -500,15 +477,21 @@ function ContactModal({ onClose, user }: any) {
     setLoading(false);
   };
 
-  useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    load();
+    const t = setInterval(() => { load(); }, 5000);
+    return () => clearInterval(t);
+  }, [user?.id]);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const send = async () => {
     if (!msg.trim()) return;
     setSending(true);
     const newMsg = { phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false };
-    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
+    // Optimistic update - шууд дэлгэцэнд харуулах
+    setMsgs((prev: any[]) => [...prev, { ...newMsg, id: Date.now(), created_at: new Date().toISOString() }]);
     setMsg("");
+    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
     await load();
     setSending(false);
   };
@@ -651,13 +634,13 @@ function LoginPage({ onLogin, onBack }: any) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, unreadReply }: any) {
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
 
   const handleLogoTap = () => {
     tapRef.current.count += 1;
     if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
-    if (tapRef.current.count >= 3) {
+    if (tapRef.current.count >= 4) {
       tapRef.current.count = 0;
       onAdmin();
     } else {
@@ -688,8 +671,6 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         }} style={{ background: "none", border: `0.5px solid ${C.bd}`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
           📲 Апп суулгах
         </button>
-        {/* Далд админ товч — 3 удаа дарна */}
-        <div onClick={handleLogoTap} style={{ padding: "6px 8px", cursor: "pointer", color: "transparent", userSelect: "none", fontSize: 12 }}>·</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
           {user
@@ -699,8 +680,12 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               </div>
             : <button onClick={onLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
           }
-          <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
-          <button onClick={onAdmin} style={{ background: "none", border: "none", color: "transparent", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", userSelect: "none" }}>⚙️</button>
+          <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", position: "relative" }}>
+            💬
+            {unreadReply > 0 && <span style={{ position: "absolute", top: -4, right: -4, background: C.red, color: "#fff", borderRadius: "50%", width: 16, height: 16, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadReply}</span>}
+          </button>
+          <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
+          
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
@@ -720,7 +705,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>11,500₮</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
             <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
           </div>
         </div>
@@ -865,18 +850,38 @@ function AdminOrdersTab() {
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.muted;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
+  const [filter, setFilter] = useState<"all"|"monthly"|"film">("all");
+  const [statusFilter, setStatusFilter] = useState<"all"|"confirmed"|"pending"|"revoked">("all");
+  const filtered = orders.filter((o: any) => {
+    const typeOk = filter === "all" ? true : filter === "monthly" ? o.film_id === 0 : o.film_id !== 0;
+    const statusOk = statusFilter === "all" ? true : o.status === statusFilter;
+    return typeOk && statusOk;
+  });
+
   return (
     <div style={{ padding: "0 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{orders.filter((o: any) => o.status === "pending").length} хүлээгдэж байна</span>
-        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+        {(["all","monthly","film"] as const).map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, background: filter === f ? C.gold : C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 0", color: filter === f ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {f === "all" ? "Бүгд" : f === "monthly" ? "👑 Сарын" : "🎬 Кино"}
+          </button>
+        ))}
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
       </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        {([["all","Бүгд"],["confirmed","✅ Идэвхтэй"],["pending","⏳ Хүлээгдэж"],["revoked","🚫 Хасагдсан"]] as const).map(([s, label]) => (
+          <button key={s} onClick={() => setStatusFilter(s)} style={{ flex: 1, background: statusFilter === s ? "#1e3a2f" : C.card2, border: `0.5px solid ${statusFilter === s ? C.green : C.bd}`, borderRadius: 8, padding: "5px 0", color: statusFilter === s ? C.green : C.muted, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>{filtered.filter((o: any) => o.status === "pending").length} хүлээгдэж байна · нийт {filtered.length}</div>
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-      ) : orders.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Захиалга байхгүй байна</div>
       ) : (
-        orders.map((o: any) => (
+        filtered.map((o: any) => (
           <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : o.status === "revoked" ? C.red : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div>
@@ -908,6 +913,10 @@ function AdminOrdersTab() {
             {o.status === "revoked" && (
               <div style={{ fontSize: 12, color: C.red, textAlign: "center" }}>🚫 Эрх хасагдсан</div>
             )}
+            <button onClick={async () => { if (!window.confirm("Устгах уу?")) return; await dbFetch(`pending_payments?ref_code=eq.${o.ref_code}`, { method: "DELETE" }); load(); }}
+              style={{ width: "100%", background: "#1a0a0a", border: `0.5px solid #3a1a1a`, borderRadius: 8, padding: "8px", color: "#f05555", fontSize: 12, fontWeight: 700, cursor: "pointer", marginTop: 4 }}>
+              🗑️ Устгах
+            </button>
           </div>
         ))
       )}
@@ -1300,21 +1309,39 @@ function AdminPage({ films, onBack, onRefresh }: any) {
               </div>
               {editId === f.id && (
                 <div style={{ marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
-                  <label style={lbl}>Зургийн URL эсвэл файл</label>
+                  <label style={lbl}>Кино нэр</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input defaultValue={f.title} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="Кино нэр" />
+                    <button onClick={() => { dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ title: imgVal }) }); setEditId(null); onRefresh(); }} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
+                  </div>
+                  <label style={{ ...lbl, marginTop: 8 }}>Зургийн URL эсвэл файл</label>
                   <div style={{ display: "flex", gap: 6 }}>
                     <input defaultValue={f.img} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://..." />
                     <button onClick={() => updateImg(f.id, imgVal)} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
                   </div>
-                  <input type="file" accept="image/*" onChange={(e: any) => {
-                    const file = e.target.files?.[0]; if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (ev: any) => { setImgVal(ev.target.result as string); updateImg(f.id, ev.target.result as string); };
-                    reader.readAsDataURL(file);
-                  }} style={{ marginTop: 4, fontSize: 12, color: C.muted, width: "100%" }} />
+                  <label style={{ display: "block", marginTop: 6, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.muted, cursor: "pointer", textAlign: "center" }}>
+                    📁 Компьютерээс зураг сонгох
+                    <input type="file" accept="image/*" onChange={(e: any) => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev: any) => { setImgVal(ev.target.result as string); updateImg(f.id, ev.target.result as string); };
+                      reader.readAsDataURL(file);
+                    }} style={{ display: "none" }} />
+                  </label>
                   <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
                   <div style={{ display: "flex", gap: 6 }}>
                     <input defaultValue={f.url} onChange={(e: any) => setUrlVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://youtu.be/..." />
                     <button onClick={() => updateUrl(f.id, urlVal)} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
+                  </div>
+                  <label style={{ ...lbl, marginTop: 8 }}>Зарах үнэ ₮</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input defaultValue={f.price} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} type="number" placeholder="4000" />
+                    <button onClick={() => { dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ price: parseInt(imgVal) || f.price }) }); setEditId(null); onRefresh(); }} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
+                  </div>
+                  <label style={{ ...lbl, marginTop: 8 }}>Хуучин үнэ ₮</label>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input defaultValue={f.op} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} type="number" placeholder="6000" />
+                    <button onClick={() => { dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ op: parseInt(imgVal) || f.op }) }); setEditId(null); onRefresh(); }} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
                   </div>
                 </div>
               )}
@@ -1335,9 +1362,48 @@ export default function Home() {
   const [adminAuth, setAdminAuth] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [unreadReply, setUnreadReply] = useState(0);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
+
+  // DB-с confirmed төлбөрүүдийг татаж access олгох
+  const syncAccessFromDB = async (userId: number) => {
+    const payments = await dbFetch(
+      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
+    );
+    if (!Array.isArray(payments)) return;
+    const now = Date.now();
+    const newAccess: Record<string, number> = {};
+    payments.forEach((p: any) => {
+      if (p.status !== "confirmed") return;
+      if (p.plan === "monthly") {
+        const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
+        if (exp > now) newAccess["monthly"] = exp;
+      } else {
+        const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
+        if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
+      }
+    });
+    localStorage.setItem("kino_access", JSON.stringify(newAccess));
+    setAccessMap(newAccess);
+  };
+
+  // Unread reply шалгах
+  useEffect(() => {
+    if (!user?.id) return;
+    const check = async () => {
+      const data = await dbFetch(`contact_messages?user_id=eq.${user.id}&select=reply,user_read`);
+      if (Array.isArray(data)) {
+        const count = data.filter((m: any) => m.reply && !m.user_read).length;
+        setUnreadReply(count);
+      }
+    };
+    check();
+    const t = setInterval(check, 5000);
+    return () => clearInterval(t);
+  }, [user]);
 
   // PWA install prompt барих
   useEffect(() => {
@@ -1360,35 +1426,16 @@ export default function Home() {
 
   useEffect(() => {
     const s = loadSession(); if (s) { setUser(s); syncAccessFromDB(s.id); }
+  }, []);
+
+  // 60 секунд тутам access шинэчлэх
+  useEffect(() => {
+    if (!user?.id) return;
+    const t = setInterval(() => syncAccessFromDB(user.id), 60000);
+    return () => clearInterval(t);
     // localStorage-с access map уншина
     try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
   }, []);
-
-  // DB-с confirmed төлбөрүүдийг татаж access олгох
-  const syncAccessFromDB = async (userId: number) => {
-    // Бүх захиалгыг татах (confirmed + revoked)
-    const payments = await dbFetch(
-      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
-    );
-    if (!Array.isArray(payments)) return;
-    const now = Date.now();
-    const newAccess: Record<string, number> = {};
-
-    payments.forEach((p: any) => {
-      if (p.status !== "confirmed") return; // revoked болон pending-г орхино
-      if (p.plan === "monthly") {
-        const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
-        if (exp > now) newAccess["monthly"] = exp;
-      } else {
-        const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
-        if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
-      }
-    });
-
-    // localStorage-г бүрэн солих — revoked эрхүүд автоматаар арилна
-    localStorage.setItem("kino_access", JSON.stringify(newAccess));
-    setAccessMap(newAccess);
-  };
 
   const saveAccess = (key: string, ms: number) => {
     setAccessMap(prev => {
@@ -1421,11 +1468,11 @@ export default function Home() {
     else setPayFilm(f);
   };
 
-  const handlePaid = () => {
+  const handlePaid = async () => {
     if (payFilm.monthly) {
-      // 1 сарын эрх
       saveAccess("monthly", Date.now() + 30 * 24 * 60 * 60 * 1000);
       setPayFilm(null);
+      if (user?.id) await syncAccessFromDB(user.id);
       // Бүх кино нээлттэй болно — нүүр хуудас руу буцах
       setPage("home");
     } else {
@@ -1474,7 +1521,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => { if (!user) { setPage("login"); return; } setPayFilm({ id: 0, title: "1 Сарын багц", price: 14500, monthly: true, locked: true }); }} onContact={() => { setShowContact(true); setUnreadReply(0); if (user?.id) dbFetch(`contact_messages?user_id=eq.${user.id}&reply=not.is.null`, { method: "PATCH", body: JSON.stringify({ user_read: true }) }); }} accessMap={accessMap} onInstall={handleInstallClick} unreadReply={unreadReply} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
@@ -1508,6 +1555,7 @@ export default function Home() {
           </div>
         </div>
       )}
+      {showLoginPrompt && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 24 }}>
           <div style={{ background: C.card, borderRadius: 18, padding: 28, width: "100%", maxWidth: 320, textAlign: "center", border: `0.5px solid ${C.bd}` }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>
