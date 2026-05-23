@@ -678,12 +678,20 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               if (c.outcome === 'accepted') (window as any).__pwaPrompt = null;
             });
           } else {
-            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-            if (isIOS) {
-              alert('iPhone дээр суулгах:\n1. Safari-д нээнэ үү\n2. Share товч (□↑) дарна\n3. "Add to Home Screen" дарна');
-            } else {
-              alert('Chrome цэс (⋮) → "Нүүр дэлгэцэнд нэмэх" дарна уу');
-            }
+            // Event ирэхийг хүлээж байна — flag тавина
+            (window as any).__pwaClicked = true;
+            // 3 секундын дараа ирэхгүй бол заавар харуулна
+            setTimeout(() => {
+              if ((window as any).__pwaClicked) {
+                (window as any).__pwaClicked = false;
+                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                if (isIOS) {
+                  alert('Safari → Share (□↑) → "Add to Home Screen"');
+                } else {
+                  alert('Chrome цэс ⋮ → "Нүүр дэлгэцэнд нэмэх"');
+                }
+              }
+            }, 3000);
           }
         }} style={{ fontFamily: "Georgia,serif", fontSize: 16, fontWeight: 800, color: C.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
           📲 Утсанд суулгах
@@ -1437,9 +1445,18 @@ export default function Home() {
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
       <script dangerouslySetInnerHTML={{ __html: `
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js');
+        }
+        window.__pwaPrompt = null;
+        window.__pwaClicked = false;
         window.addEventListener('beforeinstallprompt', function(e) {
           e.preventDefault();
           window.__pwaPrompt = e;
+          if (window.__pwaClicked) {
+            window.__pwaClicked = false;
+            setTimeout(function() { e.prompt(); }, 100);
+          }
         });
         window.addEventListener('appinstalled', function() {
           window.__pwaPrompt = null;
