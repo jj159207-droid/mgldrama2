@@ -657,7 +657,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
   const handleLogoTap = () => {
     tapRef.current.count += 1;
     if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
-    if (tapRef.current.count >= 3) {
+    if (tapRef.current.count >= 4) {
       tapRef.current.count = 0;
       onAdmin();
     } else {
