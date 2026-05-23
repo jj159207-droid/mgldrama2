@@ -25,6 +25,7 @@ const ADMIN_KEY = "admin2024";
 const BANK_ACCOUNT = {
   bank: "Хаан банк",
   number: "5402504824",
+  ibn: "IBN11000500",
   name: "Т.Жаргалбаяр",
   shortNumber: "MN11000500",
 };
@@ -263,7 +264,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
 
           {/* Үнэ */}
           <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: C.gold }}>{film.price?.toLocaleString()}₮</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: C.gold }}>5,000₮</div>
             <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>дараах данс руу шилжүүлнэ үү</div>
           </div>
 
@@ -273,6 +274,11 @@ function BankModal({ film, onClose, onPaid, user }: any) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 13, color: C.muted }}>Банк</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{BANK_ACCOUNT.bank}</span>
+            </div>
+            {/* IBN дугаар */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 13, color: C.muted }}>IBN</span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: C.txt, fontFamily: "monospace" }}>{BANK_ACCOUNT.ibn}</span>
             </div>
             {/* Дансны дугаар — том, дарахад copy */}
             <div
@@ -869,7 +875,19 @@ function AdminPage({ films, onBack, onRefresh }: any) {
   const [tab, setTab] = useState<"list" | "add" | "sms" | "orders">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
+
+  // Unread тоо ачааллах + 30 секунд тутамд шинэчлэх
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const data = await dbFetch("contact_messages?read=eq.false&select=id");
+      setUnreadCount(Array.isArray(data) ? data.length : 0);
+    };
+    fetchUnread();
+    const t = setInterval(fetchUnread, 30000);
+    return () => clearInterval(t);
+  }, [tab]);
   const empty = { title: "", views: 0, op: 6000, price: 4000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
@@ -903,7 +921,12 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>📋 Жагсаалт</button>
         <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>🧾 Захиалга</button>
         <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>➕ Нэмэх</button>
-        <button onClick={() => setTab("sms")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12 }}>💬 Холбогдох</button>
+        <button onClick={() => { setTab("sms"); setUnreadCount(0); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 12, position: "relative" }}>
+          💬 Холбогдох
+          {unreadCount > 0 && tab !== "sms" && (
+            <span style={{ position: "absolute", top: 4, right: 4, background: C.red, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount}</span>
+          )}
+        </button>
       </div>
 
       {tab === "orders" && <AdminOrdersTab />}
