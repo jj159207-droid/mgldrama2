@@ -688,8 +688,6 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         }} style={{ background: "none", border: `0.5px solid ${C.bd}`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
           📲 Апп суулгах
         </button>
-        {/* Далд админ товч — 3 удаа дарна */}
-        <div onClick={handleLogoTap} style={{ padding: "6px 8px", cursor: "pointer", color: "transparent", userSelect: "none", fontSize: 12 }}>·</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
           {user
@@ -700,6 +698,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             : <button onClick={onLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
           }
           <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
+          <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
           
         </div>
       </div>
