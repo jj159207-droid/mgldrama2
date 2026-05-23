@@ -500,7 +500,7 @@ function ContactModal({ onClose, user }: any) {
     setLoading(false);
   };
 
-  useEffect(() => { load(); const t = setInterval(load, 10000); return () => clearInterval(t); }, []);
+  useEffect(() => { load(); const t = setInterval(load, 3000); return () => clearInterval(t); }, []);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const send = async () => {
@@ -896,15 +896,21 @@ function AdminOrdersTab() {
 
 function AdminMembersTab() {
   const [users, setUsers] = useState<any[]>([]);
+  const [films, setFilms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
   const [userPayments, setUserPayments] = useState<any[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  const [showRights, setShowRights] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    const us = await dbFetch("users?order=id.desc&select=*");
+    const [us, fl] = await Promise.all([
+      dbFetch("users?order=id.desc&select=*"),
+      dbFetch("films?select=id,title"),
+    ]);
     setUsers(Array.isArray(us) ? us : []);
+    setFilms(Array.isArray(fl) ? fl : []);
     setLoading(false);
   };
 
@@ -912,6 +918,7 @@ function AdminMembersTab() {
 
   const openUser = async (u: any) => {
     setSelected(u);
+    setShowRights(false);
     setLoadingPayments(true);
     const payments = await dbFetch(`pending_payments?user_id=eq.${u.id}&order=created_at.desc&select=*`);
     setUserPayments(Array.isArray(payments) ? payments : []);
@@ -934,43 +941,72 @@ function AdminMembersTab() {
     setSelected(null);
   };
 
+  const getFilmName = (id: number) => id === 0 ? "👑 Сарын багц" : films.find(f => f.id === id)?.title || `Кино #${id}`;
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "revoked" ? C.red : C.gold;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Идэвхтэй" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
-  const planLabel = (p: any) => p.plan === "monthly" ? "👑 Сарын багц" : `🎬 Кино #${p.film_id}`;
+  const activePayments = userPayments.filter(p => p.status === "confirmed");
 
   if (selected) return (
     <div style={{ padding: "0 14px" }}>
       <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>← Буцах</button>
+      
+      {/* Гишүүний мэдээлэл */}
       <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
         <div style={{ fontSize: 18, fontWeight: 800, color: C.gold, marginBottom: 4 }}>📞 {selected.phone}</div>
         <div style={{ fontSize: 12, color: C.muted }}>ID: {selected.user_id}</div>
         <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Бүртгэгдсэн: {new Date(selected.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
-        <button onClick={() => deleteUser(selected.id)} style={{ marginTop: 12, background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px 16px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️ Гишүүн устгах</button>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button onClick={() => setShowRights(!showRights)} style={{ flex: 1, background: showRights ? C.blue : C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "9px", color: showRights ? "#fff" : C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            🎬 Кино үзэх эрх {loadingPayments ? "..." : `(${activePayments.length})`}
+          </button>
+          <button onClick={() => deleteUser(selected.id)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "9px 14px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
+        </div>
       </div>
+
+      {/* Идэвхтэй эрхүүд */}
+      {showRights && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>
+            🎬 Идэвхтэй кино эрхүүд
+          </div>
+          {loadingPayments ? (
+            <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
+          ) : activePayments.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 16, color: C.muted, background: C.card, borderRadius: 10 }}>Идэвхтэй эрх байхгүй</div>
+          ) : activePayments.map(p => (
+            <div key={p.id} style={{ background: C.card, border: `0.5px solid ${C.green}`, borderRadius: 12, padding: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{getFilmName(p.film_id)}</div>
+                <div style={{ fontSize: 11, color: C.green, marginTop: 2 }}>✅ Идэвхтэй · {p.amount?.toLocaleString()}₮</div>
+                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
+              </div>
+              <button onClick={() => revokeAccess(p.ref_code)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+                🚫 Хасах
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Бүх захиалгын түүх */}
       <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>Захиалгын түүх</div>
       {loadingPayments ? (
         <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
       ) : userPayments.length === 0 ? (
         <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Захиалга байхгүй</div>
       ) : userPayments.map(p => (
-        <div key={p.id} style={{ background: C.card, border: `0.5px solid ${p.status === "confirmed" ? C.green : p.status === "revoked" ? C.red : C.gold}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+        <div key={p.id} style={{ background: C.card, border: `0.5px solid ${statusColor(p.status)}22`, borderRadius: 12, padding: 14, marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{p.ref_code}</div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{planLabel(p)}</div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#fb923c", fontFamily: "monospace" }}>{p.ref_code}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{getFilmName(p.film_id)}</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>{p.amount?.toLocaleString()}₮</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>{p.amount?.toLocaleString()}₮</div>
               <div style={{ fontSize: 11, color: statusColor(p.status), marginTop: 2 }}>{statusLabel(p.status)}</div>
             </div>
           </div>
-          {p.status === "confirmed" && (
-            <button onClick={() => revokeAccess(p.ref_code)} style={{ width: "100%", background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              🚫 Эрх хасах
-            </button>
-          )}
-          {p.status === "revoked" && <div style={{ fontSize: 12, color: C.red, textAlign: "center" }}>🚫 Эрх хасагдсан</div>}
         </div>
       ))}
     </div>
