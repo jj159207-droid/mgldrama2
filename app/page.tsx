@@ -716,7 +716,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>11,500₮</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
             <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
           </div>
         </div>
@@ -862,17 +862,29 @@ function AdminOrdersTab() {
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
   const [filter, setFilter] = useState<"all"|"monthly"|"film">("all");
-  const filtered = orders.filter((o: any) => filter === "all" ? true : filter === "monthly" ? o.film_id === 0 : o.film_id !== 0);
+  const [statusFilter, setStatusFilter] = useState<"all"|"confirmed"|"pending"|"revoked">("all");
+  const filtered = orders.filter((o: any) => {
+    const typeOk = filter === "all" ? true : filter === "monthly" ? o.film_id === 0 : o.film_id !== 0;
+    const statusOk = statusFilter === "all" ? true : o.status === statusFilter;
+    return typeOk && statusOk;
+  });
 
   return (
     <div style={{ padding: "0 14px" }}>
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
         {(["all","monthly","film"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, background: filter === f ? C.gold : C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 0", color: filter === f ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            {f === "all" ? "Бүгд" : f === "monthly" ? "👑 Сарын эрх" : "🎬 Кино"}
+            {f === "all" ? "Бүгд" : f === "monthly" ? "👑 Сарын" : "🎬 Кино"}
           </button>
         ))}
         <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        {([["all","Бүгд"],["confirmed","✅ Идэвхтэй"],["pending","⏳ Хүлээгдэж"],["revoked","🚫 Хасагдсан"]] as const).map(([s, label]) => (
+          <button key={s} onClick={() => setStatusFilter(s)} style={{ flex: 1, background: statusFilter === s ? "#1e3a2f" : C.card2, border: `0.5px solid ${statusFilter === s ? C.green : C.bd}`, borderRadius: 8, padding: "5px 0", color: statusFilter === s ? C.green : C.muted, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
+            {label}
+          </button>
+        ))}
       </div>
       <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>{filtered.filter((o: any) => o.status === "pending").length} хүлээгдэж байна · нийт {filtered.length}</div>
       {loading ? (
@@ -1501,7 +1513,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => { if (!user) { setPage("login"); return; } setPayFilm({ id: 0, title: "1 Сарын багц", price: 11500, monthly: true, locked: true }); }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={() => setPage("login")} onLogout={handleLogout} onMonthly={() => { if (!user) { setPage("login"); return; } setPayFilm({ id: 0, title: "1 Сарын багц", price: 14500, monthly: true, locked: true }); }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "login" && <LoginPage onLogin={handleLogin} onBack={() => setPage("home")} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
