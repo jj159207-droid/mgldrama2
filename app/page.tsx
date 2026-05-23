@@ -1310,12 +1310,15 @@ function AdminPage({ films, onBack, onRefresh }: any) {
                     <input defaultValue={f.img} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://..." />
                     <button onClick={() => updateImg(f.id, imgVal)} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
                   </div>
-                  <input type="file" accept="image/*" onChange={(e: any) => {
-                    const file = e.target.files?.[0]; if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (ev: any) => { setImgVal(ev.target.result as string); updateImg(f.id, ev.target.result as string); };
-                    reader.readAsDataURL(file);
-                  }} style={{ marginTop: 4, fontSize: 12, color: C.muted, width: "100%" }} />
+                  <label style={{ display: "block", marginTop: 6, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "8px 12px", fontSize: 12, color: C.muted, cursor: "pointer", textAlign: "center" }}>
+                    📁 Компьютерээс зураг сонгох
+                    <input type="file" accept="image/*" onChange={(e: any) => {
+                      const file = e.target.files?.[0]; if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = (ev: any) => { setImgVal(ev.target.result as string); updateImg(f.id, ev.target.result as string); };
+                      reader.readAsDataURL(file);
+                    }} style={{ display: "none" }} />
+                  </label>
                   <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
                   <div style={{ display: "flex", gap: 6 }}>
                     <input defaultValue={f.url} onChange={(e: any) => setUrlVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://youtu.be/..." />
