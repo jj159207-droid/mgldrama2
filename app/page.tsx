@@ -652,6 +652,18 @@ function LoginPage({ onLogin, onBack }: any) {
 }
 
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall }: any) {
+  const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
+
+  const handleLogoTap = () => {
+    tapRef.current.count += 1;
+    if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
+    if (tapRef.current.count >= 3) {
+      tapRef.current.count = 0;
+      onAdmin();
+    } else {
+      tapRef.current.timer = setTimeout(() => { tapRef.current.count = 0; }, 3000);
+    }
+  };
   const getExpiry = (filmId: number): string | null => {
     if (!user) return null;
     const now = Date.now();
@@ -670,16 +682,14 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
-        <div id="install-btn" onClick={() => {
+        <button onClick={() => {
           const e = (window as any).__pwaPrompt;
-          if (e) {
-            e.prompt();
-          } else {
-            onInstall();
-          }
-        }} style={{ fontFamily: "Georgia,serif", fontSize: 16, fontWeight: 800, color: C.gold, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-          📲 Утсанд суулгах
-        </div>
+          if (e) { e.prompt(); } else { onInstall(); }
+        }} style={{ background: "none", border: `0.5px solid ${C.bd}`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+          📲 Апп суулгах
+        </button>
+        {/* Далд админ товч — 3 удаа дарна */}
+        <div onClick={handleLogoTap} style={{ padding: "6px 8px", cursor: "pointer", color: "transparent", userSelect: "none", fontSize: 12 }}>·</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
           {user
@@ -690,7 +700,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             : <button onClick={onLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
           }
           <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
-          <button onClick={onAdmin} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
+          <button onClick={onAdmin} style={{ background: "none", border: "none", color: "transparent", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", userSelect: "none" }}>⚙️</button>
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
