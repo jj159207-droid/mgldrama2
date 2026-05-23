@@ -147,10 +147,25 @@ function BankModal({ film, onClose, onPaid, user }: any) {
   const timeoutRef = useRef<any>(null);
 
   const copyText = (text: string, key: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(key);
-      setTimeout(() => setCopied(null), 2000);
-    });
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(key); setTimeout(() => setCopied(null), 2000);
+        }).catch(() => {
+          fallbackCopy(text, key);
+        });
+      } else {
+        fallbackCopy(text, key);
+      }
+    } catch { fallbackCopy(text, key); }
+  };
+
+  const fallbackCopy = (text: string, key: string) => {
+    const el = document.createElement("textarea");
+    el.value = text; el.style.position = "fixed"; el.style.opacity = "0";
+    document.body.appendChild(el); el.focus(); el.select();
+    try { document.execCommand("copy"); setCopied(key); setTimeout(() => setCopied(null), 2000); } catch {}
+    document.body.removeChild(el);
   };
 
   // Төлбөр үүсгэх + автомат polling эхлүүлэх
@@ -279,17 +294,16 @@ function BankModal({ film, onClose, onPaid, user }: any) {
           </div>
 
           {/* Гүйлгээний утга — маш том */}
-          <div style={{ background: "#1a0a00", border: `2px solid #f97316`, borderRadius: 14, padding: "18px 16px", marginBottom: 14, textAlign: "center" }}>
-            <div style={{ fontSize: 12, color: "#f97316", marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>
-              ⚠️ Гүйлгээний утга — заавал бичнэ!
+          <div onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? "#052e16" : "#1a0a00", border: `2px solid ${copied === "ref" ? C.green : "#f97316"}`, borderRadius: 14, padding: "18px 16px", marginBottom: 14, textAlign: "center", cursor: "pointer", transition: "all 0.2s" }}>
+            <div style={{ fontSize: 12, color: copied === "ref" ? C.green : "#f97316", marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>
+              {copied === "ref" ? "✅ Хуулагдлаа!" : "⚠️ Гүйлгээний утга — заавал бичнэ!"}
             </div>
-            <div style={{ fontSize: 38, fontWeight: 900, color: "#fb923c", letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 12 }}>
+            <div style={{ fontSize: 38, fontWeight: 900, color: copied === "ref" ? C.green : "#fb923c", letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 8 }}>
               {refCode}
             </div>
-            <button onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? C.green : "#2a1500", border: `0.5px solid #f97316`, borderRadius: 8, padding: "10px 28px", fontSize: 14, color: copied === "ref" ? "#fff" : "#fb923c", cursor: "pointer", fontWeight: 700 }}>
-              {copied === "ref" ? "✅ Хуулагдлаа!" : "📋 Код хуулах"}
-            </button>
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>Энэ кодыг бичихгүй бол автоматаар таних боломжгүй</div>
+            <div style={{ fontSize: 12, color: copied === "ref" ? C.green : C.muted }}>
+              {copied === "ref" ? "✓ Хуулагдлаа" : "👆 Дарж хуулах"}
+            </div>
           </div>
 
           {/* Автомат хүлээж байна */}
