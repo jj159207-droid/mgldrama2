@@ -1335,6 +1335,7 @@ export default function Home() {
   const [adminAuth, setAdminAuth] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
