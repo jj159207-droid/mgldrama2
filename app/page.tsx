@@ -783,16 +783,22 @@ function LoginPage({ onLogin, onBack }: any) {
 
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall }: any) {
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginStep, setLoginStep] = useState<"phone"|"pin">("phone");
+  const [loginPhone, setLoginPhone] = useState("");
+  const [loginPin, setLoginPin] = useState("");
+  const [loginPin2, setLoginPin2] = useState("");
+  const [loginIsNew, setLoginIsNew] = useState(false);
+  const [loginErr, setLoginErr] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const pinRefs = [useRef<any>(null),useRef<any>(null),useRef<any>(null),useRef<any>(null)];
+  const pin2Refs = [useRef<any>(null),useRef<any>(null),useRef<any>(null),useRef<any>(null)];
 
   const handleLogoTap = () => {
     tapRef.current.count += 1;
     if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
-    if (tapRef.current.count >= 4) {
-      tapRef.current.count = 0;
-      onAdmin();
-    } else {
-      tapRef.current.timer = setTimeout(() => { tapRef.current.count = 0; }, 3000);
-    }
+    if (tapRef.current.count >= 4) { tapRef.current.count = 0; onAdmin(); }
+    else { tapRef.current.timer = setTimeout(() => { tapRef.current.count = 0; }, 3000); }
   };
   const getExpiry = (filmId: number): string | null => {
     if (!user) return null;
@@ -808,17 +814,6 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     }
     return null;
   };
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginStep, setLoginStep] = useState<"phone"|"pin">("phone");
-  const [loginPhone, setLoginPhone] = useState("");
-  const [loginPin, setLoginPin] = useState("");
-  const [loginPin2, setLoginPin2] = useState("");
-  const [loginIsNew, setLoginIsNew] = useState(false);
-  const [loginErr, setLoginErr] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
-  const pinRefs = [useRef<any>(null),useRef<any>(null),useRef<any>(null),useRef<any>(null)];
-  const pin2Refs = [useRef<any>(null),useRef<any>(null),useRef<any>(null),useRef<any>(null)];
-
   const openLogin = () => { setShowLoginModal(true); setLoginStep("phone"); setLoginPhone(""); setLoginPin(""); setLoginPin2(""); setLoginErr(""); };
   const closeLogin = () => { setShowLoginModal(false); setLoginErr(""); };
 
