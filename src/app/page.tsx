@@ -676,14 +676,15 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 
   // PIN dots харуулах
   const PinDots = ({ val }: { val: string }) => (
-    <div style={{ display: "flex", gap: 12, justifyContent: "center", margin: "16px 0" }}>
+    <div style={{ display: "flex", gap: 14, justifyContent: "center", margin: "16px 0" }}>
       {[0,1,2,3].map(i => (
         <div key={i} style={{
-          width: 54, height: 54, borderRadius: 12,
-          background: val[i] ? "#1a1a2e" : "#08080f",
-          border: `2px solid ${err ? C.red : val[i] ? "#3b82f6" : C.bd}`,
+          width: 62, height: 62, borderRadius: 14,
+          background: val[i] ? "#1e2d4a" : "#0d0d1a",
+          border: `2.5px solid ${err ? C.red : val[i] ? "#60a5fa" : "#2a2a40"}`,
+          boxShadow: val[i] ? "0 0 12px rgba(96,165,250,0.3)" : "none",
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 28, color: C.txt, transition: "all 0.15s",
+          fontSize: 30, color: "#60a5fa", transition: "all 0.15s",
         }}>
           {val[i] ? "●" : ""}
         </div>
@@ -693,8 +694,6 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 
   if (step === "phone") return (
     <div>
-      {loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginBottom: 8 }}>Шалгаж байна...</div>}
-      <label style={{ ...lbl, fontSize: 12, marginBottom: 6 }}>Утасны дугаар</label>
       <input
         ref={phoneRef}
         autoFocus
@@ -706,12 +705,13 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
         placeholder="88123456"
         disabled={loading}
         style={{
-          ...inputSt, fontSize: 24, fontWeight: 800, textAlign: "center",
-          letterSpacing: "0.18em", padding: 14, borderRadius: 12,
+          ...inputSt, fontSize: 26, fontWeight: 800, textAlign: "center",
+          letterSpacing: "0.2em", padding: 16, borderRadius: 12,
           border: `2px solid #3b82f6`, background: "#08080f",
           opacity: loading ? 0.6 : 1,
         }}
       />
+      {loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Шалгаж байна...</div>}
       {err && <div style={{ color: C.red, fontSize: 12, marginTop: 6, textAlign: "center" }}>{err}</div>}
     </div>
   );
@@ -1763,7 +1763,7 @@ export default function Home() {
               boxShadow:"0 10px 50px rgba(0,40,255,0.2)",
             }}>
               <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
-              <div style={{ fontSize:13, color:C.muted, marginBottom:14, textAlign:"center" }}>Утасны дугаараа оруулна уу</div>
+              <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:14, textAlign:"center", letterSpacing:"0.02em" }}>Утасны дугаараа оруулна уу</div>
               <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
             </div>
         </div>,
