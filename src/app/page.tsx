@@ -172,7 +172,15 @@ function BankModal({ film, onClose, onPaid, user }: any) {
 
   // Төлбөр үүсгэх + автомат polling эхлүүлэх
   useEffect(() => {
-    if (step !== "waiting") return;
+    // Буцах товч дарахад сайтаас гарахгүй байлгах
+    window.history.pushState({ modal: true }, "");
+    const handlePop = () => {
+      window.history.pushState({ modal: true }, "");
+      onClose();
+    };
+    window.addEventListener("popstate", handlePop);
+
+    if (step !== "waiting") return () => window.removeEventListener("popstate", handlePop);
 
     // Supabase-д pending_payments үүсгэх
     dbFetch("pending_payments", {
@@ -212,6 +220,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     return () => {
       clearInterval(intervalRef.current);
       clearTimeout(timeoutRef.current);
+      window.removeEventListener("popstate", handlePop);
     };
   }, [step]);
 
