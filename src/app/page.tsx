@@ -1227,6 +1227,65 @@ function AdminContactTab() {
   );
 }
 
+function EditFilmPanel({ f, onDone }: any) {
+  const [title, setTitle] = useState(f.title);
+  const [price, setPrice] = useState(String(f.price || 5000));
+  const [op, setOp] = useState(String(f.op || 6000));
+  const [url, setUrl] = useState(f.url || "");
+  const [img, setImg] = useState(f.img || "");
+  const [badge, setBadge] = useState(f.badge || "Хэлтэй");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    await dbFetch(`films?id=eq.${f.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title, price: parseInt(price) || 0, op: parseInt(op) || 0, url, img, badge }),
+    });
+    setSaving(false);
+    onDone();
+  };
+
+  return (
+    <div style={{ marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
+      <label style={lbl}>Гарчиг</label>
+      <input style={inputSt} value={title} onChange={(e: any) => setTitle(e.target.value)} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+        <div>
+          <label style={lbl}>Зарах үнэ ₮</label>
+          <input style={inputSt} value={price} onChange={(e: any) => setPrice(e.target.value)} type="number" />
+        </div>
+        <div>
+          <label style={lbl}>Хуучин үнэ ₮</label>
+          <input style={inputSt} value={op} onChange={(e: any) => setOp(e.target.value)} type="number" />
+        </div>
+      </div>
+      <label style={{ ...lbl, marginTop: 8 }}>Badge</label>
+      <select style={inputSt} value={badge} onChange={(e: any) => setBadge(e.target.value)}>
+        <option>Хэлтэй</option>
+        <option>Хадмал</option>
+      </select>
+      <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
+      <input style={inputSt} value={url} onChange={(e: any) => setUrl(e.target.value)} placeholder="https://iframe.mediadelivery.net/..." />
+      <label style={{ ...lbl, marginTop: 8 }}>Зургийн URL эсвэл файл</label>
+      <input style={inputSt} value={img} onChange={(e: any) => setImg(e.target.value)} placeholder="https://..." />
+      <input type="file" accept="image/*" onChange={(e: any) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev: any) => setImg(ev.target.result as string);
+        reader.readAsDataURL(file);
+      }} style={{ marginTop: 4, fontSize: 12, color: C.muted, width: "100%" }} />
+      {img && <img src={img} alt="" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8, marginTop: 6 }} />}
+      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+        <button onClick={save} disabled={saving} style={{ flex: 1, background: C.gold, border: "none", borderRadius: 8, padding: "10px", fontWeight: 700, cursor: "pointer", color: "#000", opacity: saving ? 0.6 : 1 }}>
+          {saving ? "..." : "✅ Хадгалах"}
+        </button>
+        <button onClick={onDone} style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px", color: C.muted, fontSize: 13, cursor: "pointer" }}>Болих</button>
+      </div>
+    </div>
+  );
+}
+
 function AdminPage({ films, onBack, onRefresh }: any) {
   const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members">("list");
   const [editId, setEditId] = useState<number | null>(null);
@@ -1346,24 +1405,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
                 <button onClick={() => deletFilm(f.id)} style={{ padding: "8px 12px", borderRadius: 8, border: `0.5px solid #3a1a1a`, background: "#1a0a0a", color: "#f05555", fontSize: 12, cursor: "pointer" }}>🗑️</button>
               </div>
               {editId === f.id && (
-                <div style={{ marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
-                  <label style={lbl}>Зургийн URL эсвэл файл</label>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <input defaultValue={f.img} onChange={(e: any) => setImgVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://..." />
-                    <button onClick={() => updateImg(f.id, imgVal)} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
-                  </div>
-                  <input type="file" accept="image/*" onChange={(e: any) => {
-                    const file = e.target.files?.[0]; if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = (ev: any) => { setImgVal(ev.target.result as string); updateImg(f.id, ev.target.result as string); };
-                    reader.readAsDataURL(file);
-                  }} style={{ marginTop: 4, fontSize: 12, color: C.muted, width: "100%" }} />
-                  <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <input defaultValue={f.url} onChange={(e: any) => setUrlVal(e.target.value)} style={{ ...inputSt, flex: 1 }} placeholder="https://youtu.be/..." />
-                    <button onClick={() => updateUrl(f.id, urlVal)} style={{ background: C.gold, border: "none", borderRadius: 8, padding: "0 12px", fontWeight: 700, cursor: "pointer", color: "#000", fontSize: 12 }}>OK</button>
-                  </div>
-                </div>
+                <EditFilmPanel f={f} onDone={() => { setEditId(null); onRefresh(); }} />
               )}
             </div>
           ))}
