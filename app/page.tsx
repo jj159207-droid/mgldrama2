@@ -894,10 +894,10 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         </div>
       </div>
 
-      {/* ── STICKY НЭВТРЭХ MODAL — scroll хийхэд дагана ── */}
+      {/* ── FIXED BOTTOM SHEET ── */}
       {showLoginModal && !user && (
-        <div style={{ position:"sticky", top:53, zIndex:9, padding:"0 10px 10px" }}>
-          <div style={{ background:"#0e0e1a", border:`1px solid ${C.blue}`, borderRadius:18, padding:"20px 18px", boxShadow:"0 8px 40px rgba(0,0,0,0.7)", maxWidth:480, margin:"0 auto" }}>
+        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", flexDirection:"column", justifyContent:"flex-end" }} onClick={closeLogin}>
+          <div style={{ background:"#0e0e1a", border:`1px solid ${C.blue}`, borderRadius:"20px 20px 0 0", padding:"20px 18px 36px", boxShadow:"0 -8px 40px rgba(0,0,0,0.9)", maxWidth:600, width:"100%", margin:"0 auto" }} onClick={(e:any)=>e.stopPropagation()}>
             {loginStep === "phone" ? (
               <>
                 <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
@@ -950,6 +950,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               </>
             )}
           </div>
+        </div>
         </div>
       )}
 
