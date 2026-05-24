@@ -301,15 +301,17 @@ function BankModal({ film, onClose, onPaid, user }: any) {
           </div>
 
           {/* Гүйлгээний утга — маш том */}
-          <div onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? "#052e16" : "#1a0a00", border: `2px solid ${copied === "ref" ? C.green : "#f97316"}`, borderRadius: 14, padding: "18px 16px", marginBottom: 14, textAlign: "center", cursor: "pointer", transition: "all 0.2s" }}>
-            <div style={{ fontSize: 12, color: copied === "ref" ? C.green : "#f97316", marginBottom: 8, letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 700 }}>
-              {copied === "ref" ? "✅ Хуулагдлаа!" : "⚠️ Гүйлгээний утга — заавал бичнэ!"}
+          <div onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? "#052e16" : "#1a0a00", border: `3px solid ${copied === "ref" ? C.green : "#f97316"}`, borderRadius: 16, padding: "20px 16px", marginBottom: 14, textAlign: "center", cursor: "pointer", transition: "all 0.2s", boxShadow: copied === "ref" ? "none" : "0 0 20px #f9731640" }}>
+            <div style={{ fontSize: 13, color: copied === "ref" ? C.green : "#f97316", marginBottom: 10, letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 800 }}>
+              {copied === "ref" ? "✅ Хуулагдлаа!" : "⚠️ ЗӨВХӨН ЭНИ ХУУЛЖ БИЧНЭ!"}
             </div>
-            <div style={{ fontSize: 38, fontWeight: 900, color: copied === "ref" ? C.green : "#fb923c", letterSpacing: "0.2em", fontFamily: "monospace", marginBottom: 8 }}>
+            <div style={{ fontSize: 42, fontWeight: 900, color: copied === "ref" ? C.green : "#fb923c", letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>
               {refCode}
             </div>
-            <div style={{ fontSize: 12, color: copied === "ref" ? C.green : C.muted }}>
-              {copied === "ref" ? "✓ Хуулагдлаа" : "👆 Дарж хуулах"}
+            <div style={{ background: copied === "ref" ? "#166534" : "#f97316", borderRadius: 10, padding: "10px 20px", display: "inline-block" }}>
+              <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
+                {copied === "ref" ? "✓ Хуулагдлаа" : "👆 ДАРЖ ХУУЛАХ"}
+              </span>
             </div>
           </div>
 
@@ -716,7 +718,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>11,500₮</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
             <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
           </div>
         </div>
