@@ -765,16 +765,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
-          {!user && (
-            <div onClick={openLogin} style={{ background: "linear-gradient(90deg,#0369a1,#0ea5e9)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-              <span style={{ fontSize: 26 }}>🎬</span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
-                <div style={{ fontSize: 13, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
-              </div>
-            </div>
-          )}
+        <div style={{ padding: "8px 16px" }}>
           <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ fontSize: 26 }}>👑</span>
@@ -1684,20 +1675,18 @@ export default function Home() {
         </div>
       )}
       {showLoginModal && !user && typeof document !== "undefined" && createPortal(
-        <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:9999, pointerEvents:"none" }}>
-          <div style={{ position:"absolute", top:53, left:0, right:0, pointerEvents:"all" }}>
-            <div style={{
-              width:"100%", maxWidth:520, margin:"0 auto",
-              background:"#0d0d18",
-              borderRadius:"0 0 20px 20px",
-              padding:"20px 20px 28px",
-              border:"1px solid #1e2d4a",
-              borderTop:"none",
-              boxShadow:"0 10px 50px rgba(0,40,255,0.18)",
-            }}>
-              <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:12, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
-              <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
-            </div>
+        <div style={{ position:"fixed", top:53, left:0, right:0, zIndex:9999 }}>
+          <div style={{
+            width:"100%", maxWidth:520, margin:"0 auto",
+            background:"#0d0d18",
+            borderRadius:"0 0 20px 20px",
+            padding:"20px 20px 28px",
+            border:"1px solid #1e2d4a",
+            borderTop:"none",
+            boxShadow:"0 10px 50px rgba(0,40,255,0.18)",
+          }}>
+            <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:12, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
+            <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
           </div>
         </div>,
         document.body
