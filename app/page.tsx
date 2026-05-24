@@ -583,77 +583,199 @@ function ContactModal({ onClose, user }: any) {
 }
 
 function LoginPage({ onLogin, onBack }: any) {
-  const [mode, setMode] = useState<"login" | "register" | "reset">("login");
-  const [phone, setPhone] = useState(""); const [pin, setPin] = useState(""); const [pin2, setPin2] = useState("");
-  const [err, setErr] = useState(""); const [loading, setLoading] = useState(false);
-  const register = async () => {
-    if (phone.length < 8) { setErr("Утасны дугаар буруу байна"); return; }
-    if (pin.length !== 4 || !/^\d+$/.test(pin)) { setErr("PIN 4 оронтой тоо байх ёстой"); return; }
-    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
+  const [step, setStep] = useState<"phone" | "pin">("phone");
+  const [phone, setPhone] = useState("");
+  const [pin, setPin] = useState("");
+  const [isNewUser, setIsNewUser] = useState(false);
+  const [pin2, setPin2] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+  const pinRefs = [useRef<any>(null), useRef<any>(null), useRef<any>(null), useRef<any>(null)];
+  const pin2Refs = [useRef<any>(null), useRef<any>(null), useRef<any>(null), useRef<any>(null)];
+
+  const handlePhoneContinue = async () => {
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length !== 8) { setErr("8 оронтой утасны дугаар оруулна уу"); return; }
     setLoading(true); setErr("");
-    const exists = await dbFetch(`users?phone=eq.${phone}&select=id`);
-    if (Array.isArray(exists) && exists.length > 0) { setErr("Энэ дугаар бүртгэлтэй байна"); setLoading(false); return; }
-    const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin, user_id: "tmp", failed_attempts: 0 }) });
-    if (data?.[0]?.id) {
-      const uid = genUserId(data[0].id);
-      await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
-      saveSession({ ...data[0], user_id: uid }); onLogin({ ...data[0], user_id: uid });
-    } else { setErr("Бүртгэл амжилтгүй"); }
+    const exists = await dbFetch(`users?phone=eq.${cleaned}&select=id`);
+    setIsNewUser(!(Array.isArray(exists) && exists.length > 0));
+    setLoading(false);
+    setPin(""); setPin2("");
+    setStep("pin");
+    setTimeout(() => pinRefs[0]?.current?.focus(), 100);
+  };
+
+  const handlePinSubmit = async () => {
+    if (pin.length !== 4) { setErr("4 оронтой PIN оруулна уу"); return; }
+    if (isNewUser && pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
+    setLoading(true); setErr("");
+    const cleaned = phone.replace(/\D/g, "");
+    if (isNewUser) {
+      const data = await dbFetch("users", {
+        method: "POST",
+        body: JSON.stringify({ phone: cleaned, pin, user_id: "tmp", failed_attempts: 0 }),
+      });
+      if (data?.[0]?.id) {
+        const uid = genUserId(data[0].id);
+        await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
+        saveSession({ ...data[0], user_id: uid });
+        onLogin({ ...data[0], user_id: uid });
+      } else { setErr("Бүртгэл амжилтгүй. Дахин оролдоно уу"); }
+    } else {
+      const data = await dbFetch(`users?phone=eq.${cleaned}&select=*`);
+      if (!Array.isArray(data) || data.length === 0) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
+      const user = data[0];
+      if (user.locked_until && new Date(user.locked_until) > new Date()) {
+        setErr("Хэт олон удаа буруу оруулсан. 15 минут хүлээнэ үү");
+        setLoading(false); return;
+      }
+      if (user.pin !== pin) {
+        const attempts = (user.failed_attempts || 0) + 1;
+        const locked = attempts >= 3 ? { locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() } : {};
+        await dbFetch(`users?id=eq.${user.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: attempts, ...locked }) });
+        setErr(attempts >= 3 ? "3 удаа буруу оруулсан. 15 минут хүлээнэ үү" : `PIN буруу (${3 - attempts} оролдлого үлдсэн)`);
+        setPin("");
+        setTimeout(() => pinRefs[0]?.current?.focus(), 100);
+        setLoading(false); return;
+      }
+      await dbFetch(`users?id=eq.${user.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: 0, locked_until: null }) });
+      saveSession(user);
+      onLogin(user);
+    }
     setLoading(false);
   };
-  const login = async () => {
-    if (!phone || !pin) { setErr("Дугаар болон PIN оруулна уу"); return; }
-    setLoading(true); setErr("");
-    const data = await dbFetch(`users?phone=eq.${phone}&select=*`);
-    if (!Array.isArray(data) || data.length === 0) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
-    const user = data[0];
-    if (user.locked_until && new Date(user.locked_until) > new Date()) { setErr("Хэт олон удаа буруу оруулсан. Түр хүлээнэ үү"); setLoading(false); return; }
-    if (user.pin !== pin) {
-      const attempts = (user.failed_attempts || 0) + 1;
-      const locked = attempts >= 3 ? { locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() } : {};
-      await dbFetch(`users?id=eq.${user.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: attempts, ...locked }) });
-      setErr(attempts >= 3 ? "3 удаа буруу оруулсан. 15 минут хүлээнэ үү" : `PIN буруу байна (${3 - attempts} оролдлого үлдсэн)`);
-      setLoading(false); return;
-    }
-    await dbFetch(`users?id=eq.${user.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: 0, locked_until: null }) });
-    saveSession(user); onLogin(user); setLoading(false);
+
+  const handlePinKey = (e: any, i: number, val: string, setVal: (v: string) => void, refs: any[]) => {
+    if (e.key === "Backspace") {
+      if (val[i]) { setVal(val.slice(0, i) + val.slice(i + 1)); }
+      else if (i > 0) { setVal(val.slice(0, i - 1) + val.slice(i)); refs[i - 1]?.current?.focus(); }
+      setErr("");
+    } else if (e.key === "Enter" && pin.length === 4) { handlePinSubmit(); }
   };
-  const resetPin = async () => {
-    if (phone.length < 8) { setErr("Утасны дугаар буруу байна"); return; }
-    if (pin.length !== 4 || !/^\d+$/.test(pin)) { setErr("Шинэ PIN 4 оронтой тоо байх ёстой"); return; }
-    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
-    setLoading(true); setErr("");
-    const data = await dbFetch(`users?phone=eq.${phone}&select=id`);
-    if (!Array.isArray(data) || data.length === 0) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
-    await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ pin, failed_attempts: 0, locked_until: null }) });
-    setErr(""); setMode("login"); alert("PIN амжилттай солигдлоо!"); setLoading(false);
+
+  const handlePinChange = (e: any, i: number, val: string, setVal: (v: string) => void, refs: any[]) => {
+    const digit = e.target.value.replace(/\D/g, "").slice(-1);
+    if (!digit) return;
+    const next = (val.slice(0, i) + digit + val.slice(i + 1)).slice(0, 4);
+    setVal(next); setErr("");
+    if (i < 3) refs[i + 1]?.current?.focus();
   };
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ fontSize: 40, marginBottom: 8 }}>🎬</div>
-      <div style={{ fontSize: 20, fontWeight: 800, color: C.txt, marginBottom: 4, fontFamily: "Georgia,serif" }}>кино үзэх самбар</div>
-      <div style={{ fontSize: 13, color: C.muted, marginBottom: 24 }}>{mode === "login" ? "Нэвтрэх" : mode === "register" ? "Бүртгүүлэх" : "PIN сэргээх"}</div>
-      <div style={{ width: "100%", maxWidth: 340, background: C.card, borderRadius: 16, padding: 20, border: `0.5px solid ${C.bd}` }}>
-        <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-          {(["login", "register", "reset"] as const).map(m => (
-            <button key={m} onClick={() => { setMode(m); setErr(""); }} style={{ flex: 1, padding: "12px 4px", borderRadius: 10, border: "none", background: mode === m ? C.gold : C.card2, color: mode === m ? "#000" : "#a0a0c0", fontWeight: 800, cursor: "pointer", fontSize: 13 }}>
-              {m === "login" ? "Нэвтрэх" : m === "register" ? "Бүртгүүлэх" : "PIN сэргээх"}
-            </button>
-          ))}
+
+  const PinBoxes = ({ val, setVal, refs }: { val: string; setVal: (v: string) => void; refs: any[] }) => (
+    <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 20 }}>
+      {[0, 1, 2, 3].map(i => (
+        <input
+          key={i}
+          ref={refs[i]}
+          type="password"
+          inputMode="numeric"
+          maxLength={1}
+          value={val[i] || ""}
+          onChange={(e: any) => handlePinChange(e, i, val, setVal, refs)}
+          onKeyDown={(e: any) => handlePinKey(e, i, val, setVal, refs)}
+          style={{
+            width: 58, height: 58, textAlign: "center", fontSize: 24, fontWeight: 800,
+            background: val[i] ? "#1a1a2e" : "#0a0a14",
+            border: `2px solid ${err ? C.red : val[i] ? C.blue : C.bd}`,
+            borderRadius: 14, color: C.txt, outline: "none", caretColor: "transparent",
+            transition: "border-color 0.2s, background 0.2s",
+          }}
+        />
+      ))}
+    </div>
+  );
+
+  if (step === "phone") {
+    return (
+      <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", borderBottom: `0.5px solid ${C.bd}` }}>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer", marginRight: 10 }}>←</button>
+          <span style={{ fontSize: 16, fontWeight: 700, color: C.txt }}>Утасаар нэвтрэх</span>
         </div>
-        <label style={lbl}>Утасны дугаар</label>
-        <input style={inputSt} value={phone} onChange={(e: any) => setPhone(e.target.value)} placeholder="99001234" type="tel" maxLength={8} />
-        <label style={{ ...lbl, marginTop: 10 }}>{mode === "reset" ? "Шинэ PIN" : "PIN код (4 оронтой)"}</label>
-        <input style={inputSt} value={pin} onChange={(e: any) => setPin(e.target.value)} placeholder="****" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} />
-        {mode !== "login" && <>
-          <label style={{ ...lbl, marginTop: 10 }}>PIN давтах</label>
-          <input style={inputSt} value={pin2} onChange={(e: any) => setPin2(e.target.value)} placeholder="****" type="password" inputMode="numeric" pattern="[0-9]*" maxLength={4} />
-        </>}
-        {err && <div style={{ color: C.red, fontSize: 12, marginTop: 8 }}>{err}</div>}
-        <button onClick={mode === "login" ? login : mode === "register" ? register : resetPin} disabled={loading} style={{ ...goldBtn, marginTop: 14, opacity: loading ? 0.6 : 1 }}>
-          {loading ? "Түр хүлээнэ үү..." : mode === "login" ? "🔓 Нэвтрэх" : mode === "register" ? "✅ Бүртгүүлэх" : "🔄 PIN солих"}
-        </button>
-        <button onClick={onBack} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 11, borderRadius: 10, fontSize: 13, cursor: "pointer", marginTop: 8 }}>Буцах</button>
+        <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px" }}>
+          <div style={{ width: "100%", maxWidth: 400, background: "#0e0e1a", borderRadius: 20, padding: "28px 22px", border: `0.5px solid ${C.bd}` }}>
+            <div style={{ fontSize: 20, fontWeight: 800, color: C.txt, marginBottom: 8 }}>Утасаар нэвтрэх</div>
+            <div style={{ fontSize: 14, color: C.muted, marginBottom: 20 }}>Монгол утасны дугаараа оруулна уу.</div>
+            <label style={{ ...lbl, fontSize: 13, marginBottom: 8 }}>Утас (8XXXXXXXX)</label>
+            <input
+              style={{ ...inputSt, fontSize: 22, fontWeight: 700, textAlign: "center", letterSpacing: "0.15em", padding: "14px", borderRadius: 12, border: `1.5px solid ${C.blue}`, background: "#0a0a14" }}
+              value={phone}
+              onChange={(e: any) => { setPhone(e.target.value.replace(/\D/g, "").slice(0, 8)); setErr(""); }}
+              placeholder="88123456"
+              type="tel"
+              inputMode="numeric"
+              maxLength={8}
+              autoFocus
+              onKeyDown={(e: any) => e.key === "Enter" && handlePhoneContinue()}
+            />
+            {err && <div style={{ color: C.red, fontSize: 12, marginTop: 8, textAlign: "center" }}>{err}</div>}
+            <button
+              onClick={handlePhoneContinue}
+              disabled={loading || phone.replace(/\D/g, "").length !== 8}
+              style={{ ...goldBtn, marginTop: 16, fontSize: 16, padding: 15, borderRadius: 12, opacity: loading || phone.replace(/\D/g, "").length !== 8 ? 0.6 : 1 }}
+            >
+              {loading ? "Шалгаж байна..." : "Үргэлжлүүлэх"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", borderBottom: `0.5px solid ${C.bd}` }}>
+        <button onClick={() => { setStep("phone"); setErr(""); setPin(""); setPin2(""); }} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer", marginRight: 10 }}>←</button>
+        <span style={{ fontSize: 16, fontWeight: 700, color: C.txt }}>Утасаар нэвтрэх</span>
+      </div>
+      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px" }}>
+        <div style={{ width: "100%", maxWidth: 400, background: "#0e0e1a", borderRadius: 20, padding: "28px 22px", border: `0.5px solid ${C.bd}` }}>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.txt, marginBottom: 16 }}>Утасаар нэвтрэх</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <span style={{ fontSize: 13, color: C.muted }}>Утас</span>
+            <button onClick={() => { setStep("phone"); setPin(""); setPin2(""); setErr(""); }} style={{ background: "none", border: "none", color: C.blue, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>← Өөрчлөх</button>
+          </div>
+          <div style={{ background: "#0a0a14", borderRadius: 12, padding: "13px", textAlign: "center", fontSize: 20, fontWeight: 800, color: C.txt, letterSpacing: "0.15em", marginBottom: 20, border: `0.5px solid ${C.bd}` }}>
+            {phone}
+          </div>
+          <label style={{ ...lbl, fontSize: 13, textAlign: "center", display: "block", marginBottom: 14 }}>
+            {isNewUser ? "Шинэ PIN код тохируулна уу" : "PIN код оруулна уу"}
+          </label>
+          <PinBoxes val={pin} setVal={setPin} refs={pinRefs} />
+          {isNewUser && (
+            <>
+              <label style={{ ...lbl, fontSize: 13, textAlign: "center", display: "block", marginBottom: 14 }}>PIN давтан оруулна уу</label>
+              <PinBoxes val={pin2} setVal={setPin2} refs={pin2Refs} />
+            </>
+          )}
+          {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 10, textAlign: "center" }}>{err}</div>}
+          <button
+            onClick={handlePinSubmit}
+            disabled={loading || pin.length !== 4 || (isNewUser && pin2.length !== 4)}
+            style={{ ...goldBtn, fontSize: 16, padding: 15, borderRadius: 12, opacity: loading || pin.length !== 4 || (isNewUser && pin2.length !== 4) ? 0.6 : 1 }}
+          >
+            {loading ? "Түр хүлээнэ үү..." : isNewUser ? "✅ Бүртгүүлэх" : "🔓 Нэвтрэх"}
+          </button>
+          {!isNewUser && (
+            <button
+              onClick={async () => {
+                const cleaned = phone.replace(/\D/g, "");
+                const data = await dbFetch(`users?phone=eq.${cleaned}&select=id`);
+                if (Array.isArray(data) && data.length > 0) {
+                  const newPin = prompt("Шинэ 4 оронтой PIN оруулна уу:");
+                  if (newPin && /^\d{4}$/.test(newPin)) {
+                    await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ pin: newPin, failed_attempts: 0, locked_until: null }) });
+                    alert("PIN амжилттай солигдлоо!"); setPin("");
+                    setTimeout(() => pinRefs[0]?.current?.focus(), 100);
+                  }
+                }
+              }}
+              style={{ width: "100%", background: "none", border: "none", color: C.blue, fontSize: 13, cursor: "pointer", marginTop: 14, textAlign: "center" }}
+            >
+              PIN код мартсан
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
