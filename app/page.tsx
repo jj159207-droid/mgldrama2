@@ -748,10 +748,19 @@ function VideoPage({ film, onBack }: any) {
   const { type, src } = getVideoEmbed(film.url || "");
   useEffect(() => {
     const t = setTimeout(() => setShowControls(false), 4000);
+    // 2 pushState хийнэ — нэг буцахад video дотор үлдэнэ, хоёр дахинд нь гарна
     window.history.pushState({ video: true }, "");
-    const handlePop = () => { onBack(); };
+    window.history.pushState({ video: true }, "");
+    const handlePop = () => {
+      // Дахин нэг pushState нэмж буцах дарахад сайтаас гарахгүй болгоно
+      window.history.pushState({ video: true }, "");
+      onBack();
+    };
     window.addEventListener("popstate", handlePop);
-    return () => { clearTimeout(t); window.removeEventListener("popstate", handlePop); };
+    return () => { 
+      clearTimeout(t); 
+      window.removeEventListener("popstate", handlePop);
+    };
   }, []);
   return (
     <div onClick={() => setShowControls(v => !v)} style={{ background: "#000", position: "fixed", inset: 0, zIndex: 50 }}>
