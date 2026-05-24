@@ -717,10 +717,8 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
-  const [showModal, setShowModal] = useState(false);
-
   const handleLogoTap = () => {
     tapRef.current.count += 1;
     if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
@@ -743,10 +741,8 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     return null;
   };
 
-  useEffect(() => { if (user) setShowModal(false); }, [user]);
-  const openLogin = () => setShowModal(true);
-  const closeLogin = () => setShowModal(false);
-  const handleLoginDone = (u: any) => { closeLogin(); onLogin(u); };
+  const openLogin = () => onOpenLogin();
+  const handleLoginDone = (u: any) => { onLogin(u); };
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
@@ -800,20 +796,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         }
       </div>
 
-      {showModal && !user && (
-        <div style={{ position:"fixed", top:53, left:0, right:0, zIndex:100, padding:"0 10px 10px" }}>
-          <div style={{
-            width:"100%", maxWidth:500, margin:"0 auto",
-            background:"#0d0d18", borderRadius:"0 0 18px 18px",
-            padding:"18px 18px 24px", border:`1px solid #1e2d4a`,
-            borderTop:"none",
-            boxShadow:"0 8px 40px rgba(0,0,255,0.12)",
-          }}>
-            <button onClick={closeLogin} style={{ position:"absolute", top:10, right:16, background:"none", border:"none", color:C.muted, fontSize:20, cursor:"pointer" }}>✕</button>
-            <LoginModal onLogin={handleLoginDone} />
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
@@ -1520,6 +1503,7 @@ export default function Home() {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
 
   // PWA install prompt барих
@@ -1621,7 +1605,7 @@ export default function Home() {
     }
   };
 
-  const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setPage("home"); };
+  const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
   const handleLogout = () => { clearSession(); setUser(null); };
   const filmsWithUnlock = films.map(f => hasAccess(f.id) ? { ...f, locked: false } : f);
 
@@ -1657,7 +1641,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 14500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 14500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
@@ -1695,6 +1679,22 @@ export default function Home() {
           <div style={{ background:"#0d0d18", borderRadius:"22px 22px 0 0", padding:"22px 20px 40px", width:"100%", maxWidth:500, margin:"0 auto", border:`1px solid #1e2d4a`, boxShadow:"0 -4px 60px rgba(0,80,255,0.15)" }} onClick={(e:any)=>e.stopPropagation()}>
             <div style={{ width:40, height:4, background:C.bd, borderRadius:2, margin:"0 auto 18px" }} />
             <LoginModal onLogin={(u:any) => { setShowLoginPrompt(false); handleLogin(u); }} />
+          </div>
+        </div>
+      )}
+      {showLoginModal && !user && (
+        <div style={{ position:"fixed", top:53, left:0, right:0, zIndex:999 }}>
+          <div style={{
+            width:"100%", maxWidth:520, margin:"0 auto",
+            background:"#0d0d18",
+            borderRadius:"0 0 20px 20px",
+            padding:"20px 20px 28px",
+            border:"1px solid #1e2d4a",
+            borderTop:"none",
+            boxShadow:"0 10px 50px rgba(0,40,255,0.18)",
+          }}>
+            <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:12, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
+            <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
           </div>
         </div>
       )}
