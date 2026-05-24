@@ -951,7 +951,6 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
             )}
           </div>
         </div>
-        </div>
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
