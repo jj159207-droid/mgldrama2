@@ -1580,7 +1580,7 @@ export default function Home() {
   const [showInstall, setShowInstall] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(true);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
 
   // PWA install prompt барих
@@ -1755,27 +1755,7 @@ export default function Home() {
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
       {!user && typeof document !== "undefined" && createPortal(
         <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, width:"calc(100% - 24px)", maxWidth:500, pointerEvents:"none" }}>
-          {!showLoginModal ? (
-            <div onClick={() => setShowLoginModal(true)}
-              style={{
-                pointerEvents:"all",
-                background:"#0d0d18",
-                border:"1px solid #1e2d4a",
-                borderRadius:16, padding:"18px 22px",
-                display:"flex", alignItems:"center", gap:16, cursor:"pointer",
-                boxShadow:"0 8px 40px rgba(0,0,0,0.7)",
-              }}>
-              <div style={{ fontSize:36, lineHeight:1 }}>🔐</div>
-              <div>
-                <div style={{ fontSize:16, fontWeight:800, color:"#fff", marginBottom:3 }}>Нэвтрэх / Бүртгүүлэх</div>
-                <div style={{ fontSize:13, color:C.muted }}>Дугаараа оруулж нэвтэрнэ үү</div>
-              </div>
-              <div style={{ marginLeft:"auto", background:"#e8a020", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:700, color:"#000", whiteSpace:"nowrap" }}>
-                Нэвтрэх →
-              </div>
-            </div>
-          ) : (
-            <div style={{
+          <div style={{
               pointerEvents:"all",
               background:"#0d0d18",
               borderRadius:20, padding:"22px 20px 28px",
@@ -1783,9 +1763,9 @@ export default function Home() {
               boxShadow:"0 10px 50px rgba(0,40,255,0.2)",
             }}>
               <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
+              <div style={{ fontSize:13, color:C.muted, marginBottom:14, textAlign:"center" }}>Утасны дугаараа оруулна уу</div>
               <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
             </div>
-          )}
         </div>,
         document.body
       )}
