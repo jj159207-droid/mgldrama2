@@ -743,6 +743,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     return null;
   };
 
+  useEffect(() => { if (user) setShowModal(false); }, [user]);
   const openLogin = () => setShowModal(true);
   const closeLogin = () => setShowModal(false);
   const handleLoginDone = (u: any) => { closeLogin(); onLogin(u); };
@@ -800,16 +801,15 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
       </div>
 
       {showModal && !user && (
-        <div style={{ position:"fixed", inset:0, zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={closeLogin}>
-          <div style={{ background:"rgba(0,0,0,0.6)", position:"absolute", inset:0 }} />
+        <div style={{ position:"fixed", top:53, left:0, right:0, zIndex:100, padding:"0 10px 10px" }}>
           <div style={{
-            position:"relative", width:"100%", maxWidth:500, margin:"0 auto",
-            background:"#0d0d18", borderRadius:"22px 22px 0 0",
-            padding:"22px 20px 40px", border:`1px solid #1e2d4a`,
-            boxShadow:"0 -4px 60px rgba(0,80,255,0.15)",
-          }} onClick={(e:any)=>e.stopPropagation()}>
-            <div style={{ width:40, height:4, background:C.bd, borderRadius:2, margin:"0 auto 18px" }} />
-            <button onClick={closeLogin} style={{ position:"absolute", top:16, right:16, background:"none", border:"none", color:C.muted, fontSize:22, cursor:"pointer" }}>✕</button>
+            width:"100%", maxWidth:500, margin:"0 auto",
+            background:"#0d0d18", borderRadius:"0 0 18px 18px",
+            padding:"18px 18px 24px", border:`1px solid #1e2d4a`,
+            borderTop:"none",
+            boxShadow:"0 8px 40px rgba(0,0,255,0.12)",
+          }}>
+            <button onClick={closeLogin} style={{ position:"absolute", top:10, right:16, background:"none", border:"none", color:C.muted, fontSize:20, cursor:"pointer" }}>✕</button>
             <LoginModal onLogin={handleLoginDone} />
           </div>
         </div>
