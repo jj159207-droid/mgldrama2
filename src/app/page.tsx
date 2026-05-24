@@ -1,5 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -1682,21 +1683,24 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showLoginModal && !user && (
-        <div style={{ position:"fixed", top:53, left:0, right:0, zIndex:999 }}>
-          <div style={{
-            width:"100%", maxWidth:520, margin:"0 auto",
-            background:"#0d0d18",
-            borderRadius:"0 0 20px 20px",
-            padding:"20px 20px 28px",
-            border:"1px solid #1e2d4a",
-            borderTop:"none",
-            boxShadow:"0 10px 50px rgba(0,40,255,0.18)",
-          }}>
-            <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:12, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
-            <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
+      {showLoginModal && !user && typeof document !== "undefined" && createPortal(
+        <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, zIndex:9999, pointerEvents:"none" }}>
+          <div style={{ position:"absolute", top:53, left:0, right:0, pointerEvents:"all" }}>
+            <div style={{
+              width:"100%", maxWidth:520, margin:"0 auto",
+              background:"#0d0d18",
+              borderRadius:"0 0 20px 20px",
+              padding:"20px 20px 28px",
+              border:"1px solid #1e2d4a",
+              borderTop:"none",
+              boxShadow:"0 10px 50px rgba(0,40,255,0.18)",
+            }}>
+              <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:12, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
+              <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
