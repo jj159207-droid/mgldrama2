@@ -303,7 +303,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
           {/* Гүйлгээний утга — маш том */}
           <div onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? "#052e16" : "#1a0a00", border: `3px solid ${copied === "ref" ? C.green : "#f97316"}`, borderRadius: 16, padding: "20px 16px", marginBottom: 14, textAlign: "center", cursor: "pointer", transition: "all 0.2s", boxShadow: copied === "ref" ? "none" : "0 0 20px #f9731640" }}>
             <div style={{ fontSize: 13, color: copied === "ref" ? C.green : "#f97316", marginBottom: 10, letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 800 }}>
-              {copied === "ref" ? "✅ Хуулагдлаа!" : "⚠️ ЗӨВХӨН ЭНИ ХУУЛЖ БИЧНЭ!"}
+              {copied === "ref" ? "✅ Хуулагдлаа!" : "⚠️ ЗӨВХӨН ЭНЭ КОДЫГ ГҮЙЛГЭЭНИЙ УТГА ДЭЭР БИЧНЭ!"}
             </div>
             <div style={{ fontSize: 42, fontWeight: 900, color: copied === "ref" ? C.green : "#fb923c", letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>
               {refCode}
@@ -681,12 +681,9 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
-        <button onClick={() => {
-          const e = (window as any).__pwaPrompt;
-          if (e) { e.prompt(); } else { onInstall(); }
-        }} style={{ background: "none", border: `0.5px solid ${C.bd}`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-          📲 Апп суулгах
-        </button>
+        <a href="https://m.me/61590383810997" target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+          💬 Messenger
+        </a>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
           {user
