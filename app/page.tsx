@@ -588,9 +588,10 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
   const [isNew, setIsNew] = useState(false);
-  const [step, setStep] = useState<"phone"|"pin">("phone");
+  const [step, setStep] = useState<"phone"|"pin"|"reset">("phone");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showReset, setShowReset] = useState(false);
   const phoneRef = useRef<any>(null);
   const pinRef = useRef<any>(null);
   const pin2Ref = useRef<any>(null);
@@ -638,12 +639,25 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
       await dbFetch(`users?id=eq.${u.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: att, ...lk }) });
       setErr(att >= 3 ? "3 удаа буруу. 15 минут хүлээнэ үү" : `PIN буруу (${3 - att} оролдлого)`);
       setPin("");
+      setShowReset(true);
       setTimeout(() => pinRef.current?.focus(), 100);
       setLoading(false); return;
     }
     await dbFetch(`users?id=eq.${u.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: 0, locked_until: null }) });
     saveSession(u); onLogin(u);
     setLoading(false);
+  };
+
+  const resetPin = async () => {
+    if (pin.length !== 4) { setErr("Шинэ 4 оронтой PIN оруулна уу"); return; }
+    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
+    setLoading(true); setErr("");
+    const data = await dbFetch(`users?phone=eq.${phone}&select=id`);
+    if (!Array.isArray(data) || !data.length) { setErr("Дугаар олдсонгүй"); setLoading(false); return; }
+    await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ pin, failed_attempts: 0, locked_until: null }) });
+    setLoading(false);
+    setStep("pin"); setShowReset(false); setPin(""); setPin2(""); setErr("");
+    setTimeout(() => pinRef.current?.focus(), 100);
   };
 
   const submitRegister = async () => {
@@ -737,8 +751,49 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
           </button>
         </>
       )}
-      {!isNew && err && <div style={{ color: C.red, fontSize: 12, marginTop: 4, textAlign: "center" }}>{err}</div>}
+      {!isNew && err && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ color: C.red, fontSize: 12, textAlign: "center", marginBottom: 10 }}>{err}</div>
+          {showReset && (
+            <button onClick={() => { setStep("reset"); setPin(""); setPin2(""); setErr(""); setShowReset(false); }}
+              style={{ width:"100%", background:"none", border:`1px solid ${C.bd}`, color:"#3b82f6", borderRadius:10, padding:"10px", fontSize:13, cursor:"pointer", fontWeight:600 }}>
+              🔑 PIN код солих
+            </button>
+          )}
+        </div>
+      )}
       {loading && !isNew && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Нэвтэрч байна...</div>}
+
+      {step === "reset" && (
+        <div style={{ marginTop: 4 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12, textAlign:"center" }}>🔑 Шинэ PIN тохируулах</div>
+          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>Шинэ PIN</label>
+          <div style={{ position: "relative" }}>
+            <PinDots val={pin} />
+            <input ref={pinRef} type="tel" inputMode="numeric" maxLength={4} value={pin}
+              onChange={(e: any) => { setPin(e.target.value.replace(/\D/g,"").slice(0,4)); setErr(""); }}
+              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
+            />
+          </div>
+          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>PIN давтах</label>
+          <div style={{ position: "relative" }}>
+            <PinDots val={pin2} />
+            <input ref={pin2Ref} type="tel" inputMode="numeric" maxLength={4} value={pin2}
+              onChange={(e: any) => { setPin2(e.target.value.replace(/\D/g,"").slice(0,4)); setErr(""); }}
+              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
+            />
+          </div>
+          {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
+          <button onClick={resetPin} disabled={loading || pin.length !== 4 || pin2.length !== 4}
+            style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 || pin2.length !== 4 ? 0.5 : 1, marginTop: 4 }}>
+            {loading ? "Хадгалж байна..." : "✅ PIN солих"}
+          </button>
+          <button onClick={() => { setStep("pin"); setPin(""); setPin2(""); setErr(""); setTimeout(()=>pinRef.current?.focus(),100); }}
+            style={{ width:"100%", background:"none", border:"none", color: C.muted, fontSize:13, cursor:"pointer", marginTop:8 }}>
+            Буцах
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1704,15 +1759,19 @@ export default function Home() {
             <div onClick={() => setShowLoginModal(true)}
               style={{
                 pointerEvents:"all",
-                background:"linear-gradient(90deg,#0369a1,#0ea5e9)",
-                borderRadius:14, padding:"14px 18px",
-                display:"flex", alignItems:"center", gap:12, cursor:"pointer",
-                boxShadow:"0 4px 30px rgba(0,0,0,0.5)",
+                background:"#0d0d18",
+                border:"1px solid #1e2d4a",
+                borderRadius:16, padding:"18px 22px",
+                display:"flex", alignItems:"center", gap:16, cursor:"pointer",
+                boxShadow:"0 8px 40px rgba(0,0,0,0.7)",
               }}>
-              <span style={{ fontSize:26 }}>🎬</span>
+              <div style={{ fontSize:36, lineHeight:1 }}>🔐</div>
               <div>
-                <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
-                <div style={{ fontSize:12, color:"#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
+                <div style={{ fontSize:16, fontWeight:800, color:"#fff", marginBottom:3 }}>Нэвтрэх / Бүртгүүлэх</div>
+                <div style={{ fontSize:13, color:C.muted }}>Дугаараа оруулж нэвтэрнэ үү</div>
+              </div>
+              <div style={{ marginLeft:"auto", background:"#e8a020", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:700, color:"#000", whiteSpace:"nowrap" }}>
+                Нэвтрэх →
               </div>
             </div>
           ) : (
