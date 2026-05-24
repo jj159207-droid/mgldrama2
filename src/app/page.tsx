@@ -748,10 +748,9 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
   return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        {/* ── STICKY HEADER + BANNERS ── */}
-        <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.bg }}>
-          {/* Navbar */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", borderBottom: `0.5px solid ${C.bd}` }}>
+        {/* ── STICKY NAVBAR ONLY ── */}
+        <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.bg, borderBottom: `0.5px solid ${C.bd}` }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
             <a href="https://m.me/61590383810997" target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
               💬 Messenger
             </a>
@@ -768,29 +767,21 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
             </div>
           </div>
-          {/* Banners */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "8px 12px" }}>
-            {!user && (
-              <div onClick={openLogin} style={{ background: "linear-gradient(90deg,#0369a1,#0ea5e9)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-                <span style={{ fontSize: 24 }}>🎬</span>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
-                  <div style={{ fontSize: 12, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
-                </div>
+        </div>
+
+        {/* ── 1 САРЫН БАГЦ — кинонуудтай хамт scroll явна ── */}
+        <div style={{ padding: "8px 12px" }}>
+          <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 24 }}>👑</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
+                <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
               </div>
-            )}
-            <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 24 }}>👑</span>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
-                  <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
-                <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
-              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
+              <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
             </div>
           </div>
         </div>
@@ -1688,20 +1679,36 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showLoginModal && !user && typeof document !== "undefined" && createPortal(
-        <div style={{ position:"fixed", top:53, left:0, right:0, zIndex:9999 }}>
-          <div style={{
-            width:"100%", maxWidth:520, margin:"0 auto",
-            background:"#0d0d18",
-            borderRadius:"0 0 20px 20px",
-            padding:"20px 20px 28px",
-            border:"1px solid #1e2d4a",
-            borderTop:"none",
-            boxShadow:"0 10px 50px rgba(0,40,255,0.18)",
-          }}>
-            <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:12, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
-            <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
-          </div>
+      {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
+      {!user && typeof document !== "undefined" && createPortal(
+        <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, width:"calc(100% - 24px)", maxWidth:500, pointerEvents:"none" }}>
+          {!showLoginModal ? (
+            <div onClick={() => setShowLoginModal(true)}
+              style={{
+                pointerEvents:"all",
+                background:"linear-gradient(90deg,#0369a1,#0ea5e9)",
+                borderRadius:14, padding:"14px 18px",
+                display:"flex", alignItems:"center", gap:12, cursor:"pointer",
+                boxShadow:"0 4px 30px rgba(0,0,0,0.5)",
+              }}>
+              <span style={{ fontSize:26 }}>🎬</span>
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
+                <div style={{ fontSize:12, color:"#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
+              </div>
+            </div>
+          ) : (
+            <div style={{
+              pointerEvents:"all",
+              background:"#0d0d18",
+              borderRadius:20, padding:"22px 20px 28px",
+              border:"1px solid #1e2d4a",
+              boxShadow:"0 10px 50px rgba(0,40,255,0.2)",
+            }}>
+              <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
+              <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
+            </div>
+          )}
         </div>,
         document.body
       )}
