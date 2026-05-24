@@ -1497,7 +1497,6 @@ export default function Home() {
   const [adminAuth, setAdminAuth] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -1580,7 +1579,7 @@ export default function Home() {
 
   const handleFilm = (f: any) => {
     if (f.free) { setCurFilm({ ...f, locked: false }); setPage("video"); return; }
-    if (!user) { setShowLoginPrompt(true); return; }
+    if (!user) { setShowLoginModal(true); return; }
     if (!f.locked || hasAccess(f.id)) { setCurFilm({ ...f, locked: false }); setPage("video"); }
     else setPayFilm(f);
   };
@@ -1671,14 +1670,7 @@ export default function Home() {
           </div>
         </div>
       )}
-      {showLoginPrompt && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", zIndex: 500, padding: 0 }} onClick={() => setShowLoginPrompt(false)}>
-          <div style={{ background:"#0d0d18", borderRadius:"22px 22px 0 0", padding:"22px 20px 40px", width:"100%", maxWidth:500, margin:"0 auto", border:`1px solid #1e2d4a`, boxShadow:"0 -4px 60px rgba(0,80,255,0.15)" }} onClick={(e:any)=>e.stopPropagation()}>
-            <div style={{ width:40, height:4, background:C.bd, borderRadius:2, margin:"0 auto 18px" }} />
-            <LoginModal onLogin={(u:any) => { setShowLoginPrompt(false); handleLogin(u); }} />
-          </div>
-        </div>
-      )}
+
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
       {!user && typeof document !== "undefined" && createPortal(
         <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, width:"calc(100% - 24px)", maxWidth:500, pointerEvents:"none" }}>
