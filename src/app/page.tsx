@@ -487,7 +487,7 @@ function FilmCard({ film, onClick, expiry }: any) {
           </span>
           {film.free || expiry
             ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
-            : <button style={{ background: C.gold, border: "none", color: "#000", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>💳</button>
+            : <span style={{ fontSize: 18 }}>🔒</span>
           }
         </div>
       </div>
@@ -851,21 +851,23 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         </div>
 
         {/* ── 1 САРЫН БАГЦ — кинонуудтай хамт scroll явна ── */}
-        <div style={{ padding: "8px 12px" }}>
-          <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 24 }}>👑</span>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
-                <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+        {user && (
+          <div style={{ padding: "8px 12px" }}>
+            <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 24 }}>👑</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
+                  <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
+                <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
               </div>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
-              <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
-            </div>
           </div>
-        </div>
+        )}
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
