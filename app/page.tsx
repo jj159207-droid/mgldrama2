@@ -591,12 +591,8 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   const [isNew, setIsNew] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const p0 = useRef<any>(null); const p1 = useRef<any>(null);
-  const p2 = useRef<any>(null); const p3 = useRef<any>(null);
-  const q0 = useRef<any>(null); const q1 = useRef<any>(null);
-  const q2 = useRef<any>(null); const q3 = useRef<any>(null);
-  const pRefs = [p0,p1,p2,p3];
-  const qRefs = [q0,q1,q2,q3];
+  const pin1Ref = useRef<any>(null);
+  const pin2Ref = useRef<any>(null);
 
   const goPhone = async () => {
     const c = phone.replace(/\D/g,"");
@@ -605,7 +601,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
     const ex = await dbFetch(`users?phone=eq.${c}&select=id`);
     setIsNew(!(Array.isArray(ex) && ex.length > 0));
     setLoading(false); setPin(""); setPin2(""); setStep("pin");
-    setTimeout(() => p0.current?.focus(), 100);
+    setTimeout(() => pin1Ref.current?.focus(), 100);
   };
 
   const goPin = async () => {
@@ -630,7 +626,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
         const lk = att >= 3 ? { locked_until: new Date(Date.now()+15*60*1000).toISOString() } : {};
         await dbFetch(`users?id=eq.${u.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts:att, ...lk }) });
         setErr(att>=3?"3 удаа буруу. 15 минут хүлээнэ үү":`PIN буруу (${3-att} оролдлого)`);
-        setPin(""); setTimeout(()=>p0.current?.focus(),100); setLoading(false); return;
+        setPin(""); setTimeout(()=>pin1Ref.current?.focus(),100); setLoading(false); return;
       }
       await dbFetch(`users?id=eq.${u.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts:0, locked_until:null }) });
       saveSession(u); onLogin(u);
@@ -638,33 +634,39 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
     setLoading(false);
   };
 
-  const PinBox = ({ val, setVal, refs }: { val:string; setVal:(v:string)=>void; refs:any[] }) => (
-    <div style={{ display:"flex", gap:12, justifyContent:"center", margin:"12px 0" }}>
-      {[0,1,2,3].map(i=>(
-        <input key={i} ref={refs[i]} type="password" inputMode="numeric" maxLength={1} value={val[i]||""}
-          onChange={(e:any)=>{
-            const d=e.target.value.replace(/\D/g,"").slice(-1);
-            if(!d) return;
-            const n=(val.slice(0,i)+d+val.slice(i+1)).slice(0,4);
-            setVal(n); setErr("");
-            if(i<3) refs[i+1]?.current?.focus();
-          }}
-          onKeyDown={(e:any)=>{
-            if(e.key==="Backspace"){
-              if(val[i]){setVal(val.slice(0,i)+val.slice(i+1));}
-              else if(i>0){setVal(val.slice(0,i-1)+val.slice(i));refs[i-1]?.current?.focus();}
-              setErr("");
-            } else if(e.key==="Enter" && val.length===4) goPin();
-          }}
-          style={{
-            width:56,height:56,textAlign:"center",fontSize:22,fontWeight:800,
-            background:val[i]?"#1a1a2e":"#08080f",
-            border:`2px solid ${err?C.red:val[i]?"#3b82f6":C.bd}`,
-            borderRadius:12,color:C.txt,outline:"none",caretColor:"transparent",
+  const PinBox = ({ val, setVal, pinRef }: { val:string; setVal:(v:string)=>void; pinRef:any }) => (
+    <div style={{ position:"relative", margin:"12px 0" }}>
+      {/* Харагдах 4 нүд */}
+      <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
+        {[0,1,2,3].map(i=>(
+          <div key={i} style={{
+            width:56, height:56, borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center",
+            fontSize:28, fontWeight:900, color:C.txt,
+            background: val[i] ? "#1a1a2e" : "#08080f",
+            border: `2px solid ${err ? C.red : val[i] ? "#3b82f6" : C.bd}`,
             transition:"all 0.15s",
-          }}
-        />
-      ))}
+          }}>
+            {val[i] ? "●" : ""}
+          </div>
+        ))}
+      </div>
+      {/* Далд нэг input — бүх гараас оролт авна */}
+      <input
+        ref={pinRef}
+        type="tel"
+        inputMode="numeric"
+        maxLength={4}
+        value={val}
+        onChange={(e:any)=>{
+          const digits = e.target.value.replace(/\D/g,"").slice(0,4);
+          setVal(digits); setErr("");
+        }}
+        onKeyDown={(e:any)=>{ if(e.key==="Enter" && val.length===4) goPin(); }}
+        style={{
+          position:"absolute", top:0, left:0, width:"100%", height:"100%",
+          opacity:0, cursor:"pointer",
+        }}
+      />
     </div>
   );
 
@@ -703,10 +705,10 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
       <div style={{ fontSize:13, color:C.muted, textAlign:"center", marginBottom:4 }}>
         {isNew?"Шинэ PIN тохируулна уу":"PIN код оруулна уу"}
       </div>
-      <PinBox val={pin} setVal={setPin} refs={pRefs} />
+      <PinBox val={pin} setVal={setPin} pinRef={pin1Ref} />
       {isNew && <>
         <div style={{ fontSize:13, color:C.muted, textAlign:"center", marginBottom:4 }}>PIN давтан оруулна уу</div>
-        <PinBox val={pin2} setVal={setPin2} refs={qRefs} />
+        <PinBox val={pin2} setVal={setPin2} pinRef={pin2Ref} />
       </>}
       {err && <div style={{ color:C.red, fontSize:12, marginBottom:6, textAlign:"center" }}>{err}</div>}
       <button onClick={goPin} disabled={loading||pin.length!==4||(isNew&&pin2.length!==4)}
