@@ -821,11 +821,12 @@ function AdminOrdersTab() {
   const [confirming, setConfirming] = useState<string | null>(null);
   const [films, setFilms] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "revoked" | "monthly">("all");
 
   const load = async () => {
     setLoading(true);
     const [pend, fl, us] = await Promise.all([
-      dbFetch("pending_payments?order=created_at.desc&limit=50&select=*"),
+      dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
       dbFetch("films?select=id,title"),
       dbFetch("users?select=id,phone,user_id"),
     ]);
@@ -855,29 +856,73 @@ function AdminOrdersTab() {
     });
     await load();
   };
+
+  const deleteOrder = async (id: number) => {
+    if (!window.confirm("Захиалгыг бүрмөсөн устгах уу?")) return;
+    await dbFetch(`pending_payments?id=eq.${id}`, { method: "DELETE" });
+    setOrders(os => os.filter(o => o.id !== id));
+  };
+
   const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
   const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
-
-  const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.muted;
+  const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.red;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
+
+  const filtered = orders.filter((o: any) => {
+    if (filter === "all") return true;
+    if (filter === "monthly") return o.plan === "monthly";
+    return o.status === filter;
+  });
+
+  const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + (o.amount || 0), 0);
+  const pendingCount = orders.filter(o => o.status === "pending").length;
+  const confirmedCount = orders.filter(o => o.status === "confirmed").length;
+  const monthlyCount = orders.filter(o => o.plan === "monthly" && o.status === "confirmed").length;
+
+  const filters: { key: typeof filter; label: string }[] = [
+    { key: "all", label: `Бүгд ${orders.length}` },
+    { key: "pending", label: `⏳ ${pendingCount}` },
+    { key: "confirmed", label: `✅ ${confirmedCount}` },
+    { key: "monthly", label: `👑 ${monthlyCount}` },
+    { key: "revoked", label: `🚫 Хасагдсан` },
+  ];
 
   return (
     <div style={{ padding: "0 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{orders.filter((o: any) => o.status === "pending").length} хүлээгдэж байна</span>
-        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+      {/* Статистик */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+        <div style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 10, padding: "10px 12px" }}>
+          <div style={{ fontSize: 11, color: C.muted }}>Нийт орлого</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{totalRevenue.toLocaleString()}₮</div>
+        </div>
+        <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px" }}>
+          <div style={{ fontSize: 11, color: C.muted }}>Хүлээгдэж байна</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.gold }}>{pendingCount} захиалга</div>
+        </div>
       </div>
+
+      {/* Filter товчнууд */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
+        {filters.map(f => (
+          <button key={f.key} onClick={() => setFilter(f.key)}
+            style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 8, border: "none", background: filter === f.key ? C.gold : C.card2, color: filter === f.key ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {f.label}
+          </button>
+        ))}
+        <button onClick={load} style={{ flexShrink: 0, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
+      </div>
+
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-      ) : orders.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Захиалга байхгүй байна</div>
       ) : (
-        orders.map((o: any) => (
-          <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : o.status === "revoked" ? C.red : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
+        filtered.map((o: any) => (
+          <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : o.status === "revoked" ? "#3a1a1a" : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
+                <div style={{ fontSize: 12, color: C.txt, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
                 <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id)}</div>
                 {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Сарын багц</div>}
               </div>
@@ -889,21 +934,27 @@ function AdminOrdersTab() {
             <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>
               {new Date(o.created_at).toLocaleString("mn-MN")}
             </div>
-            {o.status === "pending" && (
-              <button onClick={() => confirmOrder(o.ref_code)} disabled={confirming === o.ref_code}
-                style={{ width: "100%", background: confirming === o.ref_code ? C.card2 : "#166534", border: "none", borderRadius: 8, padding: "10px", color: confirming === o.ref_code ? C.muted : "#4ade80", fontSize: 13, fontWeight: 700, cursor: "pointer", marginBottom: 6 }}>
-                {confirming === o.ref_code ? "Баталгаажуулж байна..." : "✅ Гараар баталгаажуулах"}
+            <div style={{ display: "flex", gap: 6 }}>
+              {o.status === "pending" && (
+                <button onClick={() => confirmOrder(o.ref_code)} disabled={confirming === o.ref_code}
+                  style={{ flex: 1, background: confirming === o.ref_code ? C.card2 : "#166534", border: "none", borderRadius: 8, padding: "10px", color: confirming === o.ref_code ? C.muted : "#4ade80", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                  {confirming === o.ref_code ? "..." : "✅ Баталгаажуулах"}
+                </button>
+              )}
+              {o.status === "confirmed" && (
+                <button onClick={() => revokeOrder(o.ref_code)}
+                  style={{ flex: 1, background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  🚫 Эрх хасах
+                </button>
+              )}
+              {o.status === "revoked" && (
+                <div style={{ flex: 1, fontSize: 12, color: C.red, textAlign: "center", padding: "8px" }}>🚫 Хасагдсан</div>
+              )}
+              <button onClick={() => deleteOrder(o.id)}
+                style={{ background: "#1a0a0a", border: `0.5px solid #333`, borderRadius: 8, padding: "8px 12px", color: "#555", fontSize: 14, cursor: "pointer" }}>
+                🗑️
               </button>
-            )}
-            {o.status === "confirmed" && (
-              <button onClick={() => revokeOrder(o.ref_code)}
-                style={{ width: "100%", background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                🚫 Эрх хасах
-              </button>
-            )}
-            {o.status === "revoked" && (
-              <div style={{ fontSize: 12, color: C.red, textAlign: "center" }}>🚫 Эрх хасагдсан</div>
-            )}
+            </div>
           </div>
         ))
       )}
