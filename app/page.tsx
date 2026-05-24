@@ -582,217 +582,144 @@ function ContactModal({ onClose, user }: any) {
   );
 }
 
-function LoginPage({ onLogin, onBack }: any) {
-  const [step, setStep] = useState<"phone" | "pin">("phone");
+function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
+  const [step, setStep] = useState<"phone"|"pin">("phone");
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
-  const [isNewUser, setIsNewUser] = useState(false);
   const [pin2, setPin2] = useState("");
+  const [isNew, setIsNew] = useState(false);
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
-  const pinRefs = [useRef<any>(null), useRef<any>(null), useRef<any>(null), useRef<any>(null)];
-  const pin2Refs = [useRef<any>(null), useRef<any>(null), useRef<any>(null), useRef<any>(null)];
+  const p0 = useRef<any>(null); const p1 = useRef<any>(null);
+  const p2 = useRef<any>(null); const p3 = useRef<any>(null);
+  const q0 = useRef<any>(null); const q1 = useRef<any>(null);
+  const q2 = useRef<any>(null); const q3 = useRef<any>(null);
+  const pRefs = [p0,p1,p2,p3];
+  const qRefs = [q0,q1,q2,q3];
 
-  const handlePhoneContinue = async () => {
-    const cleaned = phone.replace(/\D/g, "");
-    if (cleaned.length !== 8) { setErr("8 оронтой утасны дугаар оруулна уу"); return; }
+  const goPhone = async () => {
+    const c = phone.replace(/\D/g,"");
+    if (c.length !== 8) { setErr("8 оронтой утасны дугаар оруулна уу"); return; }
     setLoading(true); setErr("");
-    const exists = await dbFetch(`users?phone=eq.${cleaned}&select=id`);
-    setIsNewUser(!(Array.isArray(exists) && exists.length > 0));
-    setLoading(false);
-    setPin(""); setPin2("");
-    setStep("pin");
-    setTimeout(() => pinRefs[0]?.current?.focus(), 100);
+    const ex = await dbFetch(`users?phone=eq.${c}&select=id`);
+    setIsNew(!(Array.isArray(ex) && ex.length > 0));
+    setLoading(false); setPin(""); setPin2(""); setStep("pin");
+    setTimeout(() => p0.current?.focus(), 100);
   };
 
-  const handlePinSubmit = async () => {
+  const goPin = async () => {
     if (pin.length !== 4) { setErr("4 оронтой PIN оруулна уу"); return; }
-    if (isNewUser && pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
+    if (isNew && pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
     setLoading(true); setErr("");
-    const cleaned = phone.replace(/\D/g, "");
-    if (isNewUser) {
-      const data = await dbFetch("users", {
-        method: "POST",
-        body: JSON.stringify({ phone: cleaned, pin, user_id: "tmp", failed_attempts: 0 }),
-      });
+    const c = phone.replace(/\D/g,"");
+    if (isNew) {
+      const data = await dbFetch("users", { method:"POST", body: JSON.stringify({ phone:c, pin, user_id:"tmp", failed_attempts:0 }) });
       if (data?.[0]?.id) {
         const uid = genUserId(data[0].id);
-        await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
-        saveSession({ ...data[0], user_id: uid });
-        onLogin({ ...data[0], user_id: uid });
-      } else { setErr("Бүртгэл амжилтгүй. Дахин оролдоно уу"); }
+        await dbFetch(`users?id=eq.${data[0].id}`, { method:"PATCH", body: JSON.stringify({ user_id:uid }) });
+        saveSession({ ...data[0], user_id:uid }); onLogin({ ...data[0], user_id:uid });
+      } else { setErr("Бүртгэл амжилтгүй"); }
     } else {
-      const data = await dbFetch(`users?phone=eq.${cleaned}&select=*`);
-      if (!Array.isArray(data) || data.length === 0) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
-      const user = data[0];
-      if (user.locked_until && new Date(user.locked_until) > new Date()) {
-        setErr("Хэт олон удаа буруу оруулсан. 15 минут хүлээнэ үү");
-        setLoading(false); return;
+      const data = await dbFetch(`users?phone=eq.${c}&select=*`);
+      if (!Array.isArray(data)||!data.length) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
+      const u = data[0];
+      if (u.locked_until && new Date(u.locked_until) > new Date()) { setErr("15 минут хүлээнэ үү"); setLoading(false); return; }
+      if (u.pin !== pin) {
+        const att = (u.failed_attempts||0)+1;
+        const lk = att >= 3 ? { locked_until: new Date(Date.now()+15*60*1000).toISOString() } : {};
+        await dbFetch(`users?id=eq.${u.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts:att, ...lk }) });
+        setErr(att>=3?"3 удаа буруу. 15 минут хүлээнэ үү":`PIN буруу (${3-att} оролдлого)`);
+        setPin(""); setTimeout(()=>p0.current?.focus(),100); setLoading(false); return;
       }
-      if (user.pin !== pin) {
-        const attempts = (user.failed_attempts || 0) + 1;
-        const locked = attempts >= 3 ? { locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() } : {};
-        await dbFetch(`users?id=eq.${user.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: attempts, ...locked }) });
-        setErr(attempts >= 3 ? "3 удаа буруу оруулсан. 15 минут хүлээнэ үү" : `PIN буруу (${3 - attempts} оролдлого үлдсэн)`);
-        setPin("");
-        setTimeout(() => pinRefs[0]?.current?.focus(), 100);
-        setLoading(false); return;
-      }
-      await dbFetch(`users?id=eq.${user.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: 0, locked_until: null }) });
-      saveSession(user);
-      onLogin(user);
+      await dbFetch(`users?id=eq.${u.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts:0, locked_until:null }) });
+      saveSession(u); onLogin(u);
     }
     setLoading(false);
   };
 
-  const handlePinKey = (e: any, i: number, val: string, setVal: (v: string) => void, refs: any[]) => {
-    if (e.key === "Backspace") {
-      if (val[i]) { setVal(val.slice(0, i) + val.slice(i + 1)); }
-      else if (i > 0) { setVal(val.slice(0, i - 1) + val.slice(i)); refs[i - 1]?.current?.focus(); }
-      setErr("");
-    } else if (e.key === "Enter" && pin.length === 4) { handlePinSubmit(); }
-  };
-
-  const handlePinChange = (e: any, i: number, val: string, setVal: (v: string) => void, refs: any[]) => {
-    const digit = e.target.value.replace(/\D/g, "").slice(-1);
-    if (!digit) return;
-    const next = (val.slice(0, i) + digit + val.slice(i + 1)).slice(0, 4);
-    setVal(next); setErr("");
-    if (i < 3) refs[i + 1]?.current?.focus();
-  };
-
-  const PinBoxes = ({ val, setVal, refs }: { val: string; setVal: (v: string) => void; refs: any[] }) => (
-    <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 20 }}>
-      {[0, 1, 2, 3].map(i => (
-        <input
-          key={i}
-          ref={refs[i]}
-          type="password"
-          inputMode="numeric"
-          maxLength={1}
-          value={val[i] || ""}
-          onChange={(e: any) => handlePinChange(e, i, val, setVal, refs)}
-          onKeyDown={(e: any) => handlePinKey(e, i, val, setVal, refs)}
+  const PinBox = ({ val, setVal, refs }: { val:string; setVal:(v:string)=>void; refs:any[] }) => (
+    <div style={{ display:"flex", gap:12, justifyContent:"center", margin:"12px 0" }}>
+      {[0,1,2,3].map(i=>(
+        <input key={i} ref={refs[i]} type="password" inputMode="numeric" maxLength={1} value={val[i]||""}
+          onChange={(e:any)=>{
+            const d=e.target.value.replace(/\D/g,"").slice(-1);
+            if(!d) return;
+            const n=(val.slice(0,i)+d+val.slice(i+1)).slice(0,4);
+            setVal(n); setErr("");
+            if(i<3) refs[i+1]?.current?.focus();
+          }}
+          onKeyDown={(e:any)=>{
+            if(e.key==="Backspace"){
+              if(val[i]){setVal(val.slice(0,i)+val.slice(i+1));}
+              else if(i>0){setVal(val.slice(0,i-1)+val.slice(i));refs[i-1]?.current?.focus();}
+              setErr("");
+            } else if(e.key==="Enter" && val.length===4) goPin();
+          }}
           style={{
-            width: 58, height: 58, textAlign: "center", fontSize: 24, fontWeight: 800,
-            background: val[i] ? "#1a1a2e" : "#0a0a14",
-            border: `2px solid ${err ? C.red : val[i] ? C.blue : C.bd}`,
-            borderRadius: 14, color: C.txt, outline: "none", caretColor: "transparent",
-            transition: "border-color 0.2s, background 0.2s",
+            width:56,height:56,textAlign:"center",fontSize:22,fontWeight:800,
+            background:val[i]?"#1a1a2e":"#08080f",
+            border:`2px solid ${err?C.red:val[i]?"#3b82f6":C.bd}`,
+            borderRadius:12,color:C.txt,outline:"none",caretColor:"transparent",
+            transition:"all 0.15s",
           }}
         />
       ))}
     </div>
   );
 
-  if (step === "phone") {
-    return (
-      <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-        <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", borderBottom: `0.5px solid ${C.bd}` }}>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer", marginRight: 10 }}>←</button>
-          <span style={{ fontSize: 16, fontWeight: 700, color: C.txt }}>Утасаар нэвтрэх</span>
-        </div>
-        <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px" }}>
-          <div style={{ width: "100%", maxWidth: 400, background: "#0e0e1a", borderRadius: 20, padding: "28px 22px", border: `0.5px solid ${C.bd}` }}>
-            <div style={{ fontSize: 20, fontWeight: 800, color: C.txt, marginBottom: 8 }}>Утасаар нэвтрэх</div>
-            <div style={{ fontSize: 14, color: C.muted, marginBottom: 20 }}>Монгол утасны дугаараа оруулна уу.</div>
-            <label style={{ ...lbl, fontSize: 13, marginBottom: 8 }}>Утас (8XXXXXXXX)</label>
-            <input
-              style={{ ...inputSt, fontSize: 22, fontWeight: 700, textAlign: "center", letterSpacing: "0.15em", padding: "14px", borderRadius: 12, border: `1.5px solid ${C.blue}`, background: "#0a0a14" }}
-              value={phone}
-              onChange={(e: any) => { setPhone(e.target.value.replace(/\D/g, "").slice(0, 8)); setErr(""); }}
-              placeholder="88123456"
-              type="tel"
-              inputMode="numeric"
-              maxLength={8}
-              autoFocus
-              onKeyDown={(e: any) => e.key === "Enter" && handlePhoneContinue()}
-            />
-            {err && <div style={{ color: C.red, fontSize: 12, marginTop: 8, textAlign: "center" }}>{err}</div>}
-            <button
-              onClick={handlePhoneContinue}
-              disabled={loading || phone.replace(/\D/g, "").length !== 8}
-              style={{ ...goldBtn, marginTop: 16, fontSize: 16, padding: 15, borderRadius: 12, opacity: loading || phone.replace(/\D/g, "").length !== 8 ? 0.6 : 1 }}
-            >
-              {loading ? "Шалгаж байна..." : "Үргэлжлүүлэх"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (step==="phone") return (
+    <div style={{ padding:"4px 0 0" }}>
+      <div style={{ fontSize:18, fontWeight:800, color:C.txt, marginBottom:4 }}>Утасаар нэвтрэх</div>
+      <div style={{ fontSize:13, color:C.muted, marginBottom:14 }}>Монгол утасны дугаараа оруулна уу.</div>
+      <label style={{ ...lbl, fontSize:12 }}>Утас (8XXXXXXXX)</label>
+      <input
+        autoFocus
+        style={{ ...inputSt, fontSize:22, fontWeight:800, textAlign:"center", letterSpacing:"0.15em", padding:14, borderRadius:12, border:`2px solid #3b82f6`, background:"#08080f" }}
+        value={phone}
+        onChange={(e:any)=>{ setPhone(e.target.value.replace(/\D/g,"").slice(0,8)); setErr(""); }}
+        placeholder="88123456" type="tel" inputMode="numeric" maxLength={8}
+        onKeyDown={(e:any)=>e.key==="Enter"&&goPhone()}
+      />
+      {err && <div style={{ color:C.red, fontSize:12, marginTop:6, textAlign:"center" }}>{err}</div>}
+      <button onClick={goPhone} disabled={loading||phone.replace(/\D/g,"").length!==8}
+        style={{ ...goldBtn, marginTop:14, borderRadius:12, fontSize:15, padding:14,
+          opacity:loading||phone.replace(/\D/g,"").length!==8?0.5:1 }}>
+        {loading?"Шалгаж байна...":"Үргэлжлүүлэх →"}
+      </button>
+    </div>
+  );
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", borderBottom: `0.5px solid ${C.bd}` }}>
-        <button onClick={() => { setStep("phone"); setErr(""); setPin(""); setPin2(""); }} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer", marginRight: 10 }}>←</button>
-        <span style={{ fontSize: 16, fontWeight: 700, color: C.txt }}>Утасаар нэвтрэх</span>
+    <div style={{ padding:"4px 0 0" }}>
+      <div style={{ fontSize:18, fontWeight:800, color:C.txt, marginBottom:4 }}>
+        {isNew?"Бүртгүүлэх":"Нэвтрэх"}
       </div>
-      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "24px 16px" }}>
-        <div style={{ width: "100%", maxWidth: 400, background: "#0e0e1a", borderRadius: 20, padding: "28px 22px", border: `0.5px solid ${C.bd}` }}>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.txt, marginBottom: 16 }}>Утасаар нэвтрэх</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-            <span style={{ fontSize: 13, color: C.muted }}>Утас</span>
-            <button onClick={() => { setStep("phone"); setPin(""); setPin2(""); setErr(""); }} style={{ background: "none", border: "none", color: C.blue, fontSize: 13, cursor: "pointer", fontWeight: 600 }}>← Өөрчлөх</button>
-          </div>
-          <div style={{ background: "#0a0a14", borderRadius: 12, padding: "13px", textAlign: "center", fontSize: 20, fontWeight: 800, color: C.txt, letterSpacing: "0.15em", marginBottom: 20, border: `0.5px solid ${C.bd}` }}>
-            {phone}
-          </div>
-          <label style={{ ...lbl, fontSize: 13, textAlign: "center", display: "block", marginBottom: 14 }}>
-            {isNewUser ? "Шинэ PIN код тохируулна уу" : "PIN код оруулна уу"}
-          </label>
-          <PinBoxes val={pin} setVal={setPin} refs={pinRefs} />
-          {isNewUser && (
-            <>
-              <label style={{ ...lbl, fontSize: 13, textAlign: "center", display: "block", marginBottom: 14 }}>PIN давтан оруулна уу</label>
-              <PinBoxes val={pin2} setVal={setPin2} refs={pin2Refs} />
-            </>
-          )}
-          {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 10, textAlign: "center" }}>{err}</div>}
-          <button
-            onClick={handlePinSubmit}
-            disabled={loading || pin.length !== 4 || (isNewUser && pin2.length !== 4)}
-            style={{ ...goldBtn, fontSize: 16, padding: 15, borderRadius: 12, opacity: loading || pin.length !== 4 || (isNewUser && pin2.length !== 4) ? 0.6 : 1 }}
-          >
-            {loading ? "Түр хүлээнэ үү..." : isNewUser ? "✅ Бүртгүүлэх" : "🔓 Нэвтрэх"}
-          </button>
-          {!isNewUser && (
-            <button
-              onClick={async () => {
-                const cleaned = phone.replace(/\D/g, "");
-                const data = await dbFetch(`users?phone=eq.${cleaned}&select=id`);
-                if (Array.isArray(data) && data.length > 0) {
-                  const newPin = prompt("Шинэ 4 оронтой PIN оруулна уу:");
-                  if (newPin && /^\d{4}$/.test(newPin)) {
-                    await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ pin: newPin, failed_attempts: 0, locked_until: null }) });
-                    alert("PIN амжилттай солигдлоо!"); setPin("");
-                    setTimeout(() => pinRefs[0]?.current?.focus(), 100);
-                  }
-                }
-              }}
-              style={{ width: "100%", background: "none", border: "none", color: C.blue, fontSize: 13, cursor: "pointer", marginTop: 14, textAlign: "center" }}
-            >
-              PIN код мартсан
-            </button>
-          )}
-        </div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+        <div style={{ fontSize:16, fontWeight:700, color:C.gold, letterSpacing:"0.1em" }}>{phone}</div>
+        <button onClick={()=>{setStep("phone");setPin("");setPin2("");setErr("");}}
+          style={{ background:"none", border:"none", color:"#3b82f6", fontSize:13, cursor:"pointer", fontWeight:600 }}>← Өөрчлөх</button>
       </div>
+      <div style={{ fontSize:13, color:C.muted, textAlign:"center", marginBottom:4 }}>
+        {isNew?"Шинэ PIN тохируулна уу":"PIN код оруулна уу"}
+      </div>
+      <PinBox val={pin} setVal={setPin} refs={pRefs} />
+      {isNew && <>
+        <div style={{ fontSize:13, color:C.muted, textAlign:"center", marginBottom:4 }}>PIN давтан оруулна уу</div>
+        <PinBox val={pin2} setVal={setPin2} refs={qRefs} />
+      </>}
+      {err && <div style={{ color:C.red, fontSize:12, marginBottom:6, textAlign:"center" }}>{err}</div>}
+      <button onClick={goPin} disabled={loading||pin.length!==4||(isNew&&pin2.length!==4)}
+        style={{ ...goldBtn, borderRadius:12, fontSize:15, padding:14,
+          opacity:loading||pin.length!==4||(isNew&&pin2.length!==4)?0.5:1 }}>
+        {loading?"Түр хүлээнэ үү...":isNew?"✅ Бүртгүүлэх":"🔓 Нэвтрэх"}
+      </button>
     </div>
   );
 }
 
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall }: any) {
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginStep, setLoginStep] = useState<"phone"|"pin">("phone");
-  const [loginPhone, setLoginPhone] = useState("");
-  const [loginPin, setLoginPin] = useState("");
-  const [loginPin2, setLoginPin2] = useState("");
-  const [loginIsNew, setLoginIsNew] = useState(false);
-  const [loginErr, setLoginErr] = useState("");
-  const [loginLoading, setLoginLoading] = useState(false);
-  const pinRefs = [useRef<any>(null),useRef<any>(null),useRef<any>(null),useRef<any>(null)];
-  const pin2Refs = [useRef<any>(null),useRef<any>(null),useRef<any>(null),useRef<any>(null)];
+  const [showModal, setShowModal] = useState(false);
 
   const handleLogoTap = () => {
     tapRef.current.count += 1;
@@ -800,6 +727,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     if (tapRef.current.count >= 4) { tapRef.current.count = 0; onAdmin(); }
     else { tapRef.current.timer = setTimeout(() => { tapRef.current.count = 0; }, 3000); }
   };
+
   const getExpiry = (filmId: number): string | null => {
     if (!user) return null;
     const now = Date.now();
@@ -814,178 +742,78 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     }
     return null;
   };
-  const openLogin = () => { setShowLoginModal(true); setLoginStep("phone"); setLoginPhone(""); setLoginPin(""); setLoginPin2(""); setLoginErr(""); };
-  const closeLogin = () => { setShowLoginModal(false); setLoginErr(""); };
 
-  const handlePhoneContinue = async () => {
-    const cleaned = loginPhone.replace(/\D/g,"");
-    if (cleaned.length !== 8) { setLoginErr("8 оронтой утасны дугаар оруулна уу"); return; }
-    setLoginLoading(true); setLoginErr("");
-    const exists = await dbFetch(`users?phone=eq.${cleaned}&select=id`);
-    setLoginIsNew(!(Array.isArray(exists) && exists.length > 0));
-    setLoginLoading(false);
-    setLoginPin(""); setLoginPin2("");
-    setLoginStep("pin");
-    setTimeout(() => pinRefs[0]?.current?.focus(), 100);
-  };
-
-  const handlePinSubmit = async () => {
-    if (loginPin.length !== 4) { setLoginErr("4 оронтой PIN оруулна уу"); return; }
-    if (loginIsNew && loginPin !== loginPin2) { setLoginErr("PIN таарахгүй байна"); return; }
-    setLoginLoading(true); setLoginErr("");
-    const cleaned = loginPhone.replace(/\D/g,"");
-    if (loginIsNew) {
-      const data = await dbFetch("users", { method:"POST", body: JSON.stringify({ phone: cleaned, pin: loginPin, user_id:"tmp", failed_attempts:0 }) });
-      if (data?.[0]?.id) {
-        const uid = genUserId(data[0].id);
-        await dbFetch(`users?id=eq.${data[0].id}`, { method:"PATCH", body: JSON.stringify({ user_id: uid }) });
-        saveSession({ ...data[0], user_id: uid });
-        closeLogin(); onLogin({ ...data[0], user_id: uid });
-      } else { setLoginErr("Бүртгэл амжилтгүй. Дахин оролдоно уу"); }
-    } else {
-      const data = await dbFetch(`users?phone=eq.${cleaned}&select=*`);
-      if (!Array.isArray(data)||data.length===0) { setLoginErr("Бүртгэлгүй дугаар"); setLoginLoading(false); return; }
-      const u = data[0];
-      if (u.locked_until && new Date(u.locked_until) > new Date()) { setLoginErr("15 минут хүлээнэ үү"); setLoginLoading(false); return; }
-      if (u.pin !== loginPin) {
-        const attempts = (u.failed_attempts||0)+1;
-        const locked = attempts >= 3 ? { locked_until: new Date(Date.now()+15*60*1000).toISOString() } : {};
-        await dbFetch(`users?id=eq.${u.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts:attempts, ...locked }) });
-        setLoginErr(attempts>=3 ? "3 удаа буруу оруулсан. 15 минут хүлээнэ үү" : `PIN буруу (${3-attempts} оролдлого үлдсэн)`);
-        setLoginPin(""); setTimeout(()=>pinRefs[0]?.current?.focus(),100);
-        setLoginLoading(false); return;
-      }
-      await dbFetch(`users?id=eq.${u.id}`, { method:"PATCH", body: JSON.stringify({ failed_attempts:0, locked_until:null }) });
-      saveSession(u); closeLogin(); onLogin(u);
-    }
-    setLoginLoading(false);
-  };
-
-  const PinRow = ({ val, setVal, refs }: { val:string; setVal:(v:string)=>void; refs:any[] }) => (
-    <div style={{ display:"flex", gap:10, justifyContent:"center", marginBottom:16 }}>
-      {[0,1,2,3].map(i => (
-        <input key={i} ref={refs[i]} type="password" inputMode="numeric" maxLength={1} value={val[i]||""}
-          onChange={(e:any)=>{ const d=e.target.value.replace(/\D/g,"").slice(-1); if(!d)return; const n=(val.slice(0,i)+d+val.slice(i+1)).slice(0,4); setVal(n); setLoginErr(""); if(i<3)refs[i+1]?.current?.focus(); }}
-          onKeyDown={(e:any)=>{ if(e.key==="Backspace"){ if(val[i]){setVal(val.slice(0,i)+val.slice(i+1));}else if(i>0){setVal(val.slice(0,i-1)+val.slice(i));refs[i-1]?.current?.focus();} setLoginErr(""); } else if(e.key==="Enter"&&loginPin.length===4)handlePinSubmit(); }}
-          style={{ width:54,height:54,textAlign:"center",fontSize:22,fontWeight:800,background:val[i]?"#1a1a2e":"#0a0a14",border:`2px solid ${loginErr?C.red:val[i]?C.blue:C.bd}`,borderRadius:12,color:C.txt,outline:"none",caretColor:"transparent",transition:"all 0.2s" }}
-        />
-      ))}
-    </div>
-  );
+  const openLogin = () => setShowModal(true);
+  const closeLogin = () => setShowModal(false);
+  const handleLoginDone = (u: any) => { closeLogin(); onLogin(u); };
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
-        <a href="https://m.me/61590383810997" target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-          💬 Messenger
-        </a>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
-          {user
-            ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 12, color: C.gold, fontWeight: 700 }}>{user.phone}</span>
-                <button onClick={onLogout} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 11, borderRadius: 8, padding: "5px 8px" }}>Гарах</button>
-              </div>
-            : <button onClick={openLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
-          }
-          <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
-          <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: C.bg, position: "sticky", top: 0, zIndex: 10, borderBottom: `0.5px solid ${C.bd}` }}>
+          <a href="https://m.me/61590383810997" target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+            💬 Messenger
+          </a>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
+            {user
+              ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 12, color: C.gold, fontWeight: 700 }}>{user.phone}</span>
+                  <button onClick={onLogout} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 11, borderRadius: 8, padding: "5px 8px" }}>Гарах</button>
+                </div>
+              : <button onClick={openLogin} style={{ background: C.gold, border: "none", color: "#000", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>Нэвтрэх</button>
+            }
+            <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
+            <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
+          </div>
         </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
+          {!user && (
+            <div onClick={openLogin} style={{ background: "linear-gradient(90deg,#0369a1,#0ea5e9)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+              <span style={{ fontSize: 26 }}>🎬</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
+                <div style={{ fontSize: 13, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
+              </div>
+            </div>
+          )}
+          <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 26 }}>👑</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
+                <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+              </div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
+              <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
+            </div>
+          </div>
+        </div>
+        {loading
+          ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+          : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
+              {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
+            </div>
+        }
       </div>
 
-      {/* ── FIXED BOTTOM SHEET ── */}
-      {showLoginModal && !user && (
-        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex", flexDirection:"column", justifyContent:"flex-end" }} onClick={closeLogin}>
-          <div style={{ background:"#0e0e1a", border:`1px solid ${C.blue}`, borderRadius:"20px 20px 0 0", padding:"20px 18px 36px", boxShadow:"0 -8px 40px rgba(0,0,0,0.9)", maxWidth:600, width:"100%", margin:"0 auto" }} onClick={(e:any)=>e.stopPropagation()}>
-            {loginStep === "phone" ? (
-              <>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                  <div>
-                    <div style={{ fontSize:16, fontWeight:800, color:C.txt }}>Утасаар нэвтрэх</div>
-                    <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>Монгол утасны дугаараа оруулна уу.</div>
-                  </div>
-                  <button onClick={closeLogin} style={{ background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1 }}>✕</button>
-                </div>
-                <label style={{ ...lbl, fontSize:12, marginBottom:6 }}>Утас (8XXXXXXXX)</label>
-                <input
-                  autoFocus
-                  style={{ ...inputSt, fontSize:20, fontWeight:700, textAlign:"center", letterSpacing:"0.12em", padding:"13px", borderRadius:10, border:`1.5px solid ${C.blue}`, background:"#0a0a14" }}
-                  value={loginPhone}
-                  onChange={(e:any)=>{ setLoginPhone(e.target.value.replace(/\D/g,"").slice(0,8)); setLoginErr(""); }}
-                  placeholder="88123456" type="tel" inputMode="numeric" maxLength={8}
-                  onKeyDown={(e:any)=>e.key==="Enter"&&handlePhoneContinue()}
-                />
-                {loginErr && <div style={{ color:C.red, fontSize:12, marginTop:6, textAlign:"center" }}>{loginErr}</div>}
-                <button onClick={handlePhoneContinue} disabled={loginLoading||loginPhone.replace(/\D/g,"").length!==8}
-                  style={{ ...goldBtn, marginTop:12, borderRadius:10, fontSize:15, opacity:loginLoading||loginPhone.replace(/\D/g,"").length!==8?0.5:1 }}>
-                  {loginLoading?"Шалгаж байна...":"Үргэлжлүүлэх"}
-                </button>
-              </>
-            ) : (
-              <>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-                  <div>
-                    <div style={{ fontSize:16, fontWeight:800, color:C.txt }}>Утасаар нэвтрэх</div>
-                    <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>{loginIsNew?"Шинэ хэрэглэгч — PIN тохируулна уу":"PIN код оруулна уу"}</div>
-                  </div>
-                  <button onClick={closeLogin} style={{ background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer",lineHeight:1 }}>✕</button>
-                </div>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                  <div style={{ background:"#0a0a14", borderRadius:8, padding:"8px 14px", fontSize:16, fontWeight:700, color:C.txt, letterSpacing:"0.1em", flex:1, textAlign:"center", border:`0.5px solid ${C.bd}`, marginRight:8 }}>{loginPhone}</div>
-                  <button onClick={()=>{setLoginStep("phone");setLoginPin("");setLoginPin2("");setLoginErr("");}} style={{ background:"none",border:"none",color:C.blue,fontSize:12,cursor:"pointer",fontWeight:600,whiteSpace:"nowrap" }}>← Өөрчлөх</button>
-                </div>
-                <PinRow val={loginPin} setVal={setLoginPin} refs={pinRefs} />
-                {loginIsNew && (
-                  <>
-                    <div style={{ fontSize:12, color:C.muted, textAlign:"center", marginBottom:8 }}>PIN давтан оруулна уу</div>
-                    <PinRow val={loginPin2} setVal={setLoginPin2} refs={pin2Refs} />
-                  </>
-                )}
-                {loginErr && <div style={{ color:C.red, fontSize:12, marginBottom:8, textAlign:"center" }}>{loginErr}</div>}
-                <button onClick={handlePinSubmit} disabled={loginLoading||loginPin.length!==4||(loginIsNew&&loginPin2.length!==4)}
-                  style={{ ...goldBtn, borderRadius:10, fontSize:15, opacity:loginLoading||loginPin.length!==4||(loginIsNew&&loginPin2.length!==4)?0.5:1 }}>
-                  {loginLoading?"Түр хүлээнэ үү...":loginIsNew?"✅ Бүртгүүлэх":"🔓 Нэвтрэх"}
-                </button>
-              </>
-            )}
+      {showModal && !user && (
+        <div style={{ position:"fixed", inset:0, zIndex:500, display:"flex", alignItems:"flex-end" }} onClick={closeLogin}>
+          <div style={{ background:"rgba(0,0,0,0.6)", position:"absolute", inset:0 }} />
+          <div style={{
+            position:"relative", width:"100%", maxWidth:500, margin:"0 auto",
+            background:"#0d0d18", borderRadius:"22px 22px 0 0",
+            padding:"22px 20px 40px", border:`1px solid #1e2d4a`,
+            boxShadow:"0 -4px 60px rgba(0,80,255,0.15)",
+          }} onClick={(e:any)=>e.stopPropagation()}>
+            <div style={{ width:40, height:4, background:C.bd, borderRadius:2, margin:"0 auto 18px" }} />
+            <button onClick={closeLogin} style={{ position:"absolute", top:16, right:16, background:"none", border:"none", color:C.muted, fontSize:22, cursor:"pointer" }}>✕</button>
+            <LoginModal onLogin={handleLoginDone} />
           </div>
         </div>
       )}
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 12, padding: "12px 16px 8px" }}>
-        {!user && (
-          <div onClick={openLogin} style={{ background: "linear-gradient(90deg,#0369a1,#0ea5e9)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
-            <span style={{ fontSize: 26 }}>🎬</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Нэвтрэх / Бүртгүүлэх</div>
-              <div style={{ fontSize: 13, color: "#bae6fd" }}>Киногоо үзэхийн тулд нэвтэрнэ үү</div>
-            </div>
-          </div>
-        )}
-        <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 26 }}>👑</span>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
-              <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
-            </div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
-            <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
-          </div>
-        </div>
-      </div>
-      <div style={{ padding: "4px 20px 8px" }}>
-      </div>
-      {loading
-        ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-        : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-          {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
-        </div>
-      }
-      </div>
     </div>
   );
 }
@@ -1864,13 +1692,10 @@ export default function Home() {
         </div>
       )}
       {showLoginPrompt && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 24 }}>
-          <div style={{ background: C.card, borderRadius: 18, padding: 28, width: "100%", maxWidth: 320, textAlign: "center", border: `0.5px solid ${C.bd}` }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🔐</div>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.txt, marginBottom: 8 }}>Нэвтрэх шаардлагатай</div>
-            <div style={{ fontSize: 13, color: C.muted, marginBottom: 24, lineHeight: 1.6 }}>Кино үзэхийн тулд бүртгүүлж эсвэл нэвтэрч орно уу</div>
-            <button onClick={() => { setShowLoginPrompt(false); setPage("login"); }} style={{ ...goldBtn, marginBottom: 10 }}>🔓 Нэвтрэх / Бүртгүүлэх</button>
-            <button onClick={() => setShowLoginPrompt(false)} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 11, borderRadius: 10, fontSize: 13, cursor: "pointer" }}>Буцах</button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", zIndex: 500, padding: 0 }} onClick={() => setShowLoginPrompt(false)}>
+          <div style={{ background:"#0d0d18", borderRadius:"22px 22px 0 0", padding:"22px 20px 40px", width:"100%", maxWidth:500, margin:"0 auto", border:`1px solid #1e2d4a`, boxShadow:"0 -4px 60px rgba(0,80,255,0.15)" }} onClick={(e:any)=>e.stopPropagation()}>
+            <div style={{ width:40, height:4, background:C.bd, borderRadius:2, margin:"0 auto 18px" }} />
+            <LoginModal onLogin={(u:any) => { setShowLoginPrompt(false); handleLogin(u); }} />
           </div>
         </div>
       )}
