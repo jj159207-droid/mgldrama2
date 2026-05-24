@@ -467,11 +467,7 @@ function FilmCard({ film, onClick, expiry }: any) {
         <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
           {film.badge}
         </div>
-        {!film.free && film.locked && !expiry && (
-          <div style={{ position: "absolute", bottom: 8, right: 8, background: "rgba(0,0,0,0.6)", borderRadius: "50%", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 16 }}>🔒</span>
-          </div>
-        )}
+
         {expiry && (
           <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(22,163,74,0.85)", padding: "4px 6px", textAlign: "center" }}>
             <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>{expiry}</span>
@@ -487,7 +483,7 @@ function FilmCard({ film, onClick, expiry }: any) {
           </span>
           {film.free || expiry
             ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
-            : <span style={{ fontSize: 18 }}>🔒</span>
+            : null
           }
         </div>
       </div>
@@ -1692,7 +1688,7 @@ export default function Home() {
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
-        html,body{background:#0d0d14}
+        html,body{background:#0d0d14;overflow-x:hidden}
         input,select,button,textarea{font-family:inherit}
         input:focus,select:focus,textarea:focus{outline:none;border-color:#e8a020!important}
         ::-webkit-scrollbar{width:4px}
@@ -1702,6 +1698,12 @@ export default function Home() {
         @media(min-width:1100px){.film-grid{grid-template-columns:repeat(5,1fr)!important}}
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
+      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      <meta name="mobile-web-app-capable" content="yes" />
+      <meta name="theme-color" content="#0d0d14" />
+      <link rel="manifest" href="/manifest.json" />
       <script dangerouslySetInnerHTML={{ __html: `
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.register('/sw.js');
