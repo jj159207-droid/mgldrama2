@@ -849,7 +849,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>14,500₮</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>12,500₮</div>
                 <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
               </div>
             </div>
