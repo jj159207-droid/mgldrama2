@@ -658,7 +658,6 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 
   const submitRegister = async () => {
     if (pin.length !== 4) { setErr("4 оронтой PIN оруулна уу"); return; }
-    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
     setLoading(true); setErr("");
     const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin, user_id: "tmp", failed_attempts: 0 }) });
     if (data?.[0]?.id) {
@@ -732,17 +731,9 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
       </div>
       {isNew && (
         <>
-          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>PIN давтах</label>
-          <div style={{ position: "relative" }}>
-            <PinDots val={pin2} />
-            <input ref={pin2Ref} type="tel" inputMode="numeric" maxLength={4} value={pin2}
-              onChange={(e: any) => handlePin2Change(e.target.value)}
-              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
-            />
-          </div>
           {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
-          <button onClick={submitRegister} disabled={loading || pin.length !== 4 || pin2.length !== 4}
-            style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 || pin2.length !== 4 ? 0.5 : 1 }}>
+          <button onClick={submitRegister} disabled={loading || pin.length !== 4}
+            style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 ? 0.5 : 1 }}>
             {loading ? "Түр хүлээнэ үү..." : "✅ Бүртгүүлэх"}
           </button>
         </>
@@ -1722,7 +1713,7 @@ export default function Home() {
           window.__pwaPrompt = null;
         });
       `}} />
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 14500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 12500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
