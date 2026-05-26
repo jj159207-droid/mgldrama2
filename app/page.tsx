@@ -868,6 +868,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               }
               <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
               <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
+              <button onClick={onInstall} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: "#60a5fa", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>📲 Апп</button>
             </div>
           </div>
         </div>
@@ -1639,9 +1640,13 @@ export default function Home() {
   }, []);
 
   const handleInstallClick = () => {
-    if (pwaPrompt) {
-      pwaPrompt.prompt();
-      pwaPrompt.userChoice.then(() => setPwaPrompt(null));
+    const prompt = pwaPrompt || (window as any).__pwaPrompt;
+    if (prompt) {
+      prompt.prompt();
+      prompt.userChoice.then(() => {
+        setPwaPrompt(null);
+        (window as any).__pwaPrompt = null;
+      });
     } else {
       setShowInstall(true);
     }
