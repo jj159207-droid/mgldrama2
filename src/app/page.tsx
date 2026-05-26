@@ -1549,6 +1549,8 @@ function AdminPage({ films, onBack, onRefresh }: any) {
             </div>
             <label style={{ ...lbl, marginTop: 12 }}>Видео URL (YouTube / MP4 / Google Drive)</label>
             <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/... эсвэл .mp4 холбоос" />
+            <label style={{ ...lbl, marginTop: 10 }}>🎬 Preview URL (Bunny.net MP4)</label>
+            <input style={inputSt} value={form.preview_url || ""} onChange={set("preview_url")} placeholder="https://your.b-cdn.net/preview.mp4" />
             <label style={{ ...lbl, marginTop: 10 }}>Зургийн URL эсвэл файл</label>
             <input style={inputSt} value={form.img} onChange={set("img")} placeholder="https://..." />
             <input type="file" accept="image/*" onChange={(e: any) => {
