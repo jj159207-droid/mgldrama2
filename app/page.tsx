@@ -1000,6 +1000,7 @@ function AdminOrdersTab() {
   const [films, setFilms] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "revoked" | "monthly">("all");
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -1047,9 +1048,16 @@ function AdminOrdersTab() {
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
   const filtered = orders.filter((o: any) => {
-    if (filter === "all") return true;
-    if (filter === "monthly") return o.plan === "monthly";
-    return o.status === filter;
+    if (filter === "all") { }
+    else if (filter === "monthly") { if (o.plan !== "monthly") return false; }
+    else { if (o.status !== filter) return false; }
+    if (search.trim()) {
+      const s = search.trim().toLowerCase();
+      const phone = getPhone(o.user_id).toLowerCase();
+      const ref = (o.ref_code || "").toLowerCase();
+      return phone.includes(s) || ref.includes(s);
+    }
+    return true;
   });
 
   const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + (o.amount || 0), 0);
@@ -1089,6 +1097,14 @@ function AdminOrdersTab() {
         ))}
         <button onClick={load} style={{ flexShrink: 0, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
       </div>
+
+      {/* Хайлт */}
+      <input
+        style={{ ...inputSt, marginBottom: 12 }}
+        value={search}
+        onChange={(e: any) => setSearch(e.target.value)}
+        placeholder="📞 Дугаар эсвэл 🔑 KN код хайх..."
+      />
 
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
