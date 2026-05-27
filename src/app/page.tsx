@@ -516,7 +516,7 @@ function FilmCard({ film, onClick, expiry }: any) {
       onTouchCancel={handleTouchEnd}
       style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${expiry ? C.green : C.bd}`, WebkitTapHighlightColor: "transparent" }}
     >
-      <div style={{ position: "relative", aspectRatio: "3/4", overflow: "hidden" }}>
+      <div style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden" }}>
         {film.img
           ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           : <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg,${film.bg || "#1a0820"} 0%,#000 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
