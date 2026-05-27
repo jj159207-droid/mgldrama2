@@ -1516,8 +1516,10 @@ function EditFilmPanel({ f, onDone }: any) {
     if (img && !img.startsWith("data:")) payload.img = img;
     await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
     if (previewUrl !== (f.preview_url || "")) {
-      const r2 = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ preview_url: previewUrl }) });
-      console.log("PREVIEW SAVE:", JSON.stringify(r2));
+      await dbFetch(`film_previews?film_id=eq.${f.id}`, { method: "DELETE" });
+      if (previewUrl) {
+        await dbFetch(`film_previews`, { method: "POST", body: JSON.stringify({ film_id: f.id, preview_url: previewUrl }) });
+      }
     }
     setSaving(false);
     onDone();
@@ -1783,7 +1785,13 @@ export default function Home() {
 
   const loadFilms = async () => {
     setLoading(true);
-    const data = await dbFetch("films?order=created_at.desc&select=*");
+    const [rawFilms, previews] = await Promise.all([
+      dbFetch("films?order=created_at.desc&select=*"),
+      dbFetch("film_previews?select=film_id,preview_url"),
+    ]);
+    const previewMap: Record<number, string> = {};
+    if (Array.isArray(previews)) previews.forEach((p: any) => { previewMap[p.film_id] = p.preview_url; });
+    const data = Array.isArray(rawFilms) ? rawFilms.map((f: any) => ({ ...f, preview_url: previewMap[f.id] || null })) : [];
     setFilms(Array.isArray(data) ? data : []);
     setLoading(false);
   };
