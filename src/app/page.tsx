@@ -465,11 +465,12 @@ function FilmCard({ film, onClick, expiry }: any) {
   // preview_url нь url талбарт ||| тусгаарлагчаар хадгалагдана
   const mainUrl = film.url ? film.url.split("|||")[0] : "";
   const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
-  const isIframeUrl = previewFromUrl && (previewFromUrl.includes("iframe.mediadelivery.net") || previewFromUrl.includes("player.mediadelivery.net"));
+  const isPlayerUrl = previewFromUrl && (previewFromUrl.includes("mediadelivery.net") || previewFromUrl.includes("bunny.net"));
 
-  // Iframe/player URL-д autoplay + muted параметр нэмэх
-  const iframeSrc = isIframeUrl
-    ? `${previewFromUrl}${previewFromUrl!.includes("?") ? "&" : "?"}autoplay=true&muted=true&loop=true`
+  const iframeSrc = isPlayerUrl && previewFromUrl
+    ? (previewFromUrl.includes("player.mediadelivery.net")
+        ? previewFromUrl.replace("player.mediadelivery.net/play", "iframe.mediadelivery.net/embed") + (previewFromUrl.includes("?") ? "&" : "?") + "autoplay=true&muted=true&loop=true"
+        : previewFromUrl + (previewFromUrl.includes("?") ? "&" : "?") + "autoplay=true&muted=true&loop=true")
     : null;
 
   const startPreview = () => {
@@ -477,7 +478,7 @@ function FilmCard({ film, onClick, expiry }: any) {
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setShowPreview(true);
-      if (!isIframeUrl && videoRef.current) {
+      if (!isPlayerUrl && videoRef.current) {
         videoRef.current.muted = true;
         videoRef.current.currentTime = 0;
         videoRef.current.play().catch(() => {});
@@ -488,7 +489,7 @@ function FilmCard({ film, onClick, expiry }: any) {
   const stopPreview = () => {
     clearTimeout(timerRef.current);
     setShowPreview(false);
-    if (!isIframeUrl && videoRef.current) {
+    if (!isPlayerUrl && videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
@@ -523,8 +524,8 @@ function FilmCard({ film, onClick, expiry }: any) {
           </div>
         }
 
-        {/* Iframe preview (Bunny.net embed URL) */}
-        {isIframeUrl && showPreview && (
+        {/* Iframe preview (Bunny.net) */}
+        {isPlayerUrl && showPreview && iframeSrc && (
           <iframe
             src={iframeSrc!}
             allow="autoplay; encrypted-media"
@@ -538,7 +539,7 @@ function FilmCard({ film, onClick, expiry }: any) {
         )}
 
         {/* Шууд MP4 preview */}
-        {!isIframeUrl && previewFromUrl && (
+        {!isPlayerUrl && previewFromUrl && (
           <video
             ref={videoRef}
             src={previewFromUrl}
