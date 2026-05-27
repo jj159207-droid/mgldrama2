@@ -1512,10 +1512,13 @@ function EditFilmPanel({ f, onDone }: any) {
 
   const save = async () => {
     setSaving(true);
-    await dbFetch(`films?id=eq.${f.id}`, {
+    const payload: any = { title, price: parseInt(price) || 0, op: parseInt(op) || 0, url, badge, preview_url: previewUrl };
+    if (img && !img.startsWith("data:")) payload.img = img;
+    const result = await dbFetch(`films?id=eq.${f.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ title, price: parseInt(price) || 0, op: parseInt(op) || 0, url, img, badge, preview_url: previewUrl }),
+      body: JSON.stringify(payload),
     });
+    console.log("SAVE RESULT:", JSON.stringify(result));
     setSaving(false);
     onDone();
   };
