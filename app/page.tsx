@@ -886,7 +886,6 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 
 
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
-  const [previewFilm, setPreviewFilm] = useState<any>(null);
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
   const handleLogoTap = () => {
     tapRef.current.count += 1;
@@ -959,17 +958,11 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-              {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => setPreviewFilm(f)} expiry={getExpiry(f.id)} />)}
+              {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
             </div>
         }
       </div>
-      {previewFilm && (
-        <PreviewModal
-          film={previewFilm}
-          onClose={() => setPreviewFilm(null)}
-          onWatch={() => { setPreviewFilm(null); onFilm(previewFilm); }}
-        />
-      )}
+
 
 
     </div>
