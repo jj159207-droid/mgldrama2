@@ -460,12 +460,20 @@ function FilmCard({ film, onClick, expiry }: any) {
   const timerRef = useRef<any>(null);
   const touchTimer = useRef<any>(null);
 
+  // preview_url нь iframe URL мөн эсэхийг шалгах
+  const isIframeUrl = film.preview_url && film.preview_url.includes("iframe.mediadelivery.net");
+
+  // Iframe-д autoplay + muted параметр нэмэх
+  const iframeSrc = isIframeUrl
+    ? `${film.preview_url}${film.preview_url.includes("?") ? "&" : "?"}autoplay=true&muted=true&loop=true&preload=true`
+    : null;
+
   const startPreview = () => {
     if (!film.preview_url) return;
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setShowPreview(true);
-      if (videoRef.current) {
+      if (!isIframeUrl && videoRef.current) {
         videoRef.current.muted = true;
         videoRef.current.currentTime = 0;
         videoRef.current.play().catch(() => {});
@@ -476,7 +484,7 @@ function FilmCard({ film, onClick, expiry }: any) {
   const stopPreview = () => {
     clearTimeout(timerRef.current);
     setShowPreview(false);
-    if (videoRef.current) {
+    if (!isIframeUrl && videoRef.current) {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
     }
@@ -510,7 +518,23 @@ function FilmCard({ film, onClick, expiry }: any) {
             <span style={{ fontSize: 44 }}>🎬</span>
           </div>
         }
-        {film.preview_url && (
+
+        {/* Iframe preview (Bunny.net embed URL) */}
+        {isIframeUrl && showPreview && (
+          <iframe
+            src={iframeSrc!}
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+            style={{
+              position: "absolute", inset: 0, width: "100%", height: "100%",
+              border: "none", opacity: 1, transition: "opacity 0.3s",
+              pointerEvents: "none",
+            }}
+          />
+        )}
+
+        {/* Шууд MP4 preview */}
+        {!isIframeUrl && film.preview_url && (
           <video
             ref={videoRef}
             src={film.preview_url}
@@ -520,6 +544,7 @@ function FilmCard({ film, onClick, expiry }: any) {
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: showPreview ? 1 : 0, transition: "opacity 0.3s" }}
           />
         )}
+
         <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
           {film.badge}
         </div>
