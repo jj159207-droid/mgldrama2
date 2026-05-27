@@ -1848,30 +1848,7 @@ export default function Home() {
         @media(min-width:1100px){.film-grid{grid-template-columns:repeat(5,1fr)!important}}
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
-      <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-      <meta name="apple-mobile-web-app-capable" content="yes" />
-      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-      <meta name="mobile-web-app-capable" content="yes" />
-      <meta name="theme-color" content="#0d0d14" />
-      <link rel="manifest" href="/manifest.json" />
-      <script dangerouslySetInnerHTML={{ __html: `
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js');
-        }
-        window.__pwaPrompt = null;
-        window.__pwaClicked = false;
-        window.addEventListener('beforeinstallprompt', function(e) {
-          e.preventDefault();
-          window.__pwaPrompt = e;
-          if (window.__pwaClicked) {
-            window.__pwaClicked = false;
-            setTimeout(function() { e.prompt(); }, 100);
-          }
-        });
-        window.addEventListener('appinstalled', function() {
-          window.__pwaPrompt = null;
-        });
-      `}} />
+
       {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 12500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
