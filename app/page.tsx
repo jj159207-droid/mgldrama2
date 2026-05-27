@@ -1160,22 +1160,30 @@ function AdminOrdersTab() {
 function AdminMembersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [films, setFilms] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<any>(null);
   const [userPayments, setUserPayments] = useState<any[]>([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [showRights, setShowRights] = useState(false);
+  const [filterTab, setFilterTab] = useState<"all"|"monthly"|"film">("all");
 
   const load = async () => {
     setLoading(true);
-    const [us, fl] = await Promise.all([
+    const [us, fl, pay] = await Promise.all([
       dbFetch("users?order=id.desc&select=*"),
       dbFetch("films?select=id,title"),
+      dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,ref_code"),
     ]);
     setUsers(Array.isArray(us) ? us : []);
     setFilms(Array.isArray(fl) ? fl : []);
+    setAllPayments(Array.isArray(pay) ? pay : []);
     setLoading(false);
   };
+
+  const hasMonthly = (userId: number) => allPayments.some(p => p.user_id === userId && p.plan === "monthly");
+  const hasFilm = (userId: number) => allPayments.some(p => p.user_id === userId && p.plan !== "monthly");
+  const activeCount = (userId: number) => allPayments.filter(p => p.user_id === userId).length;
 
   useEffect(() => { load(); }, []);
 
@@ -1281,17 +1289,39 @@ function AdminMembersTab() {
         <span style={{ fontSize: 13, color: C.muted }}>{users.length} гишүүн</span>
         <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
       </div>
+
+      {/* Filter */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {([["all","Бүгд"],["monthly","👑 Сарын"],["film","🎬 Кино"]] as any[]).map(([k,l]) => (
+          <button key={k} onClick={() => setFilterTab(k)}
+            style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: filterTab === k ? C.gold : C.card2, color: filterTab === k ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {l}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
       ) : users.length === 0 ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Гишүүн байхгүй байна</div>
       ) : (
-        users.map(u => (
-          <div key={u.id} onClick={() => openUser(u)} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}>
+        users
+          .filter(u => {
+            if (filterTab === "monthly") return hasMonthly(u.id);
+            if (filterTab === "film") return hasFilm(u.id) && !hasMonthly(u.id);
+            return true;
+          })
+          .map(u => (
+          <div key={u.id} onClick={() => openUser(u)} style={{ background: C.card, border: `0.5px solid ${activeCount(u.id) > 0 ? C.green : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+                <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                  {hasMonthly(u.id) && <span style={{ background: "#3b0764", border: `0.5px solid #a855f7`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "#e9d5ff", fontWeight: 700 }}>👑 Сарын эрх</span>}
+                  {hasFilm(u.id) && <span style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: C.green, fontWeight: 700 }}>🎬 {allPayments.filter(p => p.user_id === u.id && p.plan !== "monthly").length} кино</span>}
+                  {!hasMonthly(u.id) && !hasFilm(u.id) && <span style={{ fontSize: 11, color: C.muted }}>Эрхгүй</span>}
+                </div>
               </div>
               <span style={{ color: C.muted, fontSize: 16 }}>›</span>
             </div>
