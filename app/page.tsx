@@ -964,7 +964,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         }
       </div>
       {previewFilm && (
-        <PreviewOverlay
+        <PreviewModal
           film={previewFilm}
           onClose={() => setPreviewFilm(null)}
           onWatch={() => { setPreviewFilm(null); onFilm(previewFilm); }}
