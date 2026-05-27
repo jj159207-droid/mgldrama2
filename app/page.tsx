@@ -971,11 +971,23 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
 
 function getVideoEmbed(url: string): { type: "iframe" | "video" | "youtube"; src: string } {
   if (!url) return { type: "iframe", src: "" };
+  // YouTube
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) return { type: "youtube", src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&playsinline=1` };
-  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return { type: "video", src: url };
+  // Bunny.net / mediadelivery.net — ЗААВАЛ iframe болгоно
+  if (url.includes("mediadelivery.net") || url.includes("bunny.net")) {
+    let src = url;
+    src = src.replace("player.mediadelivery.net/play", "iframe.mediadelivery.net/embed");
+    if (!src.includes("autoplay")) {
+      src += (src.includes("?") ? "&" : "?") + "autoplay=true&preload=true";
+    }
+    return { type: "iframe", src };
+  }
+  // Google Drive
   const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
   if (gdMatch) return { type: "iframe", src: `https://drive.google.com/file/d/${gdMatch[1]}/preview` };
+  // Direct video file
+  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return { type: "video", src: url };
   return { type: "iframe", src: url };
 }
 
