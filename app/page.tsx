@@ -484,7 +484,7 @@ function PreviewModal({ film, onClose, onWatch, expiry }: any) {
         background: "#000",
       }}
     >
-      <div style={{ position: "relative", aspectRatio: "16/9", width: "100%" }}>
+      <div style={{ position: "relative", width: "100%", height: "56vw", maxHeight: "70vh" }}>
         {isPlayerUrl && iframeSrc ? (
           <iframe
             src={iframeSrc}
@@ -506,29 +506,49 @@ function PreviewModal({ film, onClose, onWatch, expiry }: any) {
 }
 
 function FilmCard({ film, onClick, expiry }: any) {
-  const [showModal, setShowModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const timerRef = useRef<any>(null);
+  const touchTimer = useRef<any>(null);
   const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
 
-  const handleClick = () => {
-    if (previewFromUrl) {
-      setShowModal(true);
-    } else {
-      onClick();
-    }
+  const startPreview = () => {
+    if (!previewFromUrl) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setShowPreview(true), 150);
+  };
+
+  const stopPreview = () => {
+    clearTimeout(timerRef.current);
+    setShowPreview(false);
+  };
+
+  const handleTouchStart = () => {
+    clearTimeout(touchTimer.current);
+    touchTimer.current = setTimeout(() => setShowPreview(true), 150);
+  };
+
+  const handleTouchEnd = () => {
+    clearTimeout(touchTimer.current);
+    setShowPreview(false);
   };
 
   return (
     <>
-      {showModal && (
+      {showPreview && previewFromUrl && (
         <PreviewModal
           film={film}
           expiry={expiry}
-          onClose={() => setShowModal(false)}
-          onWatch={() => { setShowModal(false); onClick(); }}
+          onClose={stopPreview}
+          onWatch={() => { stopPreview(); onClick(); }}
         />
       )}
       <div
-        onClick={handleClick}
+        onClick={onClick}
+        onMouseEnter={startPreview}
+        onMouseLeave={stopPreview}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${expiry ? C.green : C.bd}`, WebkitTapHighlightColor: "transparent" }}
       >
         <div style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden" }}>
@@ -944,7 +964,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         }
       </div>
       {previewFilm && (
-        <PreviewModal
+        <PreviewOverlay
           film={previewFilm}
           onClose={() => setPreviewFilm(null)}
           onWatch={() => { setPreviewFilm(null); onFilm(previewFilm); }}
