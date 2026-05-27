@@ -974,14 +974,9 @@ function getVideoEmbed(url: string): { type: "iframe" | "video" | "youtube"; src
   // YouTube
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) return { type: "youtube", src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&playsinline=1` };
-  // Bunny.net / mediadelivery.net — ЗААВАЛ iframe болгоно
+  // Bunny.net — шууд iframe, URL-г өөрчлөхгүй
   if (url.includes("mediadelivery.net") || url.includes("bunny.net")) {
-    let src = url;
-    src = src.replace("player.mediadelivery.net/play", "iframe.mediadelivery.net/embed");
-    if (!src.includes("autoplay")) {
-      src += (src.includes("?") ? "&" : "?") + "autoplay=true&preload=true";
-    }
-    return { type: "iframe", src };
+    return { type: "iframe", src: url };
   }
   // Google Drive
   const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
@@ -1015,7 +1010,7 @@ function VideoPage({ film, onBack }: any) {
       {src ? (
         type === "video"
           ? <video src={src} autoPlay controls playsInline style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
-          : <iframe src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allowFullScreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media; accelerometer; gyroscope" referrerPolicy="no-referrer-when-downgrade" />
+          : <iframe src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allowFullScreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerPolicy="no-referrer-when-downgrade" />
       ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Видео холбоос байхгүй байна</div>
       )}
