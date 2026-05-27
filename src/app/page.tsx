@@ -1726,6 +1726,8 @@ export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(true);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
 
   // PWA install prompt барих
   useEffect(() => {
@@ -1884,7 +1886,7 @@ export default function Home() {
       )}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
-      {!user && typeof document !== "undefined" && createPortal(
+      {!user && mounted && createPortal(
         <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, width:"calc(100% - 24px)", maxWidth:500, pointerEvents:"none" }}>
           <div style={{
               pointerEvents:"all",
