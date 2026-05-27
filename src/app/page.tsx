@@ -458,19 +458,39 @@ function FilmCard({ film, onClick, expiry }: any) {
   const [showPreview, setShowPreview] = useState(false);
   const videoRef = useRef<any>(null);
   const timerRef = useRef<any>(null);
+  const touchTimer = useRef<any>(null);
 
-  const startPreview = (e: any) => {
+  const startPreview = () => {
     if (!film.preview_url) return;
-    e.stopPropagation();
+    clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setShowPreview(true);
-      setTimeout(() => { if (videoRef.current) { videoRef.current.currentTime = 0; videoRef.current.play(); } }, 50);
-    }, 600);
+      if (videoRef.current) {
+        videoRef.current.muted = true;
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().catch(() => {});
+      }
+    }, 500);
   };
+
   const stopPreview = () => {
     clearTimeout(timerRef.current);
     setShowPreview(false);
-    if (videoRef.current) { videoRef.current.pause(); videoRef.current.currentTime = 0; }
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  const handleTouchStart = () => {
+    touchTimer.current = setTimeout(() => {
+      startPreview();
+    }, 300);
+  };
+
+  const handleTouchEnd = () => {
+    clearTimeout(touchTimer.current);
+    stopPreview();
   };
 
   return (
@@ -478,8 +498,9 @@ function FilmCard({ film, onClick, expiry }: any) {
       onClick={onClick}
       onMouseEnter={startPreview}
       onMouseLeave={stopPreview}
-      onTouchStart={startPreview}
-      onTouchEnd={stopPreview}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${expiry ? C.green : C.bd}`, WebkitTapHighlightColor: "transparent" }}
     >
       <div style={{ position: "relative", aspectRatio: "3/4", overflow: "hidden" }}>
