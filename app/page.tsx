@@ -6,14 +6,16 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 async function dbFetch(path: string, opts?: RequestInit) {
+  const { headers: extraHeaders, ...restOpts } = opts || {};
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...restOpts,
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       "Content-Type": "application/json",
       Prefer: "return=representation",
+      ...(extraHeaders as Record<string, string> || {}),
     },
-    ...opts,
   });
   return res.json();
 }
