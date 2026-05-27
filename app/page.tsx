@@ -465,11 +465,11 @@ function FilmCard({ film, onClick, expiry }: any) {
   // preview_url нь url талбарт ||| тусгаарлагчаар хадгалагдана
   const mainUrl = film.url ? film.url.split("|||")[0] : "";
   const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
-  const isIframeUrl = previewFromUrl && previewFromUrl.includes("iframe.mediadelivery.net");
+  const isIframeUrl = previewFromUrl && (previewFromUrl.includes("iframe.mediadelivery.net") || previewFromUrl.includes("player.mediadelivery.net"));
 
-  // Iframe-д autoplay + muted параметр нэмэх
+  // Iframe/player URL-д autoplay + muted параметр нэмэх
   const iframeSrc = isIframeUrl
-    ? `${previewFromUrl}${previewFromUrl.includes("?") ? "&" : "?"}autoplay=true&muted=true&loop=true&preload=true`
+    ? `${previewFromUrl}${previewFromUrl!.includes("?") ? "&" : "?"}autoplay=true&muted=true&loop=true`
     : null;
 
   const startPreview = () => {
