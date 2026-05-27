@@ -13,7 +13,7 @@ async function dbFetch(path: string, opts?: RequestInit) {
       apikey: SUPABASE_KEY,
       Authorization: `Bearer ${SUPABASE_KEY}`,
       "Content-Type": "application/json",
-      Prefer: "return=representation",
+      Prefer: "return=representation,resolution=ignore-duplicates",
       ...(extraHeaders as Record<string, string> || {}),
     },
   });
