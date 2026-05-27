@@ -971,24 +971,18 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
 
 function getVideoEmbed(url: string): { type: "iframe" | "video" | "youtube"; src: string } {
   if (!url) return { type: "iframe", src: "" };
-  // YouTube
   const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
   if (ytMatch) return { type: "youtube", src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&playsinline=1` };
-  // Bunny.net — шууд iframe, URL-г өөрчлөхгүй
-  if (url.includes("mediadelivery.net") || url.includes("bunny.net")) {
-    return { type: "iframe", src: url };
-  }
-  // Google Drive
+  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return { type: "video", src: url };
   const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
   if (gdMatch) return { type: "iframe", src: `https://drive.google.com/file/d/${gdMatch[1]}/preview` };
-  // Direct video file
-  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return { type: "video", src: url };
   return { type: "iframe", src: url };
 }
 
 function VideoPage({ film, onBack }: any) {
   const [showControls, setShowControls] = useState(true);
-  const { type, src } = getVideoEmbed(film.url || "");
+  const mainUrl = film.url ? film.url.split("|||")[0] : "";
+  const { type, src } = getVideoEmbed(mainUrl);
   useEffect(() => {
     const t = setTimeout(() => setShowControls(false), 4000);
     // 2 pushState хийнэ — нэг буцахад video дотор үлдэнэ, хоёр дахинд нь гарна
@@ -1010,7 +1004,7 @@ function VideoPage({ film, onBack }: any) {
       {src ? (
         type === "video"
           ? <video src={src} autoPlay controls playsInline style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
-          : <iframe src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allowFullScreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerPolicy="no-referrer-when-downgrade" />
+          : <iframe src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allowFullScreen allow="autoplay; fullscreen; picture-in-picture" />
       ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Видео холбоос байхгүй байна</div>
       )}
