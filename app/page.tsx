@@ -462,16 +462,18 @@ function FilmCard({ film, onClick, expiry }: any) {
   const timerRef = useRef<any>(null);
   const touchTimer = useRef<any>(null);
 
-  // preview_url нь iframe URL мөн эсэхийг шалгах
-  const isIframeUrl = film.preview_url && film.preview_url.includes("iframe.mediadelivery.net");
+  // preview_url нь url талбарт ||| тусгаарлагчаар хадгалагдана
+  const mainUrl = film.url ? film.url.split("|||")[0] : "";
+  const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
+  const isIframeUrl = previewFromUrl && previewFromUrl.includes("iframe.mediadelivery.net");
 
   // Iframe-д autoplay + muted параметр нэмэх
   const iframeSrc = isIframeUrl
-    ? `${film.preview_url}${film.preview_url.includes("?") ? "&" : "?"}autoplay=true&muted=true&loop=true&preload=true`
+    ? `${previewFromUrl}${previewFromUrl.includes("?") ? "&" : "?"}autoplay=true&muted=true&loop=true&preload=true`
     : null;
 
   const startPreview = () => {
-    if (!film.preview_url) return;
+    if (!previewFromUrl) return;
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       setShowPreview(true);
@@ -536,10 +538,10 @@ function FilmCard({ film, onClick, expiry }: any) {
         )}
 
         {/* Шууд MP4 preview */}
-        {!isIframeUrl && film.preview_url && (
+        {!isIframeUrl && previewFromUrl && (
           <video
             ref={videoRef}
-            src={film.preview_url}
+            src={previewFromUrl}
             muted
             playsInline
             loop
@@ -1501,26 +1503,23 @@ function AdminContactTab() {
 }
 
 function EditFilmPanel({ f, onDone }: any) {
+  const mainUrl = f.url ? f.url.split("|||")[0] : "";
+  const existingPreview = f.url && f.url.includes("|||") ? f.url.split("|||")[1] : "";
   const [title, setTitle] = useState(f.title);
   const [price, setPrice] = useState(String(f.price || 5000));
   const [op, setOp] = useState(String(f.op || 6000));
-  const [url, setUrl] = useState(f.url || "");
+  const [url, setUrl] = useState(mainUrl);
   const [img, setImg] = useState(f.img || "");
-  const [previewUrl, setPreviewUrl] = useState(f.preview_url || "");
+  const [previewUrl, setPreviewUrl] = useState(existingPreview);
   const [badge, setBadge] = useState(f.badge || "Хэлтэй");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     setSaving(true);
-    const payload: any = { title, price: parseInt(price) || 0, op: parseInt(op) || 0, url, badge };
+    const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
+    const payload: any = { title, price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
     if (img && !img.startsWith("data:")) payload.img = img;
     await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
-    if (previewUrl !== (f.preview_url || "")) {
-      await dbFetch(`film_previews?film_id=eq.${f.id}`, { method: "DELETE" });
-      if (previewUrl) {
-        await dbFetch(`film_previews`, { method: "POST", body: JSON.stringify({ film_id: f.id, preview_url: previewUrl }) });
-      }
-    }
     setSaving(false);
     onDone();
   };
@@ -1785,13 +1784,7 @@ export default function Home() {
 
   const loadFilms = async () => {
     setLoading(true);
-    const [rawFilms, previews] = await Promise.all([
-      dbFetch("films?order=created_at.desc&select=*"),
-      dbFetch("film_previews?select=film_id,preview_url"),
-    ]);
-    const previewMap: Record<number, string> = {};
-    if (Array.isArray(previews)) previews.forEach((p: any) => { previewMap[p.film_id] = p.preview_url; });
-    const data = Array.isArray(rawFilms) ? rawFilms.map((f: any) => ({ ...f, preview_url: previewMap[f.id] || null })) : [];
+    const data = await dbFetch("films?order=created_at.desc&select=*");
     setFilms(Array.isArray(data) ? data : []);
     setLoading(false);
   };
