@@ -1512,13 +1512,13 @@ function EditFilmPanel({ f, onDone }: any) {
 
   const save = async () => {
     setSaving(true);
-    const payload: any = { title, price: parseInt(price) || 0, op: parseInt(op) || 0, url, badge, preview_url: previewUrl };
+    const payload: any = { title, price: parseInt(price) || 0, op: parseInt(op) || 0, url, badge };
     if (img && !img.startsWith("data:")) payload.img = img;
-    const result = await dbFetch(`films?id=eq.${f.id}`, {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    });
-    console.log("SAVE RESULT:", JSON.stringify(result));
+    await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    if (previewUrl !== (f.preview_url || "")) {
+      const r2 = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify({ preview_url: previewUrl }) });
+      console.log("PREVIEW SAVE:", JSON.stringify(r2));
+    }
     setSaving(false);
     onDone();
   };
