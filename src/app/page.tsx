@@ -456,124 +456,117 @@ function QRCanvas({ text }: { text: string }) {
   return <canvas ref={ref} width={140} height={140} style={{ borderRadius: 6, display: "block" }} />;
 }
 
-function FilmCard({ film, onClick, expiry }: any) {
-  const [showPreview, setShowPreview] = useState(false);
-  const videoRef = useRef<any>(null);
-  const timerRef = useRef<any>(null);
-  const touchTimer = useRef<any>(null);
-
-  // preview_url нь url талбарт ||| тусгаарлагчаар хадгалагдана
-  const mainUrl = film.url ? film.url.split("|||")[0] : "";
+function PreviewModal({ film, onClose, onWatch, expiry }: any) {
   const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
   const isPlayerUrl = previewFromUrl && (previewFromUrl.includes("mediadelivery.net") || previewFromUrl.includes("bunny.net"));
-
   const iframeSrc = isPlayerUrl && previewFromUrl
-    ? (previewFromUrl.includes("player.mediadelivery.net")
+    ? (previewFromUrl.includes("player.mediadelivery.net/play")
         ? previewFromUrl.replace("player.mediadelivery.net/play", "iframe.mediadelivery.net/embed") + (previewFromUrl.includes("?") ? "&" : "?") + "autoplay=true&muted=true&loop=true"
         : previewFromUrl + (previewFromUrl.includes("?") ? "&" : "?") + "autoplay=true&muted=true&loop=true")
     : null;
+  const videoRef = useRef<any>(null);
 
-  const startPreview = () => {
-    if (!previewFromUrl) return;
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      setShowPreview(true);
-      if (!isPlayerUrl && videoRef.current) {
-        videoRef.current.muted = true;
-        videoRef.current.currentTime = 0;
-        videoRef.current.play().catch(() => {});
-      }
-    }, 500);
-  };
-
-  const stopPreview = () => {
-    clearTimeout(timerRef.current);
-    setShowPreview(false);
-    if (!isPlayerUrl && videoRef.current) {
-      videoRef.current.pause();
+  useEffect(() => {
+    if (!isPlayerUrl && videoRef.current && previewFromUrl) {
+      videoRef.current.muted = true;
       videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => {});
     }
-  };
-
-  const handleTouchStart = () => {
-    touchTimer.current = setTimeout(() => {
-      startPreview();
-    }, 300);
-  };
-
-  const handleTouchEnd = () => {
-    clearTimeout(touchTimer.current);
-    stopPreview();
-  };
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   return (
     <div
-      onClick={onClick}
-      onMouseEnter={startPreview}
-      onMouseLeave={stopPreview}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-      style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${expiry ? C.green : C.bd}`, WebkitTapHighlightColor: "transparent" }}
+      onClick={onClose}
+      style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
+        background: "#000",
+      }}
     >
-      <div style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden" }}>
-        {film.img
-          ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          : <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg,${film.bg || "#1a0820"} 0%,#000 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <span style={{ fontSize: 44 }}>🎬</span>
-          </div>
-        }
-
-        {/* Iframe preview (Bunny.net) */}
-        {isPlayerUrl && showPreview && iframeSrc && (
+      <div style={{ position: "relative", aspectRatio: "16/9", width: "100%" }}>
+        {isPlayerUrl && iframeSrc ? (
           <iframe
-            src={iframeSrc!}
+            src={iframeSrc}
             allow="autoplay; encrypted-media"
             allowFullScreen
-            style={{
-              position: "absolute", inset: 0, width: "100%", height: "100%",
-              border: "none", opacity: 1, transition: "opacity 0.3s",
-              pointerEvents: "none",
-            }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
           />
-        )}
-
-        {/* Шууд MP4 preview */}
-        {!isPlayerUrl && previewFromUrl && (
+        ) : previewFromUrl ? (
           <video
             ref={videoRef}
             src={previewFromUrl}
-            muted
-            playsInline
-            loop
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: showPreview ? 1 : 0, transition: "opacity 0.3s" }}
+            muted playsInline loop
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
           />
-        )}
-
-        <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
-          {film.badge}
-        </div>
-
-        {expiry && (
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(22,163,74,0.85)", padding: "4px 6px", textAlign: "center" }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>{expiry}</span>
-          </div>
-        )}
-      </div>
-      <div style={{ padding: "7px 8px 10px" }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: C.txt, lineHeight: 1.3, marginBottom: 5 }}>{film.title}</div>
-        {!film.free && <div style={{ fontSize: 10, color: C.muted, textDecoration: "line-through", marginBottom: 1 }}>{film.op?.toLocaleString()}₮</div>}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : expiry ? C.green : C.gold }}>
-            {film.free ? "Үнэгүй" : expiry ? "Нээлттэй" : `${film.price?.toLocaleString()}₮`}
-          </span>
-          {film.free || expiry
-            ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
-            : null
-          }
-        </div>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function FilmCard({ film, onClick, expiry }: any) {
+  const [showModal, setShowModal] = useState(false);
+  const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
+
+  const handleClick = () => {
+    if (previewFromUrl) {
+      setShowModal(true);
+    } else {
+      onClick();
+    }
+  };
+
+  return (
+    <>
+      {showModal && (
+        <PreviewModal
+          film={film}
+          expiry={expiry}
+          onClose={() => setShowModal(false)}
+          onWatch={() => { setShowModal(false); onClick(); }}
+        />
+      )}
+      <div
+        onClick={handleClick}
+        style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${expiry ? C.green : C.bd}`, WebkitTapHighlightColor: "transparent" }}
+      >
+        <div style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden" }}>
+          {film.img
+            ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            : <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg,${film.bg || "#1a0820"} 0%,#000 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 44 }}>🎬</span>
+            </div>
+          }
+          <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
+            {film.badge}
+          </div>
+          {expiry && (
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(22,163,74,0.85)", padding: "4px 6px", textAlign: "center" }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>{expiry}</span>
+            </div>
+          )}
+          {previewFromUrl && (
+            <div style={{ position: "absolute", bottom: expiry ? 28 : 8, right: 8, background: "rgba(0,0,0,0.6)", borderRadius: 10, padding: "2px 7px", fontSize: 10, color: "#fff" }}>
+              ▶ preview
+            </div>
+          )}
+        </div>
+        <div style={{ padding: "7px 8px 10px" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: C.txt, lineHeight: 1.3, marginBottom: 5 }}>{film.title}</div>
+          {!film.free && <div style={{ fontSize: 10, color: C.muted, textDecoration: "line-through", marginBottom: 1 }}>{film.op?.toLocaleString()}₮</div>}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : expiry ? C.green : C.gold }}>
+              {film.free ? "Үнэгүй" : expiry ? "Нээлттэй" : `${film.price?.toLocaleString()}₮`}
+            </span>
+            {film.free || expiry
+              ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
+              : null
+            }
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -873,6 +866,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 
 
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
+  const [previewFilm, setPreviewFilm] = useState<any>(null);
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
   const handleLogoTap = () => {
     tapRef.current.count += 1;
@@ -945,10 +939,17 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-              {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
+              {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => setPreviewFilm(f)} expiry={getExpiry(f.id)} />)}
             </div>
         }
       </div>
+      {previewFilm && (
+        <PreviewOverlay
+          film={previewFilm}
+          onClose={() => setPreviewFilm(null)}
+          onWatch={() => { setPreviewFilm(null); onFilm(previewFilm); }}
+        />
+      )}
 
 
     </div>
