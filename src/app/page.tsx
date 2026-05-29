@@ -53,6 +53,15 @@ function genRef(filmId: number, monthly?: boolean): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+
+// badge дотор cat encode/decode хийх
+function encodeBadgeCat(badge: string, cat: string): string {
+  const b = badge.split("|")[0];
+  return cat && cat !== "Эротик" ? `${b}|${cat}` : b;
+}
+function decodeBadge(badge: string): string { return (badge || "").split("|")[0] || "Хэлтэй"; }
+function decodeCat(badge: string): string { return (badge || "").split("|")[1] || "Эротик"; }
+
 const BANKS = [
   { id: "khanbank", name: "Хаан банк", color: "#00a651", icon: "🏦", deep: "khanbank://qpay?amount=" },
   { id: "golomt", name: "Голомт банк", color: "#e4002b", icon: "🏦", deep: "golomtbank://qpay?amount=" },
@@ -567,7 +576,7 @@ function FilmCard({ film, onClick, expiry }: any) {
             </div>
           }
           <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
-            {film.badge}
+            {decodeBadge(film.badge)}
           </div>
           {expiry && (
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(22,163,74,0.85)", padding: "4px 6px", textAlign: "center" }}>
@@ -991,7 +1000,7 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
   const [activeCat, setActiveCat] = useState("Бүгд");
   const CATS = ["Бүгд", "Эротик", "Гадаад", "Хятад"];
-  const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => f.cat === activeCat);
+  const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => decodeCat(f.badge) === activeCat);
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
   const handleLogoTap = () => {
     tapRef.current.count += 1;
@@ -1066,7 +1075,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, f.cat)} />)}
+              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />)}
             </div>
         }
       </div>
@@ -1688,7 +1697,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const [img, setImg] = useState(f.img || "");
   const [previewUrl, setPreviewUrl] = useState(existingPreview);
   const [badge, setBadge] = useState(f.badge || "Хэлтэй");
-  const [category, setCategory] = useState(f.cat || "Бүгд");
+  const [category, setCategory] = useState(decodeCat(f.badge));
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -1696,11 +1705,9 @@ function EditFilmPanel({ f, onDone }: any) {
     setSaving(true);
     try {
       const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
-      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
+      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge: encodeBadgeCat(badge, category) };
       if (img) payload.img = img;
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
-      // cat-г RPC-ээр тусад нь update хийх (schema cache bypass)
-      await dbFetch("rpc/update_film_cat", { method: "POST", body: JSON.stringify({ film_id: f.id, new_cat: category }) });
       if (res && res.code) { alert("Алдаа: " + (res.message || JSON.stringify(res))); return; }
       onDone();
     } catch(e: any) {
@@ -1862,7 +1869,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         views: parseInt(form.views) || 0,
         op: parseInt(form.op) || 6000,
         price: parseInt(form.price) || 0,
-        badge: form.badge || "Хэлтэй",
+        badge: encodeBadgeCat(form.badge || "Хэлтэй", form.cat || "Эротик"),
         free: !!form.free,
         locked: form.locked !== false,
         url: form.url || "",
@@ -1875,10 +1882,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         alert("Алдаа: " + (res.message || JSON.stringify(res)));
         return;
       }
-      // cat-г RPC-ээр тусад нь update хийх
-      if (Array.isArray(res) && res[0]?.id) {
-        await dbFetch("rpc/update_film_cat", { method: "POST", body: JSON.stringify({ film_id: res[0].id, new_cat: form.cat || "Эротик" }) });
-      }
+
       setForm(empty); setTab("list"); onRefresh();
     } catch(e: any) {
       alert("Алдаа гарлаа: " + (e?.message || "Дахин оролдоно уу"));
@@ -2103,12 +2107,7 @@ export default function Home() {
   const loadFilms = async () => {
     setLoading(true);
     try {
-      const raw = await dbFetch("films?order=created_at.desc&select=*");
-      // cat баганыг тусад нь татах
-      const cats = await dbFetch("rpc/get_film_cats", { method: "POST", body: JSON.stringify({}) }).catch(() => []);
-      const catMap: Record<number,string> = {};
-      if (Array.isArray(cats)) cats.forEach((c: any) => { catMap[c.id] = c.cat; });
-      const data = Array.isArray(raw) ? raw.map((f: any) => ({ ...f, cat: catMap[f.id] || f.cat || "Эротик" })) : raw;
+      const data = await dbFetch("films?order=created_at.desc&select=*");
       setFilms(Array.isArray(data) ? data : []);
     } catch(e) {
       setFilms([]);
@@ -2155,7 +2154,7 @@ export default function Home() {
 
   const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
   const handleLogout = () => { clearSession(); setUser(null); };
-  const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, f.cat) ? { ...f, locked: false } : f);
+  const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
