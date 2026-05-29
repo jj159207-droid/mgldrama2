@@ -991,7 +991,7 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
   const [activeCat, setActiveCat] = useState("Бүгд");
   const CATS = ["Бүгд", "Эротик", "Гадаад", "Хятад"];
-  const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => f.category === activeCat);
+  const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => f.cat === activeCat);
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
   const handleLogoTap = () => {
     tapRef.current.count += 1;
@@ -1066,7 +1066,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, f.category)} />)}
+              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, f.cat)} />)}
             </div>
         }
       </div>
@@ -1688,7 +1688,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const [img, setImg] = useState(f.img || "");
   const [previewUrl, setPreviewUrl] = useState(existingPreview);
   const [badge, setBadge] = useState(f.badge || "Хэлтэй");
-  const [category, setCategory] = useState(f.category || "Бүгд");
+  const [category, setCategory] = useState(f.cat || "Бүгд");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -1696,7 +1696,7 @@ function EditFilmPanel({ f, onDone }: any) {
     setSaving(true);
     try {
       const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
-      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge, category };
+      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge, cat: category };
       if (img) payload.img = img;
 
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
@@ -1848,7 +1848,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     const t = setInterval(fetchUnread, 30000);
     return () => clearInterval(t);
   }, [tab]);
-  const empty = { title: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", category: "Бүгд" };
+  const empty = { title: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Бүгд" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
@@ -1867,6 +1867,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         url: form.url || "",
         img: form.img || "",
         bg: form.bg || "#1a0820",
+        cat: form.cat || "Эротик",
       };
       if (form.preview_url) payload.preview_url = form.preview_url;
       const res = await dbFetch("films", { method: "POST", body: JSON.stringify(payload) });
@@ -1930,7 +1931,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
                 <select style={inputSt} value={form.badge} onChange={set("badge")}><option>Хэлтэй</option><option>Хадмал</option></select>
               </div>
               <div><label style={lbl}>Категори</label>
-                <select style={inputSt} value={form.category || "Бүгд"} onChange={set("category")}>
+                <select style={inputSt} value={form.cat || "Бүгд"} onChange={set("cat")}>
                   <option>Бүгд</option>
                   <option>Эротик</option>
                   <option>Гадаад</option>
@@ -2145,7 +2146,7 @@ export default function Home() {
 
   const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
   const handleLogout = () => { clearSession(); setUser(null); };
-  const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, f.category) ? { ...f, locked: false } : f);
+  const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, f.cat) ? { ...f, locked: false } : f);
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
