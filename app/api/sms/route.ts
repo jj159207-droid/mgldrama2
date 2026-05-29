@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
 
   const match = text.match(/KNM?\d{4,8}/i);
   if (!match) {
-    return NextResponse.json({ ok: false, msg: "KN код олдсонгүй" });
+    return NextResponse.json({ ok: false, msg: "KN kod oldsongu" });
   }
 
   const ref = match[0].toUpperCase();
