@@ -1696,10 +1696,11 @@ function EditFilmPanel({ f, onDone }: any) {
     setSaving(true);
     try {
       const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
-      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge, cat: category };
+      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
       if (img) payload.img = img;
-
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      // cat-г RPC-ээр тусад нь update хийх (schema cache bypass)
+      await dbFetch("rpc/update_film_cat", { method: "POST", body: JSON.stringify({ film_id: f.id, new_cat: category }) });
       if (res && res.code) { alert("Алдаа: " + (res.message || JSON.stringify(res))); return; }
       onDone();
     } catch(e: any) {
@@ -1867,13 +1868,16 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         url: form.url || "",
         img: form.img || "",
         bg: form.bg || "#1a0820",
-        cat: form.cat || "Эротик",
       };
       if (form.preview_url) payload.preview_url = form.preview_url;
       const res = await dbFetch("films", { method: "POST", body: JSON.stringify(payload) });
       if (res && res.code) {
         alert("Алдаа: " + (res.message || JSON.stringify(res)));
         return;
+      }
+      // cat-г RPC-ээр тусад нь update хийх
+      if (Array.isArray(res) && res[0]?.id) {
+        await dbFetch("rpc/update_film_cat", { method: "POST", body: JSON.stringify({ film_id: res[0].id, new_cat: form.cat || "Эротик" }) });
       }
       setForm(empty); setTab("list"); onRefresh();
     } catch(e: any) {
