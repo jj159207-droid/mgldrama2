@@ -1493,15 +1493,16 @@ function AdminContactTab() {
   const [replyId, setReplyId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const data = await dbFetch("contact_messages?order=created_at.desc&limit=50&select=*");
+    const data = await dbFetch("contact_messages?order=created_at.asc&limit=200&select=*");
     setMsgs(Array.isArray(data) ? data : []);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
 
   const markRead = async (id: number) => {
     await dbFetch(`contact_messages?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ read: true }) });
@@ -1524,7 +1525,7 @@ function AdminContactTab() {
   const deleteAll = async () => {
     if (!window.confirm("Бүх чатыг устгах уу?")) return;
     await dbFetch("contact_messages?id=gt.0", { method: "DELETE" });
-    setMsgs([]);
+    setMsgs([]); setSelectedUser(null);
   };
 
   const deleteOne = async (id: number) => {
@@ -1532,74 +1533,105 @@ function AdminContactTab() {
     setMsgs(ms => ms.filter(m => m.id !== id));
   };
 
-  return (
-    <div style={{ padding: "0 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{msgs.filter(m => !m.read).length} шинэ · {msgs.length} нийт</span>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
-          <button onClick={deleteAll} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️ Бүгдийг устгах</button>
+  // Хэрэглэгч бүрийн мэссэжийг бүлэглэх
+  const grouped = msgs.reduce((acc: any, m: any) => {
+    const key = m.user_id || m.phone;
+    if (!acc[key]) acc[key] = { phone: m.phone, user_id: m.user_id, msgs: [], unread: 0 };
+    acc[key].msgs.push(m);
+    if (!m.read) acc[key].unread++;
+    return acc;
+  }, {});
+  const users = Object.values(grouped) as any[];
+
+  // Сонгосон хэрэглэгчийн чат харагдах
+  if (selectedUser !== null) {
+    const u = users.find((u: any) => u.user_id === selectedUser || u.phone === selectedUser);
+    if (!u) return null;
+    return (
+      <div style={{ padding: "0 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <button onClick={() => setSelectedUser(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
+          <button onClick={load} style={{ marginLeft: "auto", background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "5px 10px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
         </div>
-      </div>
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-      ) : msgs.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Мессеж байхгүй байна</div>
-      ) : (
-        msgs.map(m => (
-          <div key={m.id} style={{ background: C.card, border: `0.5px solid ${m.read ? C.bd : C.gold}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {m.phone}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(m.created_at).toLocaleString("mn-MN")}</div>
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {!m.read && <span style={{ fontSize: 11, background: C.gold, color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>Шинэ</span>}
-                <button onClick={() => deleteOne(m.id)} style={{ background: "none", border: "none", color: C.red, fontSize: 14, cursor: "pointer" }}>🗑️</button>
+        {u.msgs.map((m: any) => (
+          <div key={m.id} style={{ marginBottom: 14 }}>
+            {/* Хэрэглэгчийн мессеж — баруун */}
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+              <div style={{ background: C.blue, borderRadius: "16px 16px 4px 16px", padding: "10px 14px", maxWidth: "80%", fontSize: 13, color: "#fff" }}>
+                <div>{m.message}</div>
+                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", marginTop: 4, textAlign: "right" }}>{new Date(m.created_at).toLocaleString("mn-MN")}</div>
               </div>
             </div>
-            {/* Хэрэглэгчийн мессеж */}
-            <div style={{ fontSize: 13, color: C.txt, background: C.card2, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>{m.message}</div>
-            {/* Хариу байвал харуулах */}
+            {/* Админы хариу — зүүн */}
             {m.reply && (
-              <div style={{ background: "#0a1628", border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: C.blue, marginBottom: 4, fontWeight: 700 }}>АДМИНЫ ХАРИУ</div>
-                <div style={{ fontSize: 13, color: C.txt }}>{m.reply}</div>
+              <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 4 }}>
+                <div style={{ background: C.card2, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", maxWidth: "80%", fontSize: 13, color: C.txt, border: `0.5px solid ${C.bd}` }}>
+                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Админ</div>
+                  <div>{m.reply}</div>
+                </div>
               </div>
             )}
             {/* Хариу бичих */}
             {replyId === m.id ? (
-              <div>
-                <textarea
-                  value={replyText}
-                  onChange={(e: any) => setReplyText(e.target.value)}
-                  placeholder="Хариу бичнэ үү..."
-                  style={{ ...inputSt, height: 80, resize: "none", lineHeight: 1.5, marginBottom: 8 }}
-                  autoFocus
-                />
+              <div style={{ marginTop: 6 }}>
+                <textarea value={replyText} onChange={(e: any) => setReplyText(e.target.value)}
+                  placeholder="Хариу бичнэ үү..." autoFocus
+                  style={{ ...inputSt, height: 70, resize: "none", lineHeight: 1.5, marginBottom: 6 }} />
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => sendReply(m.id)} disabled={sending || !replyText.trim()}
                     style={{ flex: 1, background: C.blue, border: "none", borderRadius: 8, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: sending ? 0.6 : 1 }}>
-                    {sending ? "Илгээж байна..." : "📨 Хариу илгээх"}
+                    {sending ? "Илгээж байна..." : "📨 Илгээх"}
                   </button>
                   <button onClick={() => { setReplyId(null); setReplyText(""); }}
-                    style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 14px", color: C.muted, fontSize: 12, cursor: "pointer" }}>Цуцлах</button>
+                    style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 14px", color: C.muted, fontSize: 12, cursor: "pointer" }}>✕</button>
                 </div>
               </div>
             ) : (
-              <div style={{ display: "flex", gap: 6 }}>
-                <button onClick={() => { setReplyId(m.id); setReplyText(""); }}
-                  style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "8px", color: C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  💬 {m.reply ? "Дахин хариулах" : "Хариулах"}
+              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
+                <button onClick={() => deleteOne(m.id)} style={{ background: "none", border: "none", color: C.red, fontSize: 13, cursor: "pointer" }}>🗑️</button>
+                <button onClick={() => { setReplyId(m.id); setReplyText(""); markRead(m.id); }}
+                  style={{ background: C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "6px 12px", color: C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  💬 {m.reply ? "Дахин" : "Хариу"}
                 </button>
-                {!m.read && (
-                  <button onClick={() => markRead(m.id)}
-                    style={{ background: "#166534", border: "none", borderRadius: 8, padding: "8px 14px", color: "#4ade80", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                    ✅ Уншсан
-                  </button>
-                )}
               </div>
             )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: "0 14px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontSize: 13, color: C.muted }}>{msgs.filter(m => !m.read).length} шинэ · {users.length} хүн</span>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
+          <button onClick={deleteAll} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
+        </div>
+      </div>
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+      ) : users.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Мессеж байхгүй байна</div>
+      ) : (
+        users.map((u: any) => (
+          <div key={u.user_id || u.phone} onClick={() => setSelectedUser(u.user_id || u.phone)}
+            style={{ background: C.card, border: `0.5px solid ${u.unread > 0 ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ background: C.card2, borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
+                  {u.msgs[u.msgs.length - 1]?.message?.slice(0, 30)}...
+                </div>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+              {u.unread > 0 && <span style={{ background: C.gold, color: "#000", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 800 }}>{u.unread}</span>}
+              <span style={{ fontSize: 10, color: C.muted }}>{u.msgs.length} мессеж</span>
+            </div>
           </div>
         ))
       )}
