@@ -991,6 +991,9 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
 }
 
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
+  const [activeCat, setActiveCat] = useState("Бүгд");
+  const CATS = ["Бүгд", "Эротик", "Гадаад", "Хятад"];
+  const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => f.category === activeCat);
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
   const handleLogoTap = () => {
     tapRef.current.count += 1;
@@ -1042,12 +1045,25 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
           </div>
         </div>
 
+        {/* ── КАТЕГОРИ ШҮҮЛТҮҮР ── */}
+        <div style={{ display: "flex", gap: 8, padding: "10px 12px 4px", overflowX: "auto" }}>
+          {["Бүгд", "🔞 Эротик", "🌍 Гадаад", "🇨🇳 Хятад"].map((cat, i) => {
+            const key = ["Бүгд", "Эротик", "Гадаад", "Хятад"][i];
+            return (
+              <button key={key} onClick={() => setActiveCat(key)}
+                style={{ background: activeCat === key ? "#6366f1" : C.card2, border: `1.5px solid ${activeCat === key ? "#6366f1" : C.bd}`, borderRadius: 20, padding: "6px 14px", whiteSpace: "nowrap", cursor: "pointer", fontSize: 12, fontWeight: activeCat === key ? 700 : 400, color: activeCat === key ? "#fff" : C.muted, flexShrink: 0 }}>
+                {cat}
+              </button>
+            );
+          })}
+        </div>
+
         {/* ── БАГЦ АВАХ ТОВЧ ── */}
         {user && <PlanModal onSelect={onMonthly} />}
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-              {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
+              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
             </div>
         }
       </div>
@@ -1789,7 +1805,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     const t = setInterval(fetchUnread, 30000);
     return () => clearInterval(t);
   }, [tab]);
-  const empty = { title: "", views: 0, op: 6000, price: 4000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820" };
+  const empty = { title: "", views: 0, op: 6000, price: 4000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", category: "Бүгд" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
@@ -1846,6 +1862,14 @@ function AdminPage({ films, onBack, onRefresh }: any) {
               <div><label style={lbl}>Үзсэн тоо</label><input style={inputSt} value={form.views} onChange={set("views")} type="number" /></div>
               <div><label style={lbl}>Badge</label>
                 <select style={inputSt} value={form.badge} onChange={set("badge")}><option>Хэлтэй</option><option>Хадмал</option></select>
+              </div>
+              <div><label style={lbl}>Категори</label>
+                <select style={inputSt} value={form.category || "Бүгд"} onChange={set("category")}>
+                  <option>Бүгд</option>
+                  <option>Эротик</option>
+                  <option>Гадаад</option>
+                  <option>Хятад</option>
+                </select>
               </div>
               <div><label style={lbl}>Хуучин үнэ ₮</label><input style={inputSt} value={form.op} onChange={set("op")} type="number" /></div>
               <div><label style={lbl}>Зарах үнэ ₮</label><input style={inputSt} value={form.price} onChange={set("price")} type="number" /></div>
