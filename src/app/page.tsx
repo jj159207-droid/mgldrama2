@@ -1015,7 +1015,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {/* ── STICKY NAVBAR ONLY ── */}
         <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.bg, borderBottom: `0.5px solid ${C.bd}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
-            <a href="https://m.me/61590383810997" target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
+            <a href={typeof window !== "undefined" ? (localStorage.getItem("messenger_url") || "https://m.me/61590383810997") : "https://m.me/61590383810997"} target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
               💬 Messenger
             </a>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1663,8 +1663,77 @@ function EditFilmPanel({ f, onDone }: any) {
   );
 }
 
+// ══════════════════════════════════════════════
+// ADMIN ТОХИРГОО — Messenger URL
+// ══════════════════════════════════════════════
+function AdminSettingsTab() {
+  const SETTINGS_KEY = "site_settings";
+  const [messengerUrl, setMessengerUrl] = useState("https://m.me/61590383810997");
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const data = await dbFetch(`sms_logs?key=eq.${SETTINGS_KEY}&select=value&limit=1`);
+      if (Array.isArray(data) && data.length > 0) {
+        try { const s = JSON.parse(data[0].value); if (s.messengerUrl) setMessengerUrl(s.messengerUrl); } catch {}
+      }
+      setLoading(false);
+    };
+    fetchSettings();
+  }, []);
+
+  const saveSettings = async () => {
+    const val = JSON.stringify({ messengerUrl });
+    const existing = await dbFetch(`sms_logs?key=eq.${SETTINGS_KEY}&select=id&limit=1`);
+    if (Array.isArray(existing) && existing.length > 0) {
+      await dbFetch(`sms_logs?key=eq.${SETTINGS_KEY}`, { method: "PATCH", body: JSON.stringify({ value: val }) });
+    } else {
+      await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ key: SETTINGS_KEY, value: val, text: "settings" }) });
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+    // localStorage-д хадгалах
+    localStorage.setItem("messenger_url", messengerUrl);
+  };
+
+  if (loading) return <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>;
+
+  return (
+    <div style={{ padding: "0 14px" }}>
+      <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 16 }}>⚙️ Сайтын тохиргоо</div>
+        <label style={lbl}>💬 Messenger холбоос</label>
+        <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
+          Жишээ: https://m.me/таны_хуудас_нэр
+        </div>
+        <input
+          value={messengerUrl}
+          onChange={(e: any) => setMessengerUrl(e.target.value)}
+          placeholder="https://m.me/..."
+          style={{ ...inputSt, marginBottom: 12 }}
+        />
+        <button
+          onClick={saveSettings}
+          style={{ ...goldBtn, borderRadius: 10 }}
+        >
+          {saved ? "✅ Хадгалагдлаа!" : "💾 Хадгалах"}
+        </button>
+      </div>
+      <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 14px" }}>
+        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
+          <div style={{ marginBottom: 4 }}>📌 Messenger холбоос яаж авах:</div>
+          <div>1. Facebook хуудсаа нээнэ</div>
+          <div>2. Settings → Messaging → Username</div>
+          <div>3. https://m.me/<span style={{ color: C.gold }}>username</span> гэж оруулна</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminPage({ films, onBack, onRefresh }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members">("list");
+  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "settings">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -1720,9 +1789,11 @@ function AdminPage({ films, onBack, onRefresh }: any) {
             <span style={{ position: "absolute", top: 4, right: 4, background: C.red, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount}</span>
           )}
         </button>
+        <button onClick={() => setTab("settings")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "settings" ? C.gold : C.card2, color: tab === "settings" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>⚙️ Тохиргоо</button>
       </div>
 
       {tab === "orders" && <AdminOrdersTab />}
+      {tab === "settings" && <AdminSettingsTab />}
       {tab === "members" && <AdminMembersTab />}
       {tab === "sms" && <AdminContactTab />}
 
