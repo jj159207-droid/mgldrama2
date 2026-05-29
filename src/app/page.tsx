@@ -1794,7 +1794,21 @@ function AdminPage({ films, onBack, onRefresh }: any) {
   const save = async () => {
     if (!form.title.trim()) { alert("Гарчиг оруулна уу"); return; }
     setSaving(true);
-    await dbFetch("films", { method: "POST", body: JSON.stringify({ ...form, views: parseInt(form.views) || 0, op: parseInt(form.op) || 6000, price: parseInt(form.price) || 0 }) });
+    const payload: any = {
+      title: form.title,
+      views: parseInt(form.views) || 0,
+      op: parseInt(form.op) || 6000,
+      price: parseInt(form.price) || 0,
+      badge: form.badge,
+      free: form.free,
+      locked: form.locked,
+      url: form.url,
+      img: form.img,
+      bg: form.bg,
+      category: form.category || "Бүгд",
+    };
+    if (form.preview_url) payload.preview_url = form.preview_url;
+    await dbFetch("films", { method: "POST", body: JSON.stringify(payload) });
     setSaving(false); setForm(empty); setTab("list"); onRefresh();
   };
   const deletFilm = async (id: number) => {
