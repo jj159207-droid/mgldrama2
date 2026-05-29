@@ -14,6 +14,33 @@ export async function POST(req: NextRequest) {
 
   const ref = match[0].toUpperCase();
 
+  // Дүнг мэссэжнээс олох
+  const amountMatch = text.match(/(\d[\d,]+)(?:₮|MNT| төгрөг)/i);
+  const paidAmount = amountMatch ? parseInt(amountMatch[1].replace(/,/g, "")) : 0;
+
+  // DB-с энэ ref-ийн pending төлбөр татах
+  const checkRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}&status=eq.pending&select=*`,
+    {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      },
+    }
+  );
+  const rows = await checkRes.json();
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    return NextResponse.json({ ok: false, msg: "Төлбөр олдсонгүй" });
+  }
+
+  const payment = rows[0];
+
+  // Дүн таарахгүй бол confirmed болгохгүй
+  if (paidAmount < payment.amount) {
+    return NextResponse.json({ ok: false, msg: `Дүн хүрэхгүй байна: ${paidAmount} < ${payment.amount}` });
+  }
+
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}&status=eq.pending`,
     {
