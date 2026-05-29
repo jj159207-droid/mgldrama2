@@ -943,20 +943,46 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
           </div>
         </div>
 
-        {/* ── 1 САРЫН БАГЦ — кинонуудтай хамт scroll явна ── */}
+        {/* ── БАГЦ СОНГОХ — 3 сонголт ── */}
         {user && (
-          <div style={{ padding: "8px 12px" }}>
-            <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+          <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+            <div onClick={() => onMonthly("3day")} style={{ background: "linear-gradient(90deg,#0ea5e9,#38bdf8)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 24 }}>👑</span>
+                <span style={{ fontSize: 22 }}>🎬</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>3 хоногийн багц</div>
+                  <div style={{ fontSize: 12, color: "#e0f2fe" }}>Бүх кино — 3 хоног үнэгүй</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>8,000₮</div>
+                <div style={{ fontSize: 11, color: "#e0f2fe" }}>/ 3 хоног</div>
+              </div>
+            </div>
+            <div onClick={() => onMonthly("1month")} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>👑</span>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
-                  <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+                  <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — 1 сар үнэгүй</div>
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>12,500₮</div>
                 <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
+              </div>
+            </div>
+            <div onClick={() => onMonthly("1year")} style={{ background: "linear-gradient(90deg,#b45309,#f59e0b)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 22 }}>🏆</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Жилийн багц</div>
+                  <div style={{ fontSize: 12, color: "#fef3c7" }}>Бүх кино — 1 жил үнэгүй</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>20,000₮</div>
+                <div style={{ fontSize: 11, color: "#fef3c7" }}>/ жил</div>
               </div>
             </div>
           </div>
@@ -1776,8 +1802,11 @@ export default function Home() {
 
     payments.forEach((p: any) => {
       if (p.status !== "confirmed") return; // revoked болон pending-г орхино
-      if (p.plan === "monthly") {
-        const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
+      if (p.plan === "monthly" || p.plan === "1month" || p.plan === "3day" || p.plan === "1year") {
+        let dur = 30 * 24 * 60 * 60 * 1000;
+        if (p.plan === "3day") dur = 3 * 24 * 60 * 60 * 1000;
+        else if (p.plan === "1year") dur = 365 * 24 * 60 * 60 * 1000;
+        const exp = new Date(p.created_at).getTime() + dur;
         if (exp > now) newAccess["monthly"] = exp;
       } else {
         const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
@@ -1823,10 +1852,11 @@ export default function Home() {
 
   const handlePaid = () => {
     if (payFilm.monthly) {
-      // 1 сарын эрх
-      saveAccess("monthly", Date.now() + 30 * 24 * 60 * 60 * 1000);
+      let ms = 30 * 24 * 60 * 60 * 1000; // default 1 month
+      if (payFilm.plan === "3day") ms = 3 * 24 * 60 * 60 * 1000;
+      else if (payFilm.plan === "1year") ms = 365 * 24 * 60 * 60 * 1000;
+      saveAccess("monthly", Date.now() + ms);
       setPayFilm(null);
-      // Бүх кино нээлттэй болно — нүүр хуудас руу буцах
       setPage("home");
     } else {
       // 72 цагийн эрх
@@ -1857,7 +1887,11 @@ export default function Home() {
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
 
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 12500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={(plan: string) => {
+          if (plan === "3day") setPayFilm({ id: 0, title: "3 Хоногийн багц", price: 8000, monthly: true, plan: "3day", locked: true });
+          else if (plan === "1year") setPayFilm({ id: 0, title: "1 Жилийн багц", price: 20000, monthly: true, plan: "1year", locked: true });
+          else setPayFilm({ id: 0, title: "1 Сарын багц", price: 12500, monthly: true, plan: "1month", locked: true });
+        }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
