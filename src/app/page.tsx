@@ -891,6 +891,97 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 }
 
 
+// ══════════════════════════════════════════════
+// БАГЦ АВАХ MODAL
+// ══════════════════════════════════════════════
+function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <div style={{ padding: "8px 12px" }}>
+        <div
+          onClick={() => setOpen(true)}
+          style={{
+            background: "linear-gradient(135deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%)",
+            border: "1px solid rgba(99,102,241,0.4)",
+            borderRadius: 14, padding: "14px 18px",
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            cursor: "pointer",
+            boxShadow: "0 0 20px rgba(99,102,241,0.15)",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ fontSize: 24 }}>🎬</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: "0.02em" }}>Багц авах</div>
+              <div style={{ fontSize: 11, color: "#a5b4fc" }}>3 хоног · 1 сар · 1 жил</div>
+            </div>
+          </div>
+          <div style={{ background: "linear-gradient(90deg,#6366f1,#a855f7)", borderRadius: 10, padding: "7px 14px" }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Сонгох →</span>
+          </div>
+        </div>
+      </div>
+
+      {open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 300 }} onClick={() => setOpen(false)}>
+          <div style={{ background: "#0d0d18", borderRadius: "20px 20px 0 0", padding: "20px 16px 40px", width: "100%", border: "1px solid rgba(99,102,241,0.2)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, background: "#2a2a40", borderRadius: 2, margin: "0 auto 20px" }} />
+            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 16, textAlign: "center" }}>Багц сонгох</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* 3 хоног */}
+              <div onClick={() => { setOpen(false); onSelect("3day"); }}
+                style={{ background: "linear-gradient(135deg,#0c4a6e,#0ea5e9,#38bdf8)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 4px 20px rgba(14,165,233,0.3)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>⚡</div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>3 Хоногийн багц</div>
+                    <div style={{ fontSize: 12, color: "#bae6fd" }}>Бүх кино · 72 цаг</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>8,000₮</div>
+                  <div style={{ fontSize: 10, color: "#bae6fd", background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", marginTop: 2 }}>ХЯМД</div>
+                </div>
+              </div>
+              {/* 1 сар */}
+              <div onClick={() => { setOpen(false); onSelect("1month"); }}
+                style={{ background: "linear-gradient(135deg,#3b0764,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 4px 20px rgba(168,85,247,0.3)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>👑</div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>1 Сарын багц</div>
+                    <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино · 30 хоног</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>12,500₮</div>
+                  <div style={{ fontSize: 10, color: "#e9d5ff", background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", marginTop: 2 }}>АЛДАРТАЙ</div>
+                </div>
+              </div>
+              {/* 1 жил */}
+              <div onClick={() => { setOpen(false); onSelect("1year"); }}
+                style={{ background: "linear-gradient(135deg,#451a03,#b45309,#f59e0b)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 4px 20px rgba(245,158,11,0.3)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏆</div>
+                  <div>
+                    <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>1 Жилийн багц</div>
+                    <div style={{ fontSize: 12, color: "#fef3c7" }}>Бүх кино · 365 хоног</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>20,000₮</div>
+                  <div style={{ fontSize: 10, color: "#fef3c7", background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", marginTop: 2 }}>ХЭМНЭЛТТЭЙ</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
   const handleLogoTap = () => {
@@ -936,57 +1027,15 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
                   </div>
                 : null
               }
-              <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
+
               <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
               <button onClick={onInstall} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: "#60a5fa", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>📲 Апп</button>
             </div>
           </div>
         </div>
 
-        {/* ── БАГЦ СОНГОХ — 3 сонголт ── */}
-        {user && (
-          <div style={{ padding: "8px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
-            <div onClick={() => onMonthly("3day")} style={{ background: "linear-gradient(90deg,#0ea5e9,#38bdf8)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>🎬</span>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>3 хоногийн багц</div>
-                  <div style={{ fontSize: 12, color: "#e0f2fe" }}>Бүх кино — 3 хоног үнэгүй</div>
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>8,000₮</div>
-                <div style={{ fontSize: 11, color: "#e0f2fe" }}>/ 3 хоног</div>
-              </div>
-            </div>
-            <div onClick={() => onMonthly("1month")} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>👑</span>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
-                  <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — 1 сар үнэгүй</div>
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>12,500₮</div>
-                <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
-              </div>
-            </div>
-            <div onClick={() => onMonthly("1year")} style={{ background: "linear-gradient(90deg,#b45309,#f59e0b)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 22 }}>🏆</span>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Жилийн багц</div>
-                  <div style={{ fontSize: 12, color: "#fef3c7" }}>Бүх кино — 1 жил үнэгүй</div>
-                </div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>20,000₮</div>
-                <div style={{ fontSize: 11, color: "#fef3c7" }}>/ жил</div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* ── БАГЦ АВАХ ТОВЧ ── */}
+        {user && <PlanModal onSelect={onMonthly} />}
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
