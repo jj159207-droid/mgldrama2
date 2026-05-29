@@ -207,7 +207,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       method: "POST",
       body: JSON.stringify({
         ref_code: refCode,
-        film_id: film.id,
+        film_id: film.id || null,
         amount: film.price,
         status: "pending",
         user_id: user?.id || null,
@@ -2075,7 +2075,7 @@ export default function Home() {
       } else if (p.plan?.startsWith("hyatad")) {
         if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
       }
-      if (p.film_id) {
+      if (p.film_id && p.film_id > 0 && p.plan === "single") {
         const filmExp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
         if (filmExp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, filmExp);
       }
@@ -2142,6 +2142,7 @@ export default function Home() {
       }
       setPayFilm(null);
       setPage("home");
+      if (user?.id) syncAccessFromDB(user.id);
     } else {
       // 72 цагийн эрх
       const expires = Date.now() + 72 * 60 * 60 * 1000;
