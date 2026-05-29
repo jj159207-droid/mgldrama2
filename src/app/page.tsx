@@ -220,13 +220,13 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       } else {
         setAutoStatus("waiting");
       }
-    }, 5000);
+    }, 4000);
 
-    // 15 минутын дараа timeout
+    // 20 минутын дараа timeout
     timeoutRef.current = setTimeout(() => {
       clearInterval(intervalRef.current);
       setAutoStatus("timeout");
-    }, 15 * 60 * 1000);
+    }, 20 * 60 * 1000);
 
     return () => {
       clearInterval(intervalRef.current);
@@ -737,14 +737,19 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 
   const submitRegisterWithPin = async (pinVal: string) => {
     setLoading(true); setErr("");
-    const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin: pinVal, user_id: "tmp", failed_attempts: 0 }) });
-    if (data?.[0]?.id) {
-      const uid = genUserId(data[0].id);
-      await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
-      saveSession({ ...data[0], user_id: uid });
-      onLogin({ ...data[0], user_id: uid });
-    } else { setErr("Бүртгэл амжилтгүй"); }
-    setLoading(false);
+    try {
+      const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin: pinVal, user_id: "tmp", failed_attempts: 0 }) });
+      if (data?.[0]?.id) {
+        const uid = genUserId(data[0].id);
+        await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
+        saveSession({ ...data[0], user_id: uid });
+        onLogin({ ...data[0], user_id: uid });
+      } else { setErr("Бүртгэл амжилтгүй. Дахин оролдоно уу"); }
+    } catch(e) {
+      setErr("Холболтын алдаа. Дахин оролдоно уу");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePin2Change = (val: string) => {
@@ -755,7 +760,13 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 
   const submitPin = async (pinVal: string) => {
     setLoading(true); setErr("");
-    const data = await dbFetch(`users?phone=eq.${phone}&select=*`);
+    let data: any;
+    try {
+      data = await dbFetch(`users?phone=eq.${phone}&select=*`);
+    } catch(e) {
+      setErr("Холболтын алдаа. Дахин оролдоно уу");
+      setLoading(false); return;
+    }
     if (!Array.isArray(data) || !data.length) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
     const u = data[0];
     if (u.locked_until && new Date(u.locked_until) > new Date()) { setErr("15 минут хүлээнэ үү"); setLoading(false); return; }
@@ -1168,27 +1179,37 @@ function AdminOrdersTab() {
 
   const load = async () => {
     setLoading(true);
-    const [pend, fl, us] = await Promise.all([
-      dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
-      dbFetch("films?select=id,title"),
-      dbFetch("users?select=id,phone,user_id"),
-    ]);
-    setOrders(Array.isArray(pend) ? pend : []);
-    setFilms(Array.isArray(fl) ? fl : []);
-    setUsers(Array.isArray(us) ? us : []);
-    setLoading(false);
+    try {
+      const [pend, fl, us] = await Promise.all([
+        dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
+        dbFetch("films?select=id,title"),
+        dbFetch("users?select=id,phone,user_id"),
+      ]);
+      setOrders(Array.isArray(pend) ? pend : []);
+      setFilms(Array.isArray(fl) ? fl : []);
+      setUsers(Array.isArray(us) ? us : []);
+    } catch(e) {
+      setOrders([]); setFilms([]); setUsers([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
 
   const confirmOrder = async (ref_code: string) => {
     setConfirming(ref_code);
-    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "confirmed" }),
-    });
-    await load();
-    setConfirming(null);
+    try {
+      await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString() }),
+      });
+      await load();
+    } catch(e) {
+      alert("Баталгаажуулахад алдаа гарлаа");
+    } finally {
+      setConfirming(null);
+    }
   };
 
   const revokeOrder = async (ref_code: string) => {
@@ -1333,15 +1354,20 @@ function AdminMembersTab() {
 
   const load = async () => {
     setLoading(true);
-    const [us, fl, pay] = await Promise.all([
-      dbFetch("users?order=id.desc&select=*"),
-      dbFetch("films?select=id,title"),
-      dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,ref_code"),
-    ]);
-    setUsers(Array.isArray(us) ? us : []);
-    setFilms(Array.isArray(fl) ? fl : []);
-    setAllPayments(Array.isArray(pay) ? pay : []);
-    setLoading(false);
+    try {
+      const [us, fl, pay] = await Promise.all([
+        dbFetch("users?order=id.desc&select=*"),
+        dbFetch("films?select=id,title"),
+        dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,ref_code"),
+      ]);
+      setUsers(Array.isArray(us) ? us : []);
+      setFilms(Array.isArray(fl) ? fl : []);
+      setAllPayments(Array.isArray(pay) ? pay : []);
+    } catch(e) {
+      setUsers([]); setFilms([]); setAllPayments([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const hasMonthly = (userId: number) => allPayments.some(p => p.user_id === userId && p.plan === "monthly");
@@ -1354,9 +1380,14 @@ function AdminMembersTab() {
     setSelected(u);
     setShowRights(false);
     setLoadingPayments(true);
-    const payments = await dbFetch(`pending_payments?user_id=eq.${u.id}&order=created_at.desc&select=*`);
-    setUserPayments(Array.isArray(payments) ? payments : []);
-    setLoadingPayments(false);
+    try {
+      const payments = await dbFetch(`pending_payments?user_id=eq.${u.id}&order=created_at.desc&select=*`);
+      setUserPayments(Array.isArray(payments) ? payments : []);
+    } catch(e) {
+      setUserPayments([]);
+    } finally {
+      setLoadingPayments(false);
+    }
   };
 
   const revokeAccess = async (ref_code: string) => {
@@ -1962,7 +1993,7 @@ export default function Home() {
   const [showInstall, setShowInstall] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
-  const [showLoginModal, setShowLoginModal] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
