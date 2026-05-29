@@ -2103,7 +2103,12 @@ export default function Home() {
   const loadFilms = async () => {
     setLoading(true);
     try {
-      const data = await dbFetch("films?order=created_at.desc&select=*");
+      const raw = await dbFetch("films?order=created_at.desc&select=*");
+      // cat баганыг тусад нь татах
+      const cats = await dbFetch("rpc/get_film_cats", { method: "POST", body: JSON.stringify({}) }).catch(() => []);
+      const catMap: Record<number,string> = {};
+      if (Array.isArray(cats)) cats.forEach((c: any) => { catMap[c.id] = c.cat; });
+      const data = Array.isArray(raw) ? raw.map((f: any) => ({ ...f, cat: catMap[f.id] || f.cat || "Эротик" })) : raw;
       setFilms(Array.isArray(data) ? data : []);
     } catch(e) {
       setFilms([]);
