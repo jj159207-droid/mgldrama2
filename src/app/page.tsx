@@ -1806,9 +1806,9 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         url: form.url || "",
         img: form.img || "",
         bg: form.bg || "#1a0820",
-        category: form.category || "Бүгд",
       };
       if (form.preview_url) payload.preview_url = form.preview_url;
+      if (form.category) payload.category = form.category;
       const res = await dbFetch("films", { method: "POST", body: JSON.stringify(payload) });
       if (res && res.code) {
         alert("Алдаа: " + (res.message || JSON.stringify(res)));
