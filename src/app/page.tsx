@@ -1688,6 +1688,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const [img, setImg] = useState(f.img || "");
   const [previewUrl, setPreviewUrl] = useState(existingPreview);
   const [badge, setBadge] = useState(f.badge || "Хэлтэй");
+  const [category, setCategory] = useState(f.category || "Бүгд");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -1697,6 +1698,7 @@ function EditFilmPanel({ f, onDone }: any) {
       const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
       const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
       if (img) payload.img = img;
+      if (category) payload.category = category;
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       if (res && res.code) { alert("Алдаа: " + (res.message || JSON.stringify(res))); return; }
       onDone();
@@ -1720,12 +1722,23 @@ function EditFilmPanel({ f, onDone }: any) {
           <label style={lbl}>Хуучин үнэ ₮</label>
           <input style={inputSt} value={op} onChange={(e: any) => setOp(e.target.value)} type="number" />
         </div>
+        <div>
+          <label style={lbl}>Badge</label>
+          <select style={inputSt} value={badge} onChange={(e: any) => setBadge(e.target.value)}>
+            <option>Хэлтэй</option>
+            <option>Хадмал</option>
+          </select>
+        </div>
+        <div>
+          <label style={lbl}>Категори</label>
+          <select style={inputSt} value={category} onChange={(e: any) => setCategory(e.target.value)}>
+            <option>Бүгд</option>
+            <option>Эротик</option>
+            <option>Гадаад</option>
+            <option>Хятад</option>
+          </select>
+        </div>
       </div>
-      <label style={{ ...lbl, marginTop: 8 }}>Badge</label>
-      <select style={inputSt} value={badge} onChange={(e: any) => setBadge(e.target.value)}>
-        <option>Хэлтэй</option>
-        <option>Хадмал</option>
-      </select>
       <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
       <input style={inputSt} value={url} onChange={(e: any) => setUrl(e.target.value)} placeholder="https://iframe.mediadelivery.net/..." />
       <label style={{ ...lbl, marginTop: 8 }}>🎬 Preview URL (Bunny.net MP4)</label>
@@ -1835,7 +1848,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     const t = setInterval(fetchUnread, 30000);
     return () => clearInterval(t);
   }, [tab]);
-  const empty = { title: "", views: 0, op: 6000, price: 4000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", category: "Бүгд" };
+  const empty = { title: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", category: "Бүгд" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
