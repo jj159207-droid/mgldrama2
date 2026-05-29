@@ -1698,7 +1698,7 @@ function EditFilmPanel({ f, onDone }: any) {
       const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
       const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
       if (img) payload.img = img;
-      if (category) payload.category = category;
+
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       if (res && res.code) { alert("Алдаа: " + (res.message || JSON.stringify(res))); return; }
       onDone();
