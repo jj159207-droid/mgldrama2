@@ -611,6 +611,14 @@ function ContactModal({ onClose, user }: any) {
     const newMsg = { phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false };
     await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
     setMsg("");
+    // Сүүлийн 3 мэссэж л хадгалах — хуучныг устгах
+    const allMsgs = await dbFetch(`contact_messages?user_id=eq.${user?.id}&order=created_at.asc&select=id`);
+    if (Array.isArray(allMsgs) && allMsgs.length > 3) {
+      const toDelete = allMsgs.slice(0, allMsgs.length - 3);
+      for (const m of toDelete) {
+        await dbFetch(`contact_messages?id=eq.${m.id}`, { method: "DELETE" });
+      }
+    }
     await load();
     setSending(false);
   };
@@ -1015,9 +1023,9 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {/* ── STICKY NAVBAR ONLY ── */}
         <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.bg, borderBottom: `0.5px solid ${C.bd}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
-            <a href={typeof window !== "undefined" ? (localStorage.getItem("messenger_url") || "https://m.me/61590383810997") : "https://m.me/61590383810997"} target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-              💬 Messenger
-            </a>
+            <button onClick={onOpenLogin && !user ? onOpenLogin : onContact} style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              💬 Мессеж
+            </button>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
               {user
