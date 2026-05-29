@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -14,17 +14,12 @@ export async function POST(req: NextRequest) {
 
   const ref = match[0].toUpperCase();
 
-  // SMS мэссэжнээс дүн олох — Хаан банкны форматууд
-  const amountPatterns = [
-    /(\d[\d,]+)\s*[₮T]/i,
-    /орлого[:\s]+(\d[\d,]+)/i,
-    /(\d[\d,]+)\s*төгрөг/i,
-    /amount[:\s]+(\d[\d,]+)/i,
-  ];
+  // SMS-ээс зөвхөн ORLOGO дүнг авна — ULDEGDEL-г авахгүй
+  // Жишээ: "ORLOGO:12,500.00MNT hiigdej ULDEGDEL:88,420.00MNT"
   let paidAmount = 0;
-  for (const pattern of amountPatterns) {
-    const m = text.match(pattern);
-    if (m) { paidAmount = parseInt(m[1].replace(/,/g, "")); break; }
+  const orlogoMatch = text.match(/ORLOGO:([\d,]+)\.?\d*MNT/i) || text.match(/ORLOGO[:\s]+([\d,]+)/i);
+  if (orlogoMatch) {
+    paidAmount = parseInt(orlogoMatch[1].replace(/,/g, ""));
   }
 
   // Pending төлбөр татах
