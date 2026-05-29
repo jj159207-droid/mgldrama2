@@ -2098,7 +2098,7 @@ export default function Home() {
   const loadFilms = async () => {
     setLoading(true);
     try {
-      const data = await dbFetch("films?order=created_at.desc&select=*");
+      const data = await dbFetch("films?order=created_at.desc&select=id,title,views,op,price,badge,free,locked,url,img,bg,category,preview_url,created_at");
       setFilms(Array.isArray(data) ? data : []);
     } catch(e) {
       setFilms([]);
