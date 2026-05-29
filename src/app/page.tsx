@@ -192,7 +192,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
         amount: film.price,
         status: "pending",
         user_id: user?.id || null,
-        plan: film.monthly ? "monthly" : "single",
+        plan: film.plan || (film.monthly ? "monthly" : "single"),
       }),
     });
 
