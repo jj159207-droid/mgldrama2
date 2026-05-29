@@ -1696,7 +1696,7 @@ function EditFilmPanel({ f, onDone }: any) {
     setSaving(true);
     try {
       const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
-      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
+      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge, category };
       if (img) payload.img = img;
 
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
