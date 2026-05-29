@@ -904,83 +904,60 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 // ══════════════════════════════════════════════
 function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
   const [open, setOpen] = useState(false);
+  const cats = [
+    { key: "erotic", label: "🔞 ЭРОТИК", color: "#a855f7", border: "#7c3aed", bg: "#1a0a1a", sub: "#c4b5fd" },
+    { key: "gadaad", label: "🌍 ГАДААД", color: "#38bdf8", border: "#0ea5e9", bg: "#0a1220", sub: "#7dd3fc" },
+    { key: "hyatad", label: "🇨🇳 ХЯТАД",  color: "#f59e0b", border: "#b45309", bg: "#1a1000", sub: "#fcd34d" },
+  ];
   return (
     <>
       <div style={{ padding: "8px 12px" }}>
-        <div
-          onClick={() => setOpen(true)}
-          style={{
-            background: "linear-gradient(135deg,#1a1a2e 0%,#16213e 40%,#0f3460 100%)",
-            border: "1px solid rgba(99,102,241,0.4)",
-            borderRadius: 14, padding: "14px 18px",
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            cursor: "pointer",
-            boxShadow: "0 0 20px rgba(99,102,241,0.15)",
-          }}
-        >
+        <div onClick={() => setOpen(true)} style={{ background: "#13131f", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontSize: 24 }}>🎬</span>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: "0.02em" }}>Багц авах</div>
-              <div style={{ fontSize: 11, color: "#a5b4fc" }}>3 хоног · 1 сар · 1 жил</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>Багц авах</div>
+              <div style={{ fontSize: 11, color: "#a5b4fc" }}>Эротик · Гадаад · Хятад</div>
             </div>
           </div>
-          <div style={{ background: "linear-gradient(90deg,#6366f1,#a855f7)", borderRadius: 10, padding: "7px 14px" }}>
+          <div style={{ background: "#6366f1", borderRadius: 10, padding: "7px 14px" }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Сонгох →</span>
           </div>
         </div>
       </div>
 
       {open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 300 }} onClick={() => setOpen(false)}>
-          <div style={{ background: "#0d0d18", borderRadius: "20px 20px 0 0", padding: "20px 16px 40px", width: "100%", border: "1px solid rgba(99,102,241,0.2)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 36, height: 4, background: "#2a2a40", borderRadius: 2, margin: "0 auto 20px" }} />
-            <div style={{ fontSize: 16, fontWeight: 800, color: "#fff", marginBottom: 16, textAlign: "center" }}>Багц сонгох</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {/* 3 хоног */}
-              <div onClick={() => { setOpen(false); onSelect("3day"); }}
-                style={{ background: "linear-gradient(135deg,#0c4a6e,#0ea5e9,#38bdf8)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 4px 20px rgba(14,165,233,0.3)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>⚡</div>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>3 Хоногийн багц</div>
-                    <div style={{ fontSize: 12, color: "#bae6fd" }}>Бүх кино · 72 цаг</div>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-end", zIndex: 300 }} onClick={() => setOpen(false)}>
+          <div style={{ background: "#0d0d18", borderRadius: "20px 20px 0 0", padding: "20px 16px 40px", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, background: "#2a2a40", borderRadius: 2, margin: "0 auto 18px" }} />
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 16, textAlign: "center" }}>Багц сонгох</div>
+
+            {cats.map(c => (
+              <div key={c.key} style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: c.color, fontWeight: 700, letterSpacing: "0.06em", textAlign: "center", marginBottom: 8 }}>{c.label}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  <div onClick={() => { setOpen(false); onSelect(`${c.key}_3day`); }}
+                    style={{ background: c.bg, border: `0.5px solid ${c.border}`, borderRadius: 12, padding: 12, textAlign: "center", cursor: "pointer" }}>
+                    <div style={{ fontSize: 11, color: c.sub, marginBottom: 4 }}>3 хоног</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>8,000₮</div>
                   </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>8,000₮</div>
-                  <div style={{ fontSize: 10, color: "#bae6fd", background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", marginTop: 2 }}>ХЯМД</div>
+                  <div onClick={() => { setOpen(false); onSelect(`${c.key}_1month`); }}
+                    style={{ background: c.bg, border: `1.5px solid ${c.color}`, borderRadius: 12, padding: 12, textAlign: "center", cursor: "pointer" }}>
+                    <div style={{ fontSize: 11, color: c.sub, marginBottom: 4 }}>1 сар</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>12,500₮</div>
+                  </div>
                 </div>
               </div>
-              {/* 1 сар */}
-              <div onClick={() => { setOpen(false); onSelect("1month"); }}
-                style={{ background: "linear-gradient(135deg,#3b0764,#7c3aed,#a855f7)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 4px 20px rgba(168,85,247,0.3)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>👑</div>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>1 Сарын багц</div>
-                    <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино · 30 хоног</div>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>12,500₮</div>
-                  <div style={{ fontSize: 10, color: "#e9d5ff", background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", marginTop: 2 }}>АЛДАРТАЙ</div>
-                </div>
+            ))}
+
+            <div onClick={() => { setOpen(false); onSelect("all_1month"); }}
+              style={{ background: "#0f1a0f", border: "1.5px solid #4ade80", borderRadius: 12, padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginTop: 4 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "#4ade80" }}>🌟 Бүх багц</div>
+                <div style={{ fontSize: 11, color: "#86efac", marginTop: 2 }}>Эротик + Гадаад + Хятад · 1 сар</div>
               </div>
-              {/* 1 жил */}
-              <div onClick={() => { setOpen(false); onSelect("1year"); }}
-                style={{ background: "linear-gradient(135deg,#451a03,#b45309,#f59e0b)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 4px 20px rgba(245,158,11,0.3)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: 10, width: 42, height: 42, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>🏆</div>
-                  <div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>1 Жилийн багц</div>
-                    <div style={{ fontSize: 12, color: "#fef3c7" }}>Бүх кино · 365 хоног</div>
-                  </div>
-                </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{ fontSize: 20, fontWeight: 900, color: "#fff" }}>20,000₮</div>
-                  <div style={{ fontSize: 10, color: "#fef3c7", background: "rgba(255,255,255,0.1)", borderRadius: 6, padding: "2px 6px", marginTop: 2 }}>ХЭМНЭЛТТЭЙ</div>
-                </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>20,000₮</div>
               </div>
             </div>
           </div>
@@ -1002,12 +979,17 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     else { tapRef.current.timer = setTimeout(() => { tapRef.current.count = 0; }, 3000); }
   };
 
-  const getExpiry = (filmId: number): string | null => {
+  const getExpiry = (filmId: number, category?: string): string | null => {
     if (!user) return null;
     const now = Date.now();
     if (accessMap?.["monthly"] && accessMap["monthly"] > now) {
       const h = Math.ceil((accessMap["monthly"] - now) / 3600000);
       return h > 24 ? `👑 ${Math.ceil(h/24)} хоног үлдсэн` : `👑 ${h}ц үлдсэн`;
+    }
+    const catMap: any = { "Эротик": "cat_erotic", "Гадаад": "cat_gadaad", "Хятад": "cat_hyatad" };
+    if (category && catMap[category] && accessMap?.[catMap[category]] && accessMap[catMap[category]] > now) {
+      const h = Math.ceil((accessMap[catMap[category]] - now) / 3600000);
+      return h > 24 ? `✅ ${Math.ceil(h/24)} хоног үлдсэн` : `✅ ${h}ц үлдсэн`;
     }
     const key = `film_${filmId}`;
     if (accessMap?.[key] && accessMap[key] > now) {
@@ -1063,7 +1045,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
+              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, f.category)} />)}
             </div>
         }
       </div>
@@ -1986,12 +1968,21 @@ export default function Home() {
 
     payments.forEach((p: any) => {
       if (p.status !== "confirmed") return; // revoked болон pending-г орхино
+      const is3day = p.plan?.endsWith("_3day");
+      const dur = is3day ? 3*24*60*60*1000 : 30*24*60*60*1000;
+      const exp = new Date(p.created_at).getTime() + dur;
       if (p.plan === "monthly" || p.plan === "1month" || p.plan === "3day" || p.plan === "1year") {
-        let dur = 30 * 24 * 60 * 60 * 1000;
-        if (p.plan === "3day") dur = 3 * 24 * 60 * 60 * 1000;
-        else if (p.plan === "1year") dur = 365 * 24 * 60 * 60 * 1000;
-        const exp = new Date(p.created_at).getTime() + dur;
-        if (exp > now) newAccess["monthly"] = exp;
+        if (exp > now) newAccess["monthly"] = Math.max(newAccess["monthly"] || 0, exp);
+      } else if (p.plan === "all_1month") {
+        if (exp > now) { newAccess["cat_erotic"] = exp; newAccess["cat_gadaad"] = exp; newAccess["cat_hyatad"] = exp; }
+      } else if (p.plan?.startsWith("erotic")) {
+        if (exp > now) newAccess["cat_erotic"] = Math.max(newAccess["cat_erotic"] || 0, exp);
+      } else if (p.plan?.startsWith("gadaad")) {
+        if (exp > now) newAccess["cat_gadaad"] = Math.max(newAccess["cat_gadaad"] || 0, exp);
+      } else if (p.plan?.startsWith("hyatad")) {
+        if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
+      }
+      if (false) {
       } else {
         const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
         if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
@@ -2011,11 +2002,13 @@ export default function Home() {
     });
   };
 
-  const hasAccess = (filmId: number): boolean => {
+  const hasAccess = (filmId: number, category?: string): boolean => {
     if (!user) return false;
     const now = Date.now();
     if (accessMap["monthly"] && accessMap["monthly"] > now) return true;
     if (accessMap[`film_${filmId}`] && accessMap[`film_${filmId}`] > now) return true;
+    const catMap: any = { "Эротик": "cat_erotic", "Гадаад": "cat_gadaad", "Хятад": "cat_hyatad" };
+    if (category && catMap[category] && accessMap[catMap[category]] && accessMap[catMap[category]] > now) return true;
     return false;
   };
 
@@ -2036,10 +2029,20 @@ export default function Home() {
 
   const handlePaid = () => {
     if (payFilm.monthly) {
-      let ms = 30 * 24 * 60 * 60 * 1000; // default 1 month
-      if (payFilm.plan === "3day") ms = 3 * 24 * 60 * 60 * 1000;
-      else if (payFilm.plan === "1year") ms = 365 * 24 * 60 * 60 * 1000;
-      saveAccess("monthly", Date.now() + ms);
+      const is3day = payFilm.plan?.endsWith("_3day");
+      const ms = is3day ? 3 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+      const exp = Date.now() + ms;
+      if (payFilm.plan === "all_1month") {
+        saveAccess("cat_erotic", exp);
+        saveAccess("cat_gadaad", exp);
+        saveAccess("cat_hyatad", exp);
+      } else if (payFilm.plan?.startsWith("erotic")) {
+        saveAccess("cat_erotic", exp);
+      } else if (payFilm.plan?.startsWith("gadaad")) {
+        saveAccess("cat_gadaad", exp);
+      } else if (payFilm.plan?.startsWith("hyatad")) {
+        saveAccess("cat_hyatad", exp);
+      }
       setPayFilm(null);
       setPage("home");
     } else {
@@ -2054,7 +2057,7 @@ export default function Home() {
 
   const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
   const handleLogout = () => { clearSession(); setUser(null); };
-  const filmsWithUnlock = films.map(f => hasAccess(f.id) ? { ...f, locked: false } : f);
+  const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, f.category) ? { ...f, locked: false } : f);
 
   return (
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
@@ -2072,9 +2075,17 @@ export default function Home() {
       `}</style>
 
       {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={(plan: string) => {
-          if (plan === "3day") setPayFilm({ id: 0, title: "3 Хоногийн багц", price: 8000, monthly: true, plan: "3day", locked: true });
-          else if (plan === "1year") setPayFilm({ id: 0, title: "1 Жилийн багц", price: 20000, monthly: true, plan: "1year", locked: true });
-          else setPayFilm({ id: 0, title: "1 Сарын багц", price: 12500, monthly: true, plan: "1month", locked: true });
+          const PLANS: any = {
+            "erotic_3day":  { title: "🔞 Эротик · 3 хоног",  price: 8000,  plan: "erotic_3day" },
+            "erotic_1month":{ title: "🔞 Эротик · 1 сар",    price: 12500, plan: "erotic_1month" },
+            "gadaad_3day":  { title: "🌍 Гадаад · 3 хоног",  price: 8000,  plan: "gadaad_3day" },
+            "gadaad_1month":{ title: "🌍 Гадаад · 1 сар",    price: 12500, plan: "gadaad_1month" },
+            "hyatad_3day":  { title: "🇨🇳 Хятад · 3 хоног",  price: 8000,  plan: "hyatad_3day" },
+            "hyatad_1month":{ title: "🇨🇳 Хятад · 1 сар",    price: 12500, plan: "hyatad_1month" },
+            "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
+          };
+          const p = PLANS[plan] || PLANS["all_1month"];
+          setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true });
         }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
