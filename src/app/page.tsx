@@ -714,6 +714,21 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
     if (digits.length === 4 && !isNew) {
       submitPin(digits);
     }
+    if (digits.length === 4 && isNew) {
+      submitRegisterWithPin(digits);
+    }
+  };
+
+  const submitRegisterWithPin = async (pinVal: string) => {
+    setLoading(true); setErr("");
+    const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin: pinVal, user_id: "tmp", failed_attempts: 0 }) });
+    if (data?.[0]?.id) {
+      const uid = genUserId(data[0].id);
+      await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
+      saveSession({ ...data[0], user_id: uid });
+      onLogin({ ...data[0], user_id: uid });
+    } else { setErr("Бүртгэл амжилтгүй"); }
+    setLoading(false);
   };
 
   const handlePin2Change = (val: string) => {
@@ -828,15 +843,8 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
           style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
         />
       </div>
-      {isNew && (
-        <>
-          {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
-          <button onClick={submitRegister} disabled={loading || pin.length !== 4}
-            style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 ? 0.5 : 1 }}>
-            {loading ? "Түр хүлээнэ үү..." : "✅ Бүртгүүлэх"}
-          </button>
-        </>
-      )}
+      {isNew && err && <div style={{ color: C.red, fontSize: 12, marginTop: 8, textAlign: "center" }}>{err}</div>}
+      {isNew && loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Бүртгэж байна...</div>}
       {!isNew && err && (
         <div style={{ marginTop: 8 }}>
           <div style={{ color: C.red, fontSize: 12, textAlign: "center", marginBottom: 10 }}>{err}</div>
