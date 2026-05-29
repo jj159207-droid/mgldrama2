@@ -40,9 +40,7 @@ function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
 
 // Гүйлгээний утга үүсгэх
 function genRef(filmId: number, monthly?: boolean): string {
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  if (monthly) return `KNM${rand}`;
-  return `KN${filmId}${rand}`;
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 const BANKS = [
@@ -89,8 +87,8 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
   // Хэд хэдэн форматыг дэмжинэ
   const extractRef = (text: string): string | null => {
     // KNxxxxxx pattern шалгах
-    const match = text.match(/KN\d{5,8}/i);
-    if (match) return match[0].toUpperCase();
+    const match = text.match(/\b(\d{6})\b/);
+    if (match) return match[1];
     return null;
   };
 
@@ -114,7 +112,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
         <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, border: `0.5px solid ${C.bd}` }}>
           <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>📌 Жишээ мэссэж</div>
           <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "monospace", lineHeight: 1.6 }}>
-            Орлого 5,000₮ Гүйлгээний утга: <span style={{ color: C.gold }}>KN34208</span> Данс: XXXX1234 ...
+            Орлого 5,000₮ Гүйлгээний утга: <span style={{ color: C.gold }}>476400</span> Данс: XXXX1234 ...
           </div>
         </div>
 
@@ -355,8 +353,8 @@ function AdminSmsTab() {
   const [status, setStatus] = useState<"idle" | "checking" | "found" | "notfound">("idle");
 
   const extractRef = (text: string): string | null => {
-    const match = text.match(/KN\d{5,8}/i);
-    if (match) return match[0].toUpperCase();
+    const match = text.match(/\b(\d{6})\b/);
+    if (match) return match[1];
     return null;
   };
 
@@ -391,7 +389,7 @@ function AdminSmsTab() {
         <textarea
           value={smsText}
           onChange={(e: any) => { setSmsText(e.target.value); setStatus("idle"); setResult(null); }}
-          placeholder={"Орлого 5,000₮ Гүйлгээний утга: KN34208 ..."}
+          placeholder={"Орлого 5,000₮ Гүйлгээний утга: 476400 ..."}
           style={{ ...inputSt, height: 100, resize: "none", lineHeight: 1.6 }}
         />
         <button onClick={check} style={{ ...goldBtn, marginTop: 10 }}>
