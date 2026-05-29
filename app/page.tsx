@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -22,14 +22,14 @@ async function dbFetch(path: string, opts?: RequestInit) {
 
 const ADMIN_KEY = "admin2024";
 
-// ══════════════════════════════════════════════
-// ДАНСНЫ МЭДЭЭЛЭЛ
-// ══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Ð”ÐÐÐ¡ÐÐ« ÐœÐ­Ð”Ð­Ð­Ð›Ð­Ð›
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const BANK_ACCOUNT = {
-  bank: "Хаан банк",
+  bank: "Ð¥Ð°Ð°Ð½ Ð±Ð°Ð½Ðº",
   number: "5402504824",
   ibn: "IBN11000500",
-  name: "Т.Жаргалбаяр",
+  name: "Ð¢.Ð–Ð°Ñ€Ð³Ð°Ð»Ð±Ð°ÑÑ€",
   shortNumber: "MN11000500",
 };
 
@@ -38,7 +38,7 @@ function loadSession() { try { const s = JSON.parse(localStorage.getItem("kino_s
 function clearSession() { localStorage.removeItem("kino_session"); }
 function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
 
-// Гүйлгээний утга үүсгэх
+// Ð“Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ð° Ò¯Ò¯ÑÐ³ÑÑ…
 function genRef(filmId: number, monthly?: boolean): string {
   const rand = Math.floor(1000 + Math.random() * 9000);
   if (monthly) return `KNM${rand}`;
@@ -46,14 +46,14 @@ function genRef(filmId: number, monthly?: boolean): string {
 }
 
 const BANKS = [
-  { id: "khanbank", name: "Хаан банк", color: "#00a651", icon: "🏦", deep: "khanbank://qpay?amount=" },
-  { id: "golomt", name: "Голомт банк", color: "#e4002b", icon: "🏦", deep: "golomtbank://qpay?amount=" },
-  { id: "tdbbank", name: "ХАС банк", color: "#0033a0", icon: "🏦", deep: "tdb://qpay?amount=" },
-  { id: "statebank", name: "Төрийн банк", color: "#2c5f9e", icon: "🏦", deep: "statebank://qpay?amount=" },
-  { id: "mbank", name: "М банк", color: "#e8281e", icon: "📱", deep: "mbank://qpay?amount=" },
-  { id: "most", name: "MOST", color: "#6c3fa0", icon: "📱", deep: "most://payment?amount=" },
-  { id: "upoint", name: "U-Point", color: "#f97316", icon: "📱", deep: "upoint://pay?amount=" },
-  { id: "socialpay", name: "SocialPay", color: "#0ea5e9", icon: "📱", deep: "socialpay://payment?amount=" },
+  { id: "khanbank", name: "Ð¥Ð°Ð°Ð½ Ð±Ð°Ð½Ðº", color: "#00a651", icon: "ðŸ¦", deep: "khanbank://qpay?amount=" },
+  { id: "golomt", name: "Ð“Ð¾Ð»Ð¾Ð¼Ñ‚ Ð±Ð°Ð½Ðº", color: "#e4002b", icon: "ðŸ¦", deep: "golomtbank://qpay?amount=" },
+  { id: "tdbbank", name: "Ð¥ÐÐ¡ Ð±Ð°Ð½Ðº", color: "#0033a0", icon: "ðŸ¦", deep: "tdb://qpay?amount=" },
+  { id: "statebank", name: "Ð¢Ó©Ñ€Ð¸Ð¹Ð½ Ð±Ð°Ð½Ðº", color: "#2c5f9e", icon: "ðŸ¦", deep: "statebank://qpay?amount=" },
+  { id: "mbank", name: "Ðœ Ð±Ð°Ð½Ðº", color: "#e8281e", icon: "ðŸ“±", deep: "mbank://qpay?amount=" },
+  { id: "most", name: "MOST", color: "#6c3fa0", icon: "ðŸ“±", deep: "most://payment?amount=" },
+  { id: "upoint", name: "U-Point", color: "#f97316", icon: "ðŸ“±", deep: "upoint://pay?amount=" },
+  { id: "socialpay", name: "SocialPay", color: "#0ea5e9", icon: "ðŸ“±", deep: "socialpay://payment?amount=" },
 ];
 
 const C = {
@@ -62,7 +62,7 @@ const C = {
   red: "#e8281e", gold: "#e8a020", green: "#16a34a", blue: "#2563eb", amber: "#ca8a04",
 };
 
-const badgeColor = (b: string) => b === "Хадмал" ? C.amber : C.blue;
+const badgeColor = (b: string) => b === "Ð¥Ð°Ð´Ð¼Ð°Ð»" ? C.amber : C.blue;
 
 const inputSt: any = {
   width: "100%", background: "#0d0d18", border: `0.5px solid #1e1e2e`,
@@ -76,19 +76,19 @@ const goldBtn: any = {
 };
 const lbl: any = { fontSize: 12, color: C.muted, display: "block", marginBottom: 5 };
 
-// ══════════════════════════════════════════════
-// БАНКНЫ МЭССЭЖ ОРЛУУЛАХ MODAL (Админ)
-// Таны утасны орлогын мэссэжийг энд paste хийнэ
-// ══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Ð‘ÐÐÐšÐÐ« ÐœÐ­Ð¡Ð¡Ð­Ð– ÐžÐ Ð›Ð£Ð£Ð›ÐÐ¥ MODAL (ÐÐ´Ð¼Ð¸Ð½)
+// Ð¢Ð°Ð½Ñ‹ ÑƒÑ‚Ð°ÑÐ½Ñ‹ Ð¾Ñ€Ð»Ð¾Ð³Ñ‹Ð½ Ð¼ÑÑÑÑÐ¶Ð¸Ð¹Ð³ ÑÐ½Ð´ paste Ñ…Ð¸Ð¹Ð½Ñ
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (ref: string) => void }) {
   const [smsText, setSmsText] = useState("");
   const [err, setErr] = useState("");
 
-  // Мэссэжнээс гүйлгээний утга олох
-  // Жишээ мэссэж: "Орлого: 5,000₮ Гүйлгээний утга: KN3420 ..."
-  // Хэд хэдэн форматыг дэмжинэ
+  // ÐœÑÑÑÑÐ¶Ð½ÑÑÑ Ð³Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ð° Ð¾Ð»Ð¾Ñ…
+  // Ð–Ð¸ÑˆÑÑ Ð¼ÑÑÑÑÐ¶: "ÐžÑ€Ð»Ð¾Ð³Ð¾: 5,000â‚® Ð“Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ð°: KN3420 ..."
+  // Ð¥ÑÐ´ Ñ…ÑÐ´ÑÐ½ Ñ„Ð¾Ñ€Ð¼Ð°Ñ‚Ñ‹Ð³ Ð´ÑÐ¼Ð¶Ð¸Ð½Ñ
   const extractRef = (text: string): string | null => {
-    // KNxxxxxx pattern шалгах
+    // KNxxxxxx pattern ÑˆÐ°Ð»Ð³Ð°Ñ…
     const match = text.match(/KN\d{5,8}/i);
     if (match) return match[0].toUpperCase();
     return null;
@@ -97,7 +97,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
   const verify = () => {
     const ref = extractRef(smsText);
     if (!ref) {
-      setErr("Мэссэжнээс гүйлгээний утга олдсонгүй. 'KN' эхэлсэн кодыг шалгана уу.");
+      setErr("ÐœÑÑÑÑÐ¶Ð½ÑÑÑ Ð³Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ð° Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹. 'KN' ÑÑ…ÑÐ»ÑÑÐ½ ÐºÐ¾Ð´Ñ‹Ð³ ÑˆÐ°Ð»Ð³Ð°Ð½Ð° ÑƒÑƒ.");
       return;
     }
     onFound(ref);
@@ -107,22 +107,22 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 300 }}>
       <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>📩 Банкны мэссэж оруулах</div>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
+          <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>ðŸ“© Ð‘Ð°Ð½ÐºÐ½Ñ‹ Ð¼ÑÑÑÑÐ¶ Ð¾Ñ€ÑƒÑƒÐ»Ð°Ñ…</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>âœ•</button>
         </div>
 
         <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, border: `0.5px solid ${C.bd}` }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>📌 Жишээ мэссэж</div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>ðŸ“Œ Ð–Ð¸ÑˆÑÑ Ð¼ÑÑÑÑÐ¶</div>
           <div style={{ fontSize: 12, color: "#94a3b8", fontFamily: "monospace", lineHeight: 1.6 }}>
-            Орлого 5,000₮ Гүйлгээний утга: <span style={{ color: C.gold }}>KN34208</span> Данс: XXXX1234 ...
+            ÐžÑ€Ð»Ð¾Ð³Ð¾ 5,000â‚® Ð“Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ð°: <span style={{ color: C.gold }}>KN34208</span> Ð”Ð°Ð½Ñ: XXXX1234 ...
           </div>
         </div>
 
-        <label style={lbl}>Банкнаас ирсэн мэссэжийг доор хуулж тавина уу</label>
+        <label style={lbl}>Ð‘Ð°Ð½ÐºÐ½Ð°Ð°Ñ Ð¸Ñ€ÑÑÐ½ Ð¼ÑÑÑÑÐ¶Ð¸Ð¹Ð³ Ð´Ð¾Ð¾Ñ€ Ñ…ÑƒÑƒÐ»Ð¶ Ñ‚Ð°Ð²Ð¸Ð½Ð° ÑƒÑƒ</label>
         <textarea
           value={smsText}
           onChange={(e: any) => { setSmsText(e.target.value); setErr(""); }}
-          placeholder="Мэссэжийг энд paste хийнэ үү..."
+          placeholder="ÐœÑÑÑÑÐ¶Ð¸Ð¹Ð³ ÑÐ½Ð´ paste Ñ…Ð¸Ð¹Ð½Ñ Ò¯Ò¯..."
           style={{
             ...inputSt, height: 110, resize: "none",
             lineHeight: 1.6, verticalAlign: "top",
@@ -130,17 +130,17 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
         />
         {err && <div style={{ color: C.red, fontSize: 12, marginTop: 6 }}>{err}</div>}
         <button onClick={verify} style={{ ...goldBtn, marginTop: 14 }}>
-          ✅ Тулгах
+          âœ… Ð¢ÑƒÐ»Ð³Ð°Ñ…
         </button>
-        <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Буцах</button>
+        <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Ð‘ÑƒÑ†Ð°Ñ…</button>
       </div>
     </div>
   );
 }
 
-// ══════════════════════════════════════════════
-// ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
-// ══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Ð¢Ó¨Ð›Ð‘Ó¨Ð Ð˜Ð™Ð MODAL â€” Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚ polling + Ð´Ð°Ð½ÑÐ½Ñ‹ Ð¼ÑÐ´ÑÑÐ»ÑÐ»
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function BankModal({ film, onClose, onPaid, user }: any) {
   const [step, setStep] = useState<"waiting">("waiting");
   const [refCode] = useState(() => genRef(film.id, film.monthly));
@@ -173,9 +173,9 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Төлбөр үүсгэх + автомат polling эхлүүлэх
+  // Ð¢Ó©Ð»Ð±Ó©Ñ€ Ò¯Ò¯ÑÐ³ÑÑ… + Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚ polling ÑÑ…Ð»Ò¯Ò¯Ð»ÑÑ…
   useEffect(() => {
-    // Буцах товч дарахад сайтаас гарахгүй байлгах
+    // Ð‘ÑƒÑ†Ð°Ñ… Ñ‚Ð¾Ð²Ñ‡ Ð´Ð°Ñ€Ð°Ñ…Ð°Ð´ ÑÐ°Ð¹Ñ‚Ð°Ð°Ñ Ð³Ð°Ñ€Ð°Ñ…Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð»Ð³Ð°Ñ…
     window.history.pushState({ modal: true }, "");
     const handlePop = () => {
       window.history.pushState({ modal: true }, "");
@@ -185,7 +185,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
 
     if (step !== "waiting") return () => window.removeEventListener("popstate", handlePop);
 
-    // Supabase-д pending_payments үүсгэх
+    // Supabase-Ð´ pending_payments Ò¯Ò¯ÑÐ³ÑÑ…
     dbFetch("pending_payments", {
       method: "POST",
       body: JSON.stringify({
@@ -198,7 +198,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       }),
     });
 
-    // Автомат 5 секунд тутамд шалгах
+    // ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚ 5 ÑÐµÐºÑƒÐ½Ð´ Ñ‚ÑƒÑ‚Ð°Ð¼Ð´ ÑˆÐ°Ð»Ð³Ð°Ñ…
     intervalRef.current = setInterval(async () => {
       setAutoStatus("checking");
       const rows = await dbFetch(
@@ -214,7 +214,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       }
     }, 5000);
 
-    // 15 минутын дараа timeout
+    // 15 Ð¼Ð¸Ð½ÑƒÑ‚Ñ‹Ð½ Ð´Ð°Ñ€Ð°Ð° timeout
     timeoutRef.current = setTimeout(() => {
       clearInterval(intervalRef.current);
       setAutoStatus("timeout");
@@ -227,7 +227,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     };
   }, [step]);
 
-  // SMS мэссэжнээс ref олсны дараа гараар шалгах
+  // SMS Ð¼ÑÑÑÑÐ¶Ð½ÑÑÑ ref Ð¾Ð»ÑÐ½Ñ‹ Ð´Ð°Ñ€Ð°Ð° Ð³Ð°Ñ€Ð°Ð°Ñ€ ÑˆÐ°Ð»Ð³Ð°Ñ…
   const handleSmsFound = async (foundRef: string) => {
     setShowSms(false);
     setManualChecking(true);
@@ -248,7 +248,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       setTimeout(() => onPaid(), 1200);
     } else {
       setManualChecking(false);
-      alert(`"${foundRef}" кодтой төлбөр олдсонгүй. Гүйлгээний утгыг зөв бичсэн эсэхийг шалгана уу.`);
+      alert(`"${foundRef}" ÐºÐ¾Ð´Ñ‚Ð¾Ð¹ Ñ‚Ó©Ð»Ð±Ó©Ñ€ Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹. Ð“Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ñ‹Ð³ Ð·Ó©Ð² Ð±Ð¸Ñ‡ÑÑÐ½ ÑÑÑÑ…Ð¸Ð¹Ð³ ÑˆÐ°Ð»Ð³Ð°Ð½Ð° ÑƒÑƒ.`);
     }
   };
 
@@ -256,9 +256,9 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     return (
       <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.97)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 72, marginBottom: 12 }}>✅</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
-          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>Кино эхэлж байна...</div>
+          <div style={{ fontSize: 72, marginBottom: 12 }}>âœ…</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Ð¢Ó©Ð»Ð±Ó©Ñ€ Ð±Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶Ð»Ð°Ð°!</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>ÐšÐ¸Ð½Ð¾ ÑÑ…ÑÐ»Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
         </div>
       </div>
     );
@@ -272,73 +272,73 @@ function BankModal({ film, onClose, onPaid, user }: any) {
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{film.title}</span>
-            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
+            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>âœ•</button>
           </div>
 
-          {/* Үнэ */}
+          {/* Ò®Ð½Ñ */}
           <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: film.monthly ? "#a855f7" : C.gold }}>{film.price?.toLocaleString()}₮</div>
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{film.monthly ? "1 сарын хязгааргүй эрх" : "дараах данс руу шилжүүлнэ үү"}</div>
+            <div style={{ fontSize: 36, fontWeight: 900, color: film.monthly ? "#a855f7" : C.gold }}>{film.price?.toLocaleString()}â‚®</div>
+            <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{film.monthly ? "1 ÑÐ°Ñ€Ñ‹Ð½ Ñ…ÑÐ·Ð³Ð°Ð°Ñ€Ð³Ò¯Ð¹ ÑÑ€Ñ…" : "Ð´Ð°Ñ€Ð°Ð°Ñ… Ð´Ð°Ð½Ñ Ñ€ÑƒÑƒ ÑˆÐ¸Ð»Ð¶Ò¯Ò¯Ð»Ð½Ñ Ò¯Ò¯"}</div>
           </div>
 
-          {/* Дансны мэдээлэл */}
+          {/* Ð”Ð°Ð½ÑÐ½Ñ‹ Ð¼ÑÐ´ÑÑÐ»ÑÐ» */}
           <div style={{ background: "#050d1a", border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "16px 18px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>🏦 Дансны мэдээлэл</div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>ðŸ¦ Ð”Ð°Ð½ÑÐ½Ñ‹ Ð¼ÑÐ´ÑÑÐ»ÑÐ»</div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: C.muted }}>Банк</span>
+              <span style={{ fontSize: 13, color: C.muted }}>Ð‘Ð°Ð½Ðº</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{BANK_ACCOUNT.bank}</span>
             </div>
-            {/* IBN дугаар */}
+            {/* IBN Ð´ÑƒÐ³Ð°Ð°Ñ€ */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
               <span style={{ fontSize: 13, color: C.muted }}>IBN</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: C.txt, fontFamily: "monospace" }}>{BANK_ACCOUNT.ibn}</span>
             </div>
-            {/* Дансны дугаар — том, дарахад copy */}
+            {/* Ð”Ð°Ð½ÑÐ½Ñ‹ Ð´ÑƒÐ³Ð°Ð°Ñ€ â€” Ñ‚Ð¾Ð¼, Ð´Ð°Ñ€Ð°Ñ…Ð°Ð´ copy */}
             <div
               onClick={() => copyText(BANK_ACCOUNT.number, "account")}
               style={{ background: copied === "account" ? "#052e16" : "#0a1628", border: `1.5px solid ${copied === "account" ? C.green : C.gold}`, borderRadius: 12, padding: "14px 16px", textAlign: "center", cursor: "pointer", marginBottom: 8, transition: "all 0.2s" }}
             >
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Дансны дугаар — дарж хуулна уу</div>
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Ð”Ð°Ð½ÑÐ½Ñ‹ Ð´ÑƒÐ³Ð°Ð°Ñ€ â€” Ð´Ð°Ñ€Ð¶ Ñ…ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ</div>
               <div style={{ fontSize: 28, fontWeight: 900, color: copied === "account" ? C.green : "#fbbf24", fontFamily: "monospace", letterSpacing: "0.1em" }}>
                 {BANK_ACCOUNT.number}
               </div>
               <div style={{ fontSize: 12, color: copied === "account" ? C.green : C.muted, marginTop: 4 }}>
-                {copied === "account" ? "✅ Хуулагдлаа!" : "👆 Дарж хуулах"}
+                {copied === "account" ? "âœ… Ð¥ÑƒÑƒÐ»Ð°Ð³Ð´Ð»Ð°Ð°!" : "ðŸ‘† Ð”Ð°Ñ€Ð¶ Ñ…ÑƒÑƒÐ»Ð°Ñ…"}
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: C.muted }}>Эзэмшигч</span>
+              <span style={{ fontSize: 13, color: C.muted }}>Ð­Ð·ÑÐ¼ÑˆÐ¸Ð³Ñ‡</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{BANK_ACCOUNT.name}</span>
             </div>
           </div>
 
-          {/* Гүйлгээний утга — маш том */}
+          {/* Ð“Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ð° â€” Ð¼Ð°Ñˆ Ñ‚Ð¾Ð¼ */}
           <div onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? "#052e16" : "#1a0a00", border: `3px solid ${copied === "ref" ? C.green : "#f97316"}`, borderRadius: 16, padding: "20px 16px", marginBottom: 14, textAlign: "center", cursor: "pointer", transition: "all 0.2s", boxShadow: copied === "ref" ? "none" : "0 0 20px #f9731640" }}>
             <div style={{ fontSize: 13, color: copied === "ref" ? C.green : "#f97316", marginBottom: 10, letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 800 }}>
-              {copied === "ref" ? "✅ Хуулагдлаа!" : "⚠️ ЗӨВХӨН ЭНЭ КОДЫГ ГҮЙЛГЭЭНИЙ УТГА ДЭЭР БИЧНЭ!"}
+              {copied === "ref" ? "âœ… Ð¥ÑƒÑƒÐ»Ð°Ð³Ð´Ð»Ð°Ð°!" : "âš ï¸ Ð—Ó¨Ð’Ð¥Ó¨Ð Ð­ÐÐ­ ÐšÐžÐ”Ð«Ð“ Ð“Ò®Ð™Ð›Ð“Ð­Ð­ÐÐ˜Ð™ Ð£Ð¢Ð“Ð Ð”Ð­Ð­Ð  Ð‘Ð˜Ð§ÐÐ­!"}
             </div>
             <div style={{ fontSize: 42, fontWeight: 900, color: copied === "ref" ? C.green : "#fb923c", letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>
               {refCode}
             </div>
             <div style={{ background: copied === "ref" ? "#166534" : "#f97316", borderRadius: 10, padding: "10px 20px", display: "inline-block" }}>
               <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
-                {copied === "ref" ? "✓ Хуулагдлаа" : "👆 ДАРЖ ХУУЛАХ"}
+                {copied === "ref" ? "âœ“ Ð¥ÑƒÑƒÐ»Ð°Ð³Ð´Ð»Ð°Ð°" : "ðŸ‘† Ð”ÐÐ Ð– Ð¥Ð£Ð£Ð›ÐÐ¥"}
               </span>
             </div>
           </div>
 
-          {/* Автомат хүлээж байна */}
+          {/* ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚ Ñ…Ò¯Ð»ÑÑÐ¶ Ð±Ð°Ð¹Ð½Ð° */}
           <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 20 }}>{autoStatus === "checking" ? "🔄" : "⏳"}</div>
+            <div style={{ fontSize: 20 }}>{autoStatus === "checking" ? "ðŸ”„" : "â³"}</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, color: C.txt }}>
-                {autoStatus === "checking" ? "Шалгаж байна..." : "Төлбөрийг хүлээж байна"}
+                {autoStatus === "checking" ? "Ð¨Ð°Ð»Ð³Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°..." : "Ð¢Ó©Ð»Ð±Ó©Ñ€Ð¸Ð¹Ð³ Ñ…Ò¯Ð»ÑÑÐ¶ Ð±Ð°Ð¹Ð½Ð°"}
               </div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Мөнгө шилжүүлсний дараа автоматаар нээгдэнэ</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ÐœÓ©Ð½Ð³Ó© ÑˆÐ¸Ð»Ð¶Ò¯Ò¯Ð»ÑÐ½Ð¸Ð¹ Ð´Ð°Ñ€Ð°Ð° Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð°Ð°Ñ€ Ð½ÑÑÐ³Ð´ÑÐ½Ñ</div>
             </div>
           </div>
 
-          <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Буцах</button>
+          <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Ð‘ÑƒÑ†Ð°Ñ…</button>
         </div>
       </div>
       {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
@@ -346,9 +346,9 @@ function BankModal({ film, onClose, onPaid, user }: any) {
   );
 }
 
-// ══════════════════════════════════════════════
-// ADMIN — мэссэж шалгах таб нэмэгдлээ
-// ══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ADMIN â€” Ð¼ÑÑÑÑÐ¶ ÑˆÐ°Ð»Ð³Ð°Ñ… Ñ‚Ð°Ð± Ð½ÑÐ¼ÑÐ³Ð´Ð»ÑÑ
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function AdminSmsTab() {
   const [smsText, setSmsText] = useState("");
   const [result, setResult] = useState<any>(null);
@@ -386,36 +386,36 @@ function AdminSmsTab() {
   return (
     <div style={{ padding: "0 14px" }}>
       <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12 }}>📩 Банкны мэссэж шалгах</div>
-        <label style={lbl}>Орлогын мэссэжийг paste хийнэ үү</label>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12 }}>ðŸ“© Ð‘Ð°Ð½ÐºÐ½Ñ‹ Ð¼ÑÑÑÑÐ¶ ÑˆÐ°Ð»Ð³Ð°Ñ…</div>
+        <label style={lbl}>ÐžÑ€Ð»Ð¾Ð³Ñ‹Ð½ Ð¼ÑÑÑÑÐ¶Ð¸Ð¹Ð³ paste Ñ…Ð¸Ð¹Ð½Ñ Ò¯Ò¯</label>
         <textarea
           value={smsText}
           onChange={(e: any) => { setSmsText(e.target.value); setStatus("idle"); setResult(null); }}
-          placeholder={"Орлого 5,000₮ Гүйлгээний утга: KN34208 ..."}
+          placeholder={"ÐžÑ€Ð»Ð¾Ð³Ð¾ 5,000â‚® Ð“Ò¯Ð¹Ð»Ð³ÑÑÐ½Ð¸Ð¹ ÑƒÑ‚Ð³Ð°: KN34208 ..."}
           style={{ ...inputSt, height: 100, resize: "none", lineHeight: 1.6 }}
         />
         <button onClick={check} style={{ ...goldBtn, marginTop: 10 }}>
-          🔍 Шалгах
+          ðŸ” Ð¨Ð°Ð»Ð³Ð°Ñ…
         </button>
       </div>
 
       {status === "checking" && (
-        <div style={{ textAlign: "center", color: C.muted, padding: 16 }}>Шалгаж байна...</div>
+        <div style={{ textAlign: "center", color: C.muted, padding: 16 }}>Ð¨Ð°Ð»Ð³Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
       )}
 
       {status === "found" && result && (
         <div style={{ background: result.status === "confirmed" ? "#052e16" : "#1c1400", border: `0.5px solid ${result.status === "confirmed" ? "#166534" : C.gold}`, borderRadius: 12, padding: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: result.status === "confirmed" ? "#4ade80" : C.gold, marginBottom: 10 }}>
-            {result.status === "confirmed" ? "✅ Баталгаажсан" : "⏳ Хүлээгдэж байна"}
+            {result.status === "confirmed" ? "âœ… Ð‘Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑÐ°Ð½" : "â³ Ð¥Ò¯Ð»ÑÑÐ³Ð´ÑÐ¶ Ð±Ð°Ð¹Ð½Ð°"}
           </div>
           <div style={{ fontSize: 12, color: C.muted, lineHeight: 2 }}>
-            Код: <span style={{ color: C.txt, fontFamily: "monospace" }}>{result.ref_code}</span><br />
-            Кино ID: <span style={{ color: C.txt }}>{result.film_id}</span><br />
-            Дүн: <span style={{ color: C.gold }}>{result.amount?.toLocaleString()}₮</span>
+            ÐšÐ¾Ð´: <span style={{ color: C.txt, fontFamily: "monospace" }}>{result.ref_code}</span><br />
+            ÐšÐ¸Ð½Ð¾ ID: <span style={{ color: C.txt }}>{result.film_id}</span><br />
+            Ð”Ò¯Ð½: <span style={{ color: C.gold }}>{result.amount?.toLocaleString()}â‚®</span>
           </div>
           {result.status === "pending" && (
             <button onClick={confirm} style={{ ...goldBtn, marginTop: 12 }}>
-              ✅ Гараар баталгаажуулах
+              âœ… Ð“Ð°Ñ€Ð°Ð°Ñ€ Ð±Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑƒÑƒÐ»Ð°Ñ…
             </button>
           )}
         </div>
@@ -423,16 +423,16 @@ function AdminSmsTab() {
 
       {status === "notfound" && (
         <div style={{ background: "#1a0808", border: `0.5px solid #3a1a1a`, borderRadius: 12, padding: 14, color: "#f05555", fontSize: 13 }}>
-          ❌ Мэссэжнээс тохирох гүйлгээ олдсонгүй
+          âŒ ÐœÑÑÑÑÐ¶Ð½ÑÑÑ Ñ‚Ð¾Ñ…Ð¸Ñ€Ð¾Ñ… Ð³Ò¯Ð¹Ð»Ð³ÑÑ Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹
         </div>
       )}
     </div>
   );
 }
 
-// ══════════════════════════════════════════════
-// Дараах компонентууд өмнөхтэй адил үлдсэн
-// ══════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Ð”Ð°Ñ€Ð°Ð°Ñ… ÐºÐ¾Ð¼Ð¿Ð¾Ð½ÐµÐ½Ñ‚ÑƒÑƒÐ´ Ó©Ð¼Ð½Ó©Ñ…Ñ‚ÑÐ¹ Ð°Ð´Ð¸Ð» Ò¯Ð»Ð´ÑÑÐ½
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function QRCanvas({ text }: { text: string }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
@@ -555,7 +555,7 @@ function FilmCard({ film, onClick, expiry }: any) {
           {film.img
             ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             : <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg,${film.bg || "#1a0820"} 0%,#000 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 44 }}>🎬</span>
+              <span style={{ fontSize: 44 }}>ðŸŽ¬</span>
             </div>
           }
           <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
@@ -568,19 +568,19 @@ function FilmCard({ film, onClick, expiry }: any) {
           )}
           {previewFromUrl && (
             <div style={{ position: "absolute", bottom: expiry ? 28 : 8, right: 8, background: "rgba(0,0,0,0.6)", borderRadius: 10, padding: "2px 7px", fontSize: 10, color: "#fff" }}>
-              ▶ preview
+              â–¶ preview
             </div>
           )}
         </div>
         <div style={{ padding: "7px 8px 10px" }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.txt, lineHeight: 1.3, marginBottom: 5 }}>{film.title}</div>
-          {!film.free && <div style={{ fontSize: 10, color: C.muted, textDecoration: "line-through", marginBottom: 1 }}>{film.op?.toLocaleString()}₮</div>}
+          {!film.free && <div style={{ fontSize: 10, color: C.muted, textDecoration: "line-through", marginBottom: 1 }}>{film.op?.toLocaleString()}â‚®</div>}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : expiry ? C.green : C.gold }}>
-              {film.free ? "Үнэгүй" : expiry ? "Нээлттэй" : `${film.price?.toLocaleString()}₮`}
+              {film.free ? "Ò®Ð½ÑÐ³Ò¯Ð¹" : expiry ? "ÐÑÑÐ»Ñ‚Ñ‚ÑÐ¹" : `${film.price?.toLocaleString()}â‚®`}
             </span>
             {film.free || expiry
-              ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
+              ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>â–¶ Ò®Ð·ÑÑ…</button>
               : null
             }
           </div>
@@ -610,7 +610,7 @@ function ContactModal({ onClose, user }: any) {
   const send = async () => {
     if (!msg.trim()) return;
     setSending(true);
-    const newMsg = { phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false };
+    const newMsg = { phone: user?.phone || "â€”", message: msg.trim(), user_id: user?.id || null, read: false };
     await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
     setMsg("");
     await load();
@@ -622,34 +622,34 @@ function ContactModal({ onClose, user }: any) {
       {/* Header */}
       <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>â†</button>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Админтай холбогдох</div>
-            <div style={{ fontSize: 11, color: C.green }}>● Онлайн</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>ðŸ’¬ ÐÐ´Ð¼Ð¸Ð½Ñ‚Ð°Ð¹ Ñ…Ð¾Ð»Ð±Ð¾Ð³Ð´Ð¾Ñ…</div>
+            <div style={{ fontSize: 11, color: C.green }}>â— ÐžÐ½Ð»Ð°Ð¹Ð½</div>
           </div>
         </div>
       </div>
 
-      {/* Чатын мессежүүд */}
+      {/* Ð§Ð°Ñ‚Ñ‹Ð½ Ð¼ÐµÑÑÐµÐ¶Ò¯Ò¯Ð´ */}
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
         {loading ? (
-          <div style={{ textAlign: "center", color: C.muted, marginTop: 40 }}>Ачааллаж байна...</div>
+          <div style={{ textAlign: "center", color: C.muted, marginTop: 40 }}>ÐÑ‡Ð°Ð°Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
         ) : msgs.length === 0 ? (
-          <div style={{ textAlign: "center", color: C.muted, marginTop: 40, fontSize: 13 }}>Асуулт, санал хүсэлтээ бичнэ үү</div>
+          <div style={{ textAlign: "center", color: C.muted, marginTop: 40, fontSize: 13 }}>ÐÑÑƒÑƒÐ»Ñ‚, ÑÐ°Ð½Ð°Ð» Ñ…Ò¯ÑÑÐ»Ñ‚ÑÑ Ð±Ð¸Ñ‡Ð½Ñ Ò¯Ò¯</div>
         ) : (
           msgs.map(m => (
             <div key={m.id}>
-              {/* Хэрэглэгчийн мессеж — баруун тал */}
+              {/* Ð¥ÑÑ€ÑÐ³Ð»ÑÐ³Ñ‡Ð¸Ð¹Ð½ Ð¼ÐµÑÑÐµÐ¶ â€” Ð±Ð°Ñ€ÑƒÑƒÐ½ Ñ‚Ð°Ð» */}
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
                 <div style={{ background: C.blue, borderRadius: "16px 16px 4px 16px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: "#fff" }}>
                   {m.message}
                 </div>
               </div>
-              {/* Админы хариу — зүүн тал */}
+              {/* ÐÐ´Ð¼Ð¸Ð½Ñ‹ Ñ…Ð°Ñ€Ð¸Ñƒ â€” Ð·Ò¯Ò¯Ð½ Ñ‚Ð°Ð» */}
               {m.reply && (
                 <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 4 }}>
                   <div style={{ background: C.card2, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: C.txt, border: `0.5px solid ${C.bd}` }}>
-                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Админ</div>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>ÐÐ´Ð¼Ð¸Ð½</div>
                     {m.reply}
                   </div>
                 </div>
@@ -660,18 +660,18 @@ function ContactModal({ onClose, user }: any) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Мессеж бичих хэсэг */}
+      {/* ÐœÐµÑÑÐµÐ¶ Ð±Ð¸Ñ‡Ð¸Ñ… Ñ…ÑÑÑÐ³ */}
       <div style={{ background: C.card, borderTop: `0.5px solid ${C.bd}`, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
         <textarea
           value={msg}
           onChange={(e: any) => setMsg(e.target.value)}
           onKeyDown={(e: any) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Мессеж бичнэ үү..."
+          placeholder="ÐœÐµÑÑÐµÐ¶ Ð±Ð¸Ñ‡Ð½Ñ Ò¯Ò¯..."
           style={{ ...inputSt, flex: 1, height: 44, resize: "none", lineHeight: 1.5, borderRadius: 22, padding: "11px 16px" }}
         />
         <button onClick={send} disabled={sending || !msg.trim()}
           style={{ background: msg.trim() ? C.blue : C.card2, border: "none", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: 18 }}>
-          ➤
+          âž¤
         </button>
       </div>
     </div>
@@ -691,7 +691,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   const pinRef = useRef<any>(null);
   const pin2Ref = useRef<any>(null);
 
-  // Утасны дугаар 8 орон бүрэн болмогц автоматаар PIN руу шилжих
+  // Ð£Ñ‚Ð°ÑÐ½Ñ‹ Ð´ÑƒÐ³Ð°Ð°Ñ€ 8 Ð¾Ñ€Ð¾Ð½ Ð±Ò¯Ñ€ÑÐ½ Ð±Ð¾Ð»Ð¼Ð¾Ð³Ñ† Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð°Ð°Ñ€ PIN Ñ€ÑƒÑƒ ÑˆÐ¸Ð»Ð¶Ð¸Ñ…
   const handlePhoneChange = async (val: string) => {
     const digits = val.replace(/\D/g, "").slice(0, 8);
     setPhone(digits);
@@ -725,14 +725,14 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   const submitPin = async (pinVal: string) => {
     setLoading(true); setErr("");
     const data = await dbFetch(`users?phone=eq.${phone}&select=*`);
-    if (!Array.isArray(data) || !data.length) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
+    if (!Array.isArray(data) || !data.length) { setErr("Ð‘Ò¯Ñ€Ñ‚Ð³ÑÐ»Ð³Ò¯Ð¹ Ð´ÑƒÐ³Ð°Ð°Ñ€"); setLoading(false); return; }
     const u = data[0];
-    if (u.locked_until && new Date(u.locked_until) > new Date()) { setErr("15 минут хүлээнэ үү"); setLoading(false); return; }
+    if (u.locked_until && new Date(u.locked_until) > new Date()) { setErr("15 Ð¼Ð¸Ð½ÑƒÑ‚ Ñ…Ò¯Ð»ÑÑÐ½Ñ Ò¯Ò¯"); setLoading(false); return; }
     if (u.pin !== pinVal) {
       const att = (u.failed_attempts || 0) + 1;
       const lk = att >= 3 ? { locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() } : {};
       await dbFetch(`users?id=eq.${u.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: att, ...lk }) });
-      setErr(att >= 3 ? "3 удаа буруу. 15 минут хүлээнэ үү" : `PIN буруу (${3 - att} оролдлого)`);
+      setErr(att >= 3 ? "3 ÑƒÐ´Ð°Ð° Ð±ÑƒÑ€ÑƒÑƒ. 15 Ð¼Ð¸Ð½ÑƒÑ‚ Ñ…Ò¯Ð»ÑÑÐ½Ñ Ò¯Ò¯" : `PIN Ð±ÑƒÑ€ÑƒÑƒ (${3 - att} Ð¾Ñ€Ð¾Ð»Ð´Ð»Ð¾Ð³Ð¾)`);
       setPin("");
       setShowReset(true);
       setTimeout(() => pinRef.current?.focus(), 100);
@@ -744,11 +744,11 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   };
 
   const resetPin = async () => {
-    if (pin.length !== 4) { setErr("Шинэ 4 оронтой PIN оруулна уу"); return; }
-    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
+    if (pin.length !== 4) { setErr("Ð¨Ð¸Ð½Ñ 4 Ð¾Ñ€Ð¾Ð½Ñ‚Ð¾Ð¹ PIN Ð¾Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ"); return; }
+    if (pin !== pin2) { setErr("PIN Ñ‚Ð°Ð°Ñ€Ð°Ñ…Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°"); return; }
     setLoading(true); setErr("");
     const data = await dbFetch(`users?phone=eq.${phone}&select=id`);
-    if (!Array.isArray(data) || !data.length) { setErr("Дугаар олдсонгүй"); setLoading(false); return; }
+    if (!Array.isArray(data) || !data.length) { setErr("Ð”ÑƒÐ³Ð°Ð°Ñ€ Ð¾Ð»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹"); setLoading(false); return; }
     await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ pin, failed_attempts: 0, locked_until: null }) });
     setLoading(false);
     setStep("pin"); setShowReset(false); setPin(""); setPin2(""); setErr("");
@@ -756,7 +756,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   };
 
   const submitRegister = async () => {
-    if (pin.length !== 4) { setErr("4 оронтой PIN оруулна уу"); return; }
+    if (pin.length !== 4) { setErr("4 Ð¾Ñ€Ð¾Ð½Ñ‚Ð¾Ð¹ PIN Ð¾Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ"); return; }
     setLoading(true); setErr("");
     const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin, user_id: "tmp", failed_attempts: 0 }) });
     if (data?.[0]?.id) {
@@ -764,11 +764,11 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
       await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
       saveSession({ ...data[0], user_id: uid });
       onLogin({ ...data[0], user_id: uid });
-    } else { setErr("Бүртгэл амжилтгүй"); }
+    } else { setErr("Ð‘Ò¯Ñ€Ñ‚Ð³ÑÐ» Ð°Ð¼Ð¶Ð¸Ð»Ñ‚Ð³Ò¯Ð¹"); }
     setLoading(false);
   };
 
-  // PIN dots харуулах
+  // PIN dots Ñ…Ð°Ñ€ÑƒÑƒÐ»Ð°Ñ…
   const PinDots = ({ val }: { val: string }) => (
     <div style={{ display: "flex", gap: 14, justifyContent: "center", margin: "16px 0" }}>
       {[0,1,2,3].map(i => (
@@ -780,7 +780,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
           display: "flex", alignItems: "center", justifyContent: "center",
           fontSize: 30, color: "#60a5fa", transition: "all 0.15s",
         }}>
-          {val[i] ? "●" : ""}
+          {val[i] ? "â—" : ""}
         </div>
       ))}
     </div>
@@ -805,7 +805,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
           opacity: loading ? 0.6 : 1,
         }}
       />
-      {loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Шалгаж байна...</div>}
+      {loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Ð¨Ð°Ð»Ð³Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>}
       {err && <div style={{ color: C.red, fontSize: 12, marginTop: 6, textAlign: "center" }}>{err}</div>}
     </div>
   );
@@ -815,12 +815,12 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
         <div style={{ fontSize: 15, fontWeight: 700, color: C.gold, letterSpacing: "0.1em" }}>{phone}</div>
         <button onClick={() => { setStep("phone"); setPin(""); setPin2(""); setErr(""); }}
-          style={{ background: "none", border: "none", color: "#3b82f6", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>← Өөрчлөх</button>
+          style={{ background: "none", border: "none", color: "#3b82f6", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>â† Ó¨Ó©Ñ€Ñ‡Ð»Ó©Ñ…</button>
       </div>
       <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>
-        {isNew ? "Шинэ PIN тохируулна уу" : "PIN код"}
+        {isNew ? "Ð¨Ð¸Ð½Ñ PIN Ñ‚Ð¾Ñ…Ð¸Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ" : "PIN ÐºÐ¾Ð´"}
       </label>
-      {/* Далд input + харагдах dots */}
+      {/* Ð”Ð°Ð»Ð´ input + Ñ…Ð°Ñ€Ð°Ð³Ð´Ð°Ñ… dots */}
       <div style={{ position: "relative" }}>
         <PinDots val={pin} />
         <input ref={pinRef} type="tel" inputMode="numeric" maxLength={4} value={pin}
@@ -833,7 +833,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
           {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
           <button onClick={submitRegister} disabled={loading || pin.length !== 4}
             style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 ? 0.5 : 1 }}>
-            {loading ? "Түр хүлээнэ үү..." : "✅ Бүртгүүлэх"}
+            {loading ? "Ð¢Ò¯Ñ€ Ñ…Ò¯Ð»ÑÑÐ½Ñ Ò¯Ò¯..." : "âœ… Ð‘Ò¯Ñ€Ñ‚Ð³Ò¯Ò¯Ð»ÑÑ…"}
           </button>
         </>
       )}
@@ -843,17 +843,17 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
           {showReset && (
             <button onClick={() => { setStep("reset"); setPin(""); setPin2(""); setErr(""); setShowReset(false); }}
               style={{ width:"100%", background:"none", border:`1px solid ${C.bd}`, color:"#3b82f6", borderRadius:10, padding:"10px", fontSize:13, cursor:"pointer", fontWeight:600 }}>
-              🔑 PIN код солих
+              ðŸ”‘ PIN ÐºÐ¾Ð´ ÑÐ¾Ð»Ð¸Ñ…
             </button>
           )}
         </div>
       )}
-      {loading && !isNew && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Нэвтэрч байна...</div>}
+      {loading && !isNew && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>ÐÑÐ²Ñ‚ÑÑ€Ñ‡ Ð±Ð°Ð¹Ð½Ð°...</div>}
 
       {step === "reset" && (
         <div style={{ marginTop: 4 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12, textAlign:"center" }}>🔑 Шинэ PIN тохируулах</div>
-          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>Шинэ PIN</label>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12, textAlign:"center" }}>ðŸ”‘ Ð¨Ð¸Ð½Ñ PIN Ñ‚Ð¾Ñ…Ð¸Ñ€ÑƒÑƒÐ»Ð°Ñ…</div>
+          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>Ð¨Ð¸Ð½Ñ PIN</label>
           <div style={{ position: "relative" }}>
             <PinDots val={pin} />
             <input ref={pinRef} type="tel" inputMode="numeric" maxLength={4} value={pin}
@@ -861,7 +861,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
               style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
             />
           </div>
-          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>PIN давтах</label>
+          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>PIN Ð´Ð°Ð²Ñ‚Ð°Ñ…</label>
           <div style={{ position: "relative" }}>
             <PinDots val={pin2} />
             <input ref={pin2Ref} type="tel" inputMode="numeric" maxLength={4} value={pin2}
@@ -872,11 +872,11 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
           {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
           <button onClick={resetPin} disabled={loading || pin.length !== 4 || pin2.length !== 4}
             style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 || pin2.length !== 4 ? 0.5 : 1, marginTop: 4 }}>
-            {loading ? "Хадгалж байна..." : "✅ PIN солих"}
+            {loading ? "Ð¥Ð°Ð´Ð³Ð°Ð»Ð¶ Ð±Ð°Ð¹Ð½Ð°..." : "âœ… PIN ÑÐ¾Ð»Ð¸Ñ…"}
           </button>
           <button onClick={() => { setStep("pin"); setPin(""); setPin2(""); setErr(""); setTimeout(()=>pinRef.current?.focus(),100); }}
             style={{ width:"100%", background:"none", border:"none", color: C.muted, fontSize:13, cursor:"pointer", marginTop:8 }}>
-            Буцах
+            Ð‘ÑƒÑ†Ð°Ñ…
           </button>
         </div>
       )}
@@ -899,12 +899,12 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
     const now = Date.now();
     if (accessMap?.["monthly"] && accessMap["monthly"] > now) {
       const h = Math.ceil((accessMap["monthly"] - now) / 3600000);
-      return h > 24 ? `👑 ${Math.ceil(h/24)} хоног үлдсэн` : `👑 ${h}ц үлдсэн`;
+      return h > 24 ? `ðŸ‘‘ ${Math.ceil(h/24)} Ñ…Ð¾Ð½Ð¾Ð³ Ò¯Ð»Ð´ÑÑÐ½` : `ðŸ‘‘ ${h}Ñ† Ò¯Ð»Ð´ÑÑÐ½`;
     }
     const key = `film_${filmId}`;
     if (accessMap?.[key] && accessMap[key] > now) {
       const h = Math.ceil((accessMap[key] - now) / 3600000);
-      return h > 1 ? `🕐 ${h}ц үлдсэн` : "🕐 <1ц үлдсэн";
+      return h > 1 ? `ðŸ• ${h}Ñ† Ò¯Ð»Ð´ÑÑÐ½` : "ðŸ• <1Ñ† Ò¯Ð»Ð´ÑÑÐ½";
     }
     return null;
   };
@@ -915,48 +915,48 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
   return (
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        {/* ── STICKY NAVBAR ONLY ── */}
+        {/* â”€â”€ STICKY NAVBAR ONLY â”€â”€ */}
         <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.bg, borderBottom: `0.5px solid ${C.bd}` }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
             <a href="https://m.me/61590383810997" target="_blank" rel="noopener noreferrer" style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, textDecoration: "none" }}>
-              💬 Messenger
+              ðŸ’¬ Messenger
             </a>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
+              <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>ðŸ”</button>
               {user
                 ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 12, color: C.gold, fontWeight: 700 }}>{user.phone}</span>
-                    <button onClick={onLogout} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 11, borderRadius: 8, padding: "5px 8px" }}>Гарах</button>
+                    <button onClick={onLogout} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 11, borderRadius: 8, padding: "5px 8px" }}>Ð“Ð°Ñ€Ð°Ñ…</button>
                   </div>
                 : null
               }
-              <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>💬</button>
-              <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
-              <button onClick={onInstall} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: "#60a5fa", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>📲 Апп</button>
+              <button onClick={onContact} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>ðŸ’¬</button>
+              <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>âš™ï¸</button>
+              <button onClick={onInstall} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: "#60a5fa", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>ðŸ“² ÐÐ¿Ð¿</button>
             </div>
           </div>
         </div>
 
-        {/* ── 1 САРЫН БАГЦ — кинонуудтай хамт scroll явна ── */}
+        {/* â”€â”€ 1 Ð¡ÐÐ Ð«Ð Ð‘ÐÐ“Ð¦ â€” ÐºÐ¸Ð½Ð¾Ð½ÑƒÑƒÐ´Ñ‚Ð°Ð¹ Ñ…Ð°Ð¼Ñ‚ scroll ÑÐ²Ð½Ð° â”€â”€ */}
         {user && (
           <div style={{ padding: "8px 12px" }}>
             <div onClick={onMonthly} style={{ background: "linear-gradient(90deg,#7c3aed,#a855f7)", borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ fontSize: 24 }}>👑</span>
+                <span style={{ fontSize: 24 }}>ðŸ‘‘</span>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Сарын багц</div>
-                  <div style={{ fontSize: 12, color: "#e9d5ff" }}>Бүх кино — хязгааргүй үзэх</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>1 Ð¡Ð°Ñ€Ñ‹Ð½ Ð±Ð°Ð³Ñ†</div>
+                  <div style={{ fontSize: 12, color: "#e9d5ff" }}>Ð‘Ò¯Ñ… ÐºÐ¸Ð½Ð¾ â€” Ñ…ÑÐ·Ð³Ð°Ð°Ñ€Ð³Ò¯Ð¹ Ò¯Ð·ÑÑ…</div>
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>12,500₮</div>
-                <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ сар</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: "#fff" }}>12,500â‚®</div>
+                <div style={{ fontSize: 11, color: "#e9d5ff" }}>/ ÑÐ°Ñ€</div>
               </div>
             </div>
           </div>
         )}
         {loading
-          ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+          ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>ÐÑ‡Ð°Ð°Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
           : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
               {films.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id)} />)}
             </div>
@@ -985,11 +985,11 @@ function VideoPage({ film, onBack }: any) {
   const { type, src } = getVideoEmbed(mainUrl);
   useEffect(() => {
     const t = setTimeout(() => setShowControls(false), 4000);
-    // 2 pushState хийнэ — нэг буцахад video дотор үлдэнэ, хоёр дахинд нь гарна
+    // 2 pushState Ñ…Ð¸Ð¹Ð½Ñ â€” Ð½ÑÐ³ Ð±ÑƒÑ†Ð°Ñ…Ð°Ð´ video Ð´Ð¾Ñ‚Ð¾Ñ€ Ò¯Ð»Ð´ÑÐ½Ñ, Ñ…Ð¾Ñ‘Ñ€ Ð´Ð°Ñ…Ð¸Ð½Ð´ Ð½ÑŒ Ð³Ð°Ñ€Ð½Ð°
     window.history.pushState({ video: true }, "");
     window.history.pushState({ video: true }, "");
     const handlePop = () => {
-      // Дахин нэг pushState нэмж буцах дарахад сайтаас гарахгүй болгоно
+      // Ð”Ð°Ñ…Ð¸Ð½ Ð½ÑÐ³ pushState Ð½ÑÐ¼Ð¶ Ð±ÑƒÑ†Ð°Ñ… Ð´Ð°Ñ€Ð°Ñ…Ð°Ð´ ÑÐ°Ð¹Ñ‚Ð°Ð°Ñ Ð³Ð°Ñ€Ð°Ñ…Ð³Ò¯Ð¹ Ð±Ð¾Ð»Ð³Ð¾Ð½Ð¾
       window.history.pushState({ video: true }, "");
       onBack();
     };
@@ -1006,10 +1006,10 @@ function VideoPage({ film, onBack }: any) {
           ? <video src={src} autoPlay controls playsInline style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
           : <iframe src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allowFullScreen allow="autoplay; fullscreen; picture-in-picture" />
       ) : (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Видео холбоос байхгүй байна</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Ð’Ð¸Ð´ÐµÐ¾ Ñ…Ð¾Ð»Ð±Ð¾Ð¾Ñ Ð±Ð°Ð¹Ñ…Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°</div>
       )}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)", padding: "16px", transition: "opacity 0.3s", opacity: showControls ? 1 : 0, pointerEvents: showControls ? "auto" : "none" }}>
-        <button onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>←</button>
+        <button onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>â†</button>
       </div>
     </div>
   );
@@ -1021,21 +1021,21 @@ function SearchPage({ films, onFilm, onBack }: any) {
   return (
     <div style={{ background: C.bg, minHeight: "100vh" }}>
       <div style={{ background: C.card, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: `0.5px solid ${C.bd}` }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-        <input autoFocus value={q} onChange={(e: any) => setQ(e.target.value)} placeholder="Кино хайх..." style={{ ...inputSt, flex: 1 }} />
+        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>â†</button>
+        <input autoFocus value={q} onChange={(e: any) => setQ(e.target.value)} placeholder="ÐšÐ¸Ð½Ð¾ Ñ…Ð°Ð¹Ñ…..." style={{ ...inputSt, flex: 1 }} />
       </div>
       <div style={{ padding: "12px 14px" }}>
-        {q && res.length === 0 && <p style={{ color: C.muted, textAlign: "center", marginTop: 40 }}>Олдсонгүй</p>}
+        {q && res.length === 0 && <p style={{ color: C.muted, textAlign: "center", marginTop: 40 }}>ÐžÐ»Ð´ÑÐ¾Ð½Ð³Ò¯Ð¹</p>}
         {res.map((f: any) => (
           <div key={f.id} onClick={() => onFilm(f)} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: `0.5px solid ${C.bd}`, cursor: "pointer" }}>
             <div style={{ width: 44, height: 60, borderRadius: 6, background: f.bg || "#1a0820", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {f.img ? <img src={f.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 20 }}>🎬</span>}
+              {f.img ? <img src={f.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 20 }}>ðŸŽ¬</span>}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: C.txt }}>{f.title}</div>
-              <div style={{ fontSize: 12, color: f.free ? C.green : C.gold, marginTop: 3 }}>{f.free ? "Үнэгүй" : `${f.price?.toLocaleString()}₮`}</div>
+              <div style={{ fontSize: 12, color: f.free ? C.green : C.gold, marginTop: 3 }}>{f.free ? "Ò®Ð½ÑÐ³Ò¯Ð¹" : `${f.price?.toLocaleString()}â‚®`}</div>
             </div>
-            {!f.free && f.locked && <span style={{ fontSize: 16 }}>🔒</span>}
+            {!f.free && f.locked && <span style={{ fontSize: 16 }}>ðŸ”’</span>}
           </div>
         ))}
       </div>
@@ -1048,13 +1048,13 @@ function AdminLogin({ onEnter, onBack }: any) {
   const go = () => { if (key === ADMIN_KEY) { onEnter(); } else { setErr(true); } };
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: C.txt, marginBottom: 20 }}>Админ нэвтрэх</div>
+      <div style={{ fontSize: 40, marginBottom: 12 }}>ðŸ”</div>
+      <div style={{ fontSize: 18, fontWeight: 700, color: C.txt, marginBottom: 20 }}>ÐÐ´Ð¼Ð¸Ð½ Ð½ÑÐ²Ñ‚Ñ€ÑÑ…</div>
       <div style={{ width: "100%", maxWidth: 320 }}>
-        <input type="password" value={key} onChange={(e: any) => setKey(e.target.value)} placeholder="Нууц код" style={inputSt} onKeyDown={(e: any) => e.key === "Enter" && go()} />
-        {err && <p style={{ color: "#f05555", fontSize: 12, marginTop: 6 }}>Нууц код буруу байна</p>}
-        <button onClick={go} style={{ ...goldBtn, marginTop: 12 }}>Нэвтрэх</button>
-        <button onClick={onBack} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Буцах</button>
+        <input type="password" value={key} onChange={(e: any) => setKey(e.target.value)} placeholder="ÐÑƒÑƒÑ† ÐºÐ¾Ð´" style={inputSt} onKeyDown={(e: any) => e.key === "Enter" && go()} />
+        {err && <p style={{ color: "#f05555", fontSize: 12, marginTop: 6 }}>ÐÑƒÑƒÑ† ÐºÐ¾Ð´ Ð±ÑƒÑ€ÑƒÑƒ Ð±Ð°Ð¹Ð½Ð°</p>}
+        <button onClick={go} style={{ ...goldBtn, marginTop: 12 }}>ÐÑÐ²Ñ‚Ñ€ÑÑ…</button>
+        <button onClick={onBack} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Ð‘ÑƒÑ†Ð°Ñ…</button>
       </div>
     </div>
   );
@@ -1095,7 +1095,7 @@ function AdminOrdersTab() {
   };
 
   const revokeOrder = async (ref_code: string) => {
-    if (!window.confirm("Эрхийг хасах уу?")) return;
+    if (!window.confirm("Ð­Ñ€Ñ…Ð¸Ð¹Ð³ Ñ…Ð°ÑÐ°Ñ… ÑƒÑƒ?")) return;
     await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
       method: "PATCH",
       body: JSON.stringify({ status: "revoked" }),
@@ -1104,15 +1104,15 @@ function AdminOrdersTab() {
   };
 
   const deleteOrder = async (id: number) => {
-    if (!window.confirm("Захиалгыг бүрмөсөн устгах уу?")) return;
+    if (!window.confirm("Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð³ Ð±Ò¯Ñ€Ð¼Ó©ÑÓ©Ð½ ÑƒÑÑ‚Ð³Ð°Ñ… ÑƒÑƒ?")) return;
     await dbFetch(`pending_payments?id=eq.${id}`, { method: "DELETE" });
     setOrders(os => os.filter(o => o.id !== id));
   };
 
-  const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
-  const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
+  const getFilmTitle = (id: number) => id === 0 ? "ðŸ‘‘ Ð¡Ð°Ñ€Ñ‹Ð½ Ð±Ð°Ð³Ñ†" : films.find((f: any) => f.id === id)?.title || `#${id}`;
+  const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "â€”") : "â€”";
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.red;
-  const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
+  const statusLabel = (s: string) => s === "confirmed" ? "âœ… Ð‘Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑÐ°Ð½" : s === "revoked" ? "ðŸš« Ð¥Ð°ÑÐ°Ð³Ð´ÑÐ°Ð½" : "â³ Ð¥Ò¯Ð»ÑÑÐ³Ð´ÑÐ¶ Ð±Ð°Ð¹Ð½Ð°";
 
   const filtered = orders.filter((o: any) => {
     if (filter === "all") { }
@@ -1133,28 +1133,28 @@ function AdminOrdersTab() {
   const monthlyCount = orders.filter(o => o.plan === "monthly" && o.status === "confirmed").length;
 
   const filters: { key: typeof filter; label: string }[] = [
-    { key: "all", label: `Бүгд ${orders.length}` },
-    { key: "pending", label: `⏳ ${pendingCount}` },
-    { key: "confirmed", label: `✅ ${confirmedCount}` },
-    { key: "monthly", label: `👑 ${monthlyCount}` },
-    { key: "revoked", label: `🚫 Хасагдсан` },
+    { key: "all", label: `Ð‘Ò¯Ð³Ð´ ${orders.length}` },
+    { key: "pending", label: `â³ ${pendingCount}` },
+    { key: "confirmed", label: `âœ… ${confirmedCount}` },
+    { key: "monthly", label: `ðŸ‘‘ ${monthlyCount}` },
+    { key: "revoked", label: `ðŸš« Ð¥Ð°ÑÐ°Ð³Ð´ÑÐ°Ð½` },
   ];
 
   return (
     <div style={{ padding: "0 14px" }}>
-      {/* Статистик */}
+      {/* Ð¡Ñ‚Ð°Ñ‚Ð¸ÑÑ‚Ð¸Ðº */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
         <div style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 10, padding: "10px 12px" }}>
-          <div style={{ fontSize: 11, color: C.muted }}>Нийт орлого</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{totalRevenue.toLocaleString()}₮</div>
+          <div style={{ fontSize: 11, color: C.muted }}>ÐÐ¸Ð¹Ñ‚ Ð¾Ñ€Ð»Ð¾Ð³Ð¾</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{totalRevenue.toLocaleString()}â‚®</div>
         </div>
         <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px" }}>
-          <div style={{ fontSize: 11, color: C.muted }}>Хүлээгдэж байна</div>
-          <div style={{ fontSize: 18, fontWeight: 800, color: C.gold }}>{pendingCount} захиалга</div>
+          <div style={{ fontSize: 11, color: C.muted }}>Ð¥Ò¯Ð»ÑÑÐ³Ð´ÑÐ¶ Ð±Ð°Ð¹Ð½Ð°</div>
+          <div style={{ fontSize: 18, fontWeight: 800, color: C.gold }}>{pendingCount} Ð·Ð°Ñ…Ð¸Ð°Ð»Ð³Ð°</div>
         </div>
       </div>
 
-      {/* Filter товчнууд */}
+      {/* Filter Ñ‚Ð¾Ð²Ñ‡Ð½ÑƒÑƒÐ´ */}
       <div style={{ display: "flex", gap: 6, marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
         {filters.map(f => (
           <button key={f.key} onClick={() => setFilter(f.key)}
@@ -1162,21 +1162,21 @@ function AdminOrdersTab() {
             {f.label}
           </button>
         ))}
-        <button onClick={load} style={{ flexShrink: 0, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
+        <button onClick={load} style={{ flexShrink: 0, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>ðŸ”„</button>
       </div>
 
-      {/* Хайлт */}
+      {/* Ð¥Ð°Ð¹Ð»Ñ‚ */}
       <input
         style={{ ...inputSt, marginBottom: 12 }}
         value={search}
         onChange={(e: any) => setSearch(e.target.value)}
-        placeholder="📞 Дугаар эсвэл 🔑 KN код хайх..."
+        placeholder="ðŸ“ž Ð”ÑƒÐ³Ð°Ð°Ñ€ ÑÑÐ²ÑÐ» ðŸ”‘ KN ÐºÐ¾Ð´ Ñ…Ð°Ð¹Ñ…..."
       />
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>ÐÑ‡Ð°Ð°Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
       ) : filtered.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Захиалга байхгүй байна</div>
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ð±Ð°Ð¹Ñ…Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°</div>
       ) : (
         filtered.map((o: any) => (
           <div key={o.id} style={{ background: C.card, border: `0.5px solid ${o.status === "pending" ? C.gold : o.status === "revoked" ? "#3a1a1a" : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
@@ -1184,11 +1184,11 @@ function AdminOrdersTab() {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
                 <div style={{ fontSize: 12, color: C.txt, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
-                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id)}</div>
-                {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Сарын багц</div>}
+                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>ðŸ“ž {getPhone(o.user_id)}</div>
+                {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>ðŸ‘‘ Ð¡Ð°Ñ€Ñ‹Ð½ Ð±Ð°Ð³Ñ†</div>}
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{o.amount?.toLocaleString()}₮</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{o.amount?.toLocaleString()}â‚®</div>
                 <div style={{ fontSize: 11, color: statusColor(o.status), marginTop: 2 }}>{statusLabel(o.status)}</div>
               </div>
             </div>
@@ -1199,21 +1199,21 @@ function AdminOrdersTab() {
               {o.status === "pending" && (
                 <button onClick={() => confirmOrder(o.ref_code)} disabled={confirming === o.ref_code}
                   style={{ flex: 1, background: confirming === o.ref_code ? C.card2 : "#166534", border: "none", borderRadius: 8, padding: "10px", color: confirming === o.ref_code ? C.muted : "#4ade80", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-                  {confirming === o.ref_code ? "..." : "✅ Баталгаажуулах"}
+                  {confirming === o.ref_code ? "..." : "âœ… Ð‘Ð°Ñ‚Ð°Ð»Ð³Ð°Ð°Ð¶ÑƒÑƒÐ»Ð°Ñ…"}
                 </button>
               )}
               {o.status === "confirmed" && (
                 <button onClick={() => revokeOrder(o.ref_code)}
                   style={{ flex: 1, background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  🚫 Эрх хасах
+                  ðŸš« Ð­Ñ€Ñ… Ñ…Ð°ÑÐ°Ñ…
                 </button>
               )}
               {o.status === "revoked" && (
-                <div style={{ flex: 1, fontSize: 12, color: C.red, textAlign: "center", padding: "8px" }}>🚫 Хасагдсан</div>
+                <div style={{ flex: 1, fontSize: 12, color: C.red, textAlign: "center", padding: "8px" }}>ðŸš« Ð¥Ð°ÑÐ°Ð³Ð´ÑÐ°Ð½</div>
               )}
               <button onClick={() => deleteOrder(o.id)}
                 style={{ background: "#1a0a0a", border: `0.5px solid #333`, borderRadius: 8, padding: "8px 12px", color: "#555", fontSize: 14, cursor: "pointer" }}>
-                🗑️
+                ðŸ—‘ï¸
               </button>
             </div>
           </div>
@@ -1263,7 +1263,7 @@ function AdminMembersTab() {
   };
 
   const revokeAccess = async (ref_code: string) => {
-    if (!window.confirm("Энэ эрхийг хасах уу?")) return;
+    if (!window.confirm("Ð­Ð½Ñ ÑÑ€Ñ…Ð¸Ð¹Ð³ Ñ…Ð°ÑÐ°Ñ… ÑƒÑƒ?")) return;
     await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
       method: "PATCH",
       body: JSON.stringify({ status: "revoked" }),
@@ -1272,65 +1272,65 @@ function AdminMembersTab() {
   };
 
   const deleteUser = async (id: number) => {
-    if (!window.confirm("Хэрэглэгчийг устгах уу?")) return;
+    if (!window.confirm("Ð¥ÑÑ€ÑÐ³Ð»ÑÐ³Ñ‡Ð¸Ð¹Ð³ ÑƒÑÑ‚Ð³Ð°Ñ… ÑƒÑƒ?")) return;
     await dbFetch(`users?id=eq.${id}`, { method: "DELETE" });
     setUsers(us => us.filter(u => u.id !== id));
     setSelected(null);
   };
 
-  const getFilmName = (id: number) => id === 0 ? "👑 Сарын багц" : films.find(f => f.id === id)?.title || `Кино #${id}`;
+  const getFilmName = (id: number) => id === 0 ? "ðŸ‘‘ Ð¡Ð°Ñ€Ñ‹Ð½ Ð±Ð°Ð³Ñ†" : films.find(f => f.id === id)?.title || `ÐšÐ¸Ð½Ð¾ #${id}`;
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "revoked" ? C.red : C.gold;
-  const statusLabel = (s: string) => s === "confirmed" ? "✅ Идэвхтэй" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
+  const statusLabel = (s: string) => s === "confirmed" ? "âœ… Ð˜Ð´ÑÐ²Ñ…Ñ‚ÑÐ¹" : s === "revoked" ? "ðŸš« Ð¥Ð°ÑÐ°Ð³Ð´ÑÐ°Ð½" : "â³ Ð¥Ò¯Ð»ÑÑÐ³Ð´ÑÐ¶ Ð±Ð°Ð¹Ð½Ð°";
   const activePayments = userPayments.filter(p => p.status === "confirmed");
 
   if (selected) return (
     <div style={{ padding: "0 14px" }}>
-      <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>← Буцах</button>
+      <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>â† Ð‘ÑƒÑ†Ð°Ñ…</button>
       
-      {/* Гишүүний мэдээлэл */}
+      {/* Ð“Ð¸ÑˆÒ¯Ò¯Ð½Ð¸Ð¹ Ð¼ÑÐ´ÑÑÐ»ÑÐ» */}
       <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: C.gold, marginBottom: 4 }}>📞 {selected.phone}</div>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.gold, marginBottom: 4 }}>ðŸ“ž {selected.phone}</div>
         <div style={{ fontSize: 12, color: C.muted }}>ID: {selected.user_id}</div>
-        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Бүртгэгдсэн: {new Date(selected.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Ð‘Ò¯Ñ€Ñ‚Ð³ÑÐ³Ð´ÑÑÐ½: {new Date(selected.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
           <button onClick={() => setShowRights(!showRights)} style={{ flex: 1, background: showRights ? C.blue : C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "9px", color: showRights ? "#fff" : C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            🎬 Кино үзэх эрх {loadingPayments ? "..." : `(${activePayments.length})`}
+            ðŸŽ¬ ÐšÐ¸Ð½Ð¾ Ò¯Ð·ÑÑ… ÑÑ€Ñ… {loadingPayments ? "..." : `(${activePayments.length})`}
           </button>
-          <button onClick={() => deleteUser(selected.id)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "9px 14px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
+          <button onClick={() => deleteUser(selected.id)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "9px 14px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>ðŸ—‘ï¸</button>
         </div>
       </div>
 
-      {/* Идэвхтэй эрхүүд */}
+      {/* Ð˜Ð´ÑÐ²Ñ…Ñ‚ÑÐ¹ ÑÑ€Ñ…Ò¯Ò¯Ð´ */}
       {showRights && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>
-            🎬 Идэвхтэй кино эрхүүд
+            ðŸŽ¬ Ð˜Ð´ÑÐ²Ñ…Ñ‚ÑÐ¹ ÐºÐ¸Ð½Ð¾ ÑÑ€Ñ…Ò¯Ò¯Ð´
           </div>
           {loadingPayments ? (
-            <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
+            <div style={{ textAlign: "center", padding: 20, color: C.muted }}>ÐÑ‡Ð°Ð°Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
           ) : activePayments.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 16, color: C.muted, background: C.card, borderRadius: 10 }}>Идэвхтэй эрх байхгүй</div>
+            <div style={{ textAlign: "center", padding: 16, color: C.muted, background: C.card, borderRadius: 10 }}>Ð˜Ð´ÑÐ²Ñ…Ñ‚ÑÐ¹ ÑÑ€Ñ… Ð±Ð°Ð¹Ñ…Ð³Ò¯Ð¹</div>
           ) : activePayments.map(p => (
             <div key={p.id} style={{ background: C.card, border: `0.5px solid ${C.green}`, borderRadius: 12, padding: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{getFilmName(p.film_id)}</div>
-                <div style={{ fontSize: 11, color: C.green, marginTop: 2 }}>✅ Идэвхтэй · {p.amount?.toLocaleString()}₮</div>
+                <div style={{ fontSize: 11, color: C.green, marginTop: 2 }}>âœ… Ð˜Ð´ÑÐ²Ñ…Ñ‚ÑÐ¹ Â· {p.amount?.toLocaleString()}â‚®</div>
                 <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
               </div>
               <button onClick={() => revokeAccess(p.ref_code)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-                🚫 Хасах
+                ðŸš« Ð¥Ð°ÑÐ°Ñ…
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {/* Бүх захиалгын түүх */}
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>Захиалгын түүх</div>
+      {/* Ð‘Ò¯Ñ… Ð·Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ñ‚Ò¯Ò¯Ñ… */}
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð½ Ñ‚Ò¯Ò¯Ñ…</div>
       {loadingPayments ? (
-        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
+        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>ÐÑ‡Ð°Ð°Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
       ) : userPayments.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Захиалга байхгүй</div>
+        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð° Ð±Ð°Ð¹Ñ…Ð³Ò¯Ð¹</div>
       ) : userPayments.map(p => (
         <div key={p.id} style={{ background: C.card, border: `0.5px solid ${statusColor(p.status)}22`, borderRadius: 12, padding: 14, marginBottom: 8 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -1340,7 +1340,7 @@ function AdminMembersTab() {
               <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>{p.amount?.toLocaleString()}₮</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>{p.amount?.toLocaleString()}â‚®</div>
               <div style={{ fontSize: 11, color: statusColor(p.status), marginTop: 2 }}>{statusLabel(p.status)}</div>
             </div>
           </div>
@@ -1352,13 +1352,13 @@ function AdminMembersTab() {
   return (
     <div style={{ padding: "0 14px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{users.length} гишүүн</span>
-        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+        <span style={{ fontSize: 13, color: C.muted }}>{users.length} Ð³Ð¸ÑˆÒ¯Ò¯Ð½</span>
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>ðŸ”„ Ð¨Ð¸Ð½ÑÑ‡Ð»ÑÑ…</button>
       </div>
 
       {/* Filter */}
       <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-        {([["all","Бүгд"],["monthly","👑 Сарын"],["film","🎬 Кино"]] as any[]).map(([k,l]) => (
+        {([["all","Ð‘Ò¯Ð³Ð´"],["monthly","ðŸ‘‘ Ð¡Ð°Ñ€Ñ‹Ð½"],["film","ðŸŽ¬ ÐšÐ¸Ð½Ð¾"]] as any[]).map(([k,l]) => (
           <button key={k} onClick={() => setFilterTab(k)}
             style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: filterTab === k ? C.gold : C.card2, color: filterTab === k ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
             {l}
@@ -1367,9 +1367,9 @@ function AdminMembersTab() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>ÐÑ‡Ð°Ð°Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
       ) : users.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Гишүүн байхгүй байна</div>
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ð“Ð¸ÑˆÒ¯Ò¯Ð½ Ð±Ð°Ð¹Ñ…Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°</div>
       ) : (
         users
           .filter(u => {
@@ -1381,15 +1381,15 @@ function AdminMembersTab() {
           <div key={u.id} onClick={() => openUser(u)} style={{ background: C.card, border: `0.5px solid ${activeCount(u.id) > 0 ? C.green : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>ðŸ“ž {u.phone}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} Â· {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
                 <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-                  {hasMonthly(u.id) && <span style={{ background: "#3b0764", border: `0.5px solid #a855f7`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "#e9d5ff", fontWeight: 700 }}>👑 Сарын эрх</span>}
-                  {hasFilm(u.id) && <span style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: C.green, fontWeight: 700 }}>🎬 {allPayments.filter(p => p.user_id === u.id && p.plan !== "monthly").length} кино</span>}
-                  {!hasMonthly(u.id) && !hasFilm(u.id) && <span style={{ fontSize: 11, color: C.muted }}>Эрхгүй</span>}
+                  {hasMonthly(u.id) && <span style={{ background: "#3b0764", border: `0.5px solid #a855f7`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "#e9d5ff", fontWeight: 700 }}>ðŸ‘‘ Ð¡Ð°Ñ€Ñ‹Ð½ ÑÑ€Ñ…</span>}
+                  {hasFilm(u.id) && <span style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: C.green, fontWeight: 700 }}>ðŸŽ¬ {allPayments.filter(p => p.user_id === u.id && p.plan !== "monthly").length} ÐºÐ¸Ð½Ð¾</span>}
+                  {!hasMonthly(u.id) && !hasFilm(u.id) && <span style={{ fontSize: 11, color: C.muted }}>Ð­Ñ€Ñ…Ð³Ò¯Ð¹</span>}
                 </div>
               </div>
-              <span style={{ color: C.muted, fontSize: 16 }}>›</span>
+              <span style={{ color: C.muted, fontSize: 16 }}>â€º</span>
             </div>
           </div>
         ))
@@ -1433,7 +1433,7 @@ function AdminContactTab() {
   };
 
   const deleteAll = async () => {
-    if (!window.confirm("Бүх чатыг устгах уу?")) return;
+    if (!window.confirm("Ð‘Ò¯Ñ… Ñ‡Ð°Ñ‚Ñ‹Ð³ ÑƒÑÑ‚Ð³Ð°Ñ… ÑƒÑƒ?")) return;
     await dbFetch("contact_messages?id=gt.0", { method: "DELETE" });
     setMsgs([]);
   };
@@ -1446,67 +1446,67 @@ function AdminContactTab() {
   return (
     <div style={{ padding: "0 14px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{msgs.filter(m => !m.read).length} шинэ · {msgs.length} нийт</span>
+        <span style={{ fontSize: 13, color: C.muted }}>{msgs.filter(m => !m.read).length} ÑˆÐ¸Ð½Ñ Â· {msgs.length} Ð½Ð¸Ð¹Ñ‚</span>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
-          <button onClick={deleteAll} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️ Бүгдийг устгах</button>
+          <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>ðŸ”„</button>
+          <button onClick={deleteAll} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>ðŸ—‘ï¸ Ð‘Ò¯Ð³Ð´Ð¸Ð¹Ð³ ÑƒÑÑ‚Ð³Ð°Ñ…</button>
         </div>
       </div>
       {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>ÐÑ‡Ð°Ð°Ð»Ð»Ð°Ð¶ Ð±Ð°Ð¹Ð½Ð°...</div>
       ) : msgs.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Мессеж байхгүй байна</div>
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>ÐœÐµÑÑÐµÐ¶ Ð±Ð°Ð¹Ñ…Ð³Ò¯Ð¹ Ð±Ð°Ð¹Ð½Ð°</div>
       ) : (
         msgs.map(m => (
           <div key={m.id} style={{ background: C.card, border: `0.5px solid ${m.read ? C.bd : C.gold}`, borderRadius: 12, padding: 14, marginBottom: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {m.phone}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>ðŸ“ž {m.phone}</div>
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(m.created_at).toLocaleString("mn-MN")}</div>
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {!m.read && <span style={{ fontSize: 11, background: C.gold, color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>Шинэ</span>}
-                <button onClick={() => deleteOne(m.id)} style={{ background: "none", border: "none", color: C.red, fontSize: 14, cursor: "pointer" }}>🗑️</button>
+                {!m.read && <span style={{ fontSize: 11, background: C.gold, color: "#000", borderRadius: 6, padding: "2px 8px", fontWeight: 700 }}>Ð¨Ð¸Ð½Ñ</span>}
+                <button onClick={() => deleteOne(m.id)} style={{ background: "none", border: "none", color: C.red, fontSize: 14, cursor: "pointer" }}>ðŸ—‘ï¸</button>
               </div>
             </div>
-            {/* Хэрэглэгчийн мессеж */}
+            {/* Ð¥ÑÑ€ÑÐ³Ð»ÑÐ³Ñ‡Ð¸Ð¹Ð½ Ð¼ÐµÑÑÐµÐ¶ */}
             <div style={{ fontSize: 13, color: C.txt, background: C.card2, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>{m.message}</div>
-            {/* Хариу байвал харуулах */}
+            {/* Ð¥Ð°Ñ€Ð¸Ñƒ Ð±Ð°Ð¹Ð²Ð°Ð» Ñ…Ð°Ñ€ÑƒÑƒÐ»Ð°Ñ… */}
             {m.reply && (
               <div style={{ background: "#0a1628", border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
-                <div style={{ fontSize: 10, color: C.blue, marginBottom: 4, fontWeight: 700 }}>АДМИНЫ ХАРИУ</div>
+                <div style={{ fontSize: 10, color: C.blue, marginBottom: 4, fontWeight: 700 }}>ÐÐ”ÐœÐ˜ÐÐ« Ð¥ÐÐ Ð˜Ð£</div>
                 <div style={{ fontSize: 13, color: C.txt }}>{m.reply}</div>
               </div>
             )}
-            {/* Хариу бичих */}
+            {/* Ð¥Ð°Ñ€Ð¸Ñƒ Ð±Ð¸Ñ‡Ð¸Ñ… */}
             {replyId === m.id ? (
               <div>
                 <textarea
                   value={replyText}
                   onChange={(e: any) => setReplyText(e.target.value)}
-                  placeholder="Хариу бичнэ үү..."
+                  placeholder="Ð¥Ð°Ñ€Ð¸Ñƒ Ð±Ð¸Ñ‡Ð½Ñ Ò¯Ò¯..."
                   style={{ ...inputSt, height: 80, resize: "none", lineHeight: 1.5, marginBottom: 8 }}
                   autoFocus
                 />
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={() => sendReply(m.id)} disabled={sending || !replyText.trim()}
                     style={{ flex: 1, background: C.blue, border: "none", borderRadius: 8, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: sending ? 0.6 : 1 }}>
-                    {sending ? "Илгээж байна..." : "📨 Хариу илгээх"}
+                    {sending ? "Ð˜Ð»Ð³ÑÑÐ¶ Ð±Ð°Ð¹Ð½Ð°..." : "ðŸ“¨ Ð¥Ð°Ñ€Ð¸Ñƒ Ð¸Ð»Ð³ÑÑÑ…"}
                   </button>
                   <button onClick={() => { setReplyId(null); setReplyText(""); }}
-                    style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 14px", color: C.muted, fontSize: 12, cursor: "pointer" }}>Цуцлах</button>
+                    style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 14px", color: C.muted, fontSize: 12, cursor: "pointer" }}>Ð¦ÑƒÑ†Ð»Ð°Ñ…</button>
                 </div>
               </div>
             ) : (
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => { setReplyId(m.id); setReplyText(""); }}
                   style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "8px", color: C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  💬 {m.reply ? "Дахин хариулах" : "Хариулах"}
+                  ðŸ’¬ {m.reply ? "Ð”Ð°Ñ…Ð¸Ð½ Ñ…Ð°Ñ€Ð¸ÑƒÐ»Ð°Ñ…" : "Ð¥Ð°Ñ€Ð¸ÑƒÐ»Ð°Ñ…"}
                 </button>
                 {!m.read && (
                   <button onClick={() => markRead(m.id)}
                     style={{ background: "#166534", border: "none", borderRadius: 8, padding: "8px 14px", color: "#4ade80", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                    ✅ Уншсан
+                    âœ… Ð£Ð½ÑˆÑÐ°Ð½
                   </button>
                 )}
               </div>
@@ -1527,7 +1527,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const [url, setUrl] = useState(mainUrl);
   const [img, setImg] = useState(f.img || "");
   const [previewUrl, setPreviewUrl] = useState(existingPreview);
-  const [badge, setBadge] = useState(f.badge || "Хэлтэй");
+  const [badge, setBadge] = useState(f.badge || "Ð¥ÑÐ»Ñ‚ÑÐ¹");
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -1542,28 +1542,28 @@ function EditFilmPanel({ f, onDone }: any) {
 
   return (
     <div style={{ marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
-      <label style={lbl}>Гарчиг</label>
+      <label style={lbl}>Ð“Ð°Ñ€Ñ‡Ð¸Ð³</label>
       <input style={inputSt} value={title} onChange={(e: any) => setTitle(e.target.value)} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
         <div>
-          <label style={lbl}>Зарах үнэ ₮</label>
+          <label style={lbl}>Ð—Ð°Ñ€Ð°Ñ… Ò¯Ð½Ñ â‚®</label>
           <input style={inputSt} value={price} onChange={(e: any) => setPrice(e.target.value)} type="number" />
         </div>
         <div>
-          <label style={lbl}>Хуучин үнэ ₮</label>
+          <label style={lbl}>Ð¥ÑƒÑƒÑ‡Ð¸Ð½ Ò¯Ð½Ñ â‚®</label>
           <input style={inputSt} value={op} onChange={(e: any) => setOp(e.target.value)} type="number" />
         </div>
       </div>
       <label style={{ ...lbl, marginTop: 8 }}>Badge</label>
       <select style={inputSt} value={badge} onChange={(e: any) => setBadge(e.target.value)}>
-        <option>Хэлтэй</option>
-        <option>Хадмал</option>
+        <option>Ð¥ÑÐ»Ñ‚ÑÐ¹</option>
+        <option>Ð¥Ð°Ð´Ð¼Ð°Ð»</option>
       </select>
-      <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
+      <label style={{ ...lbl, marginTop: 8 }}>Ð’Ð¸Ð´ÐµÐ¾ URL</label>
       <input style={inputSt} value={url} onChange={(e: any) => setUrl(e.target.value)} placeholder="https://iframe.mediadelivery.net/..." />
-      <label style={{ ...lbl, marginTop: 8 }}>🎬 Preview URL (Bunny.net MP4)</label>
+      <label style={{ ...lbl, marginTop: 8 }}>ðŸŽ¬ Preview URL (Bunny.net MP4)</label>
       <input style={inputSt} value={previewUrl} onChange={(e: any) => setPreviewUrl(e.target.value)} placeholder="https://your.b-cdn.net/preview.mp4" />
-      <label style={{ ...lbl, marginTop: 8 }}>Зургийн URL эсвэл файл</label>
+      <label style={{ ...lbl, marginTop: 8 }}>Ð—ÑƒÑ€Ð³Ð¸Ð¹Ð½ URL ÑÑÐ²ÑÐ» Ñ„Ð°Ð¹Ð»</label>
       <input style={inputSt} value={img} onChange={(e: any) => setImg(e.target.value)} placeholder="https://..." />
       <input type="file" accept="image/*" onChange={(e: any) => {
         const file = e.target.files?.[0]; if (!file) return;
@@ -1574,9 +1574,9 @@ function EditFilmPanel({ f, onDone }: any) {
       {img && <img src={img} alt="" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8, marginTop: 6 }} />}
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
         <button onClick={save} disabled={saving} style={{ flex: 1, background: C.gold, border: "none", borderRadius: 8, padding: "10px", fontWeight: 700, cursor: "pointer", color: "#000", opacity: saving ? 0.6 : 1 }}>
-          {saving ? "..." : "✅ Хадгалах"}
+          {saving ? "..." : "âœ… Ð¥Ð°Ð´Ð³Ð°Ð»Ð°Ñ…"}
         </button>
-        <button onClick={onDone} style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px", color: C.muted, fontSize: 13, cursor: "pointer" }}>Болих</button>
+        <button onClick={onDone} style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px", color: C.muted, fontSize: 13, cursor: "pointer" }}>Ð‘Ð¾Ð»Ð¸Ñ…</button>
       </div>
     </div>
   );
@@ -1589,7 +1589,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
 
-  // Unread тоо ачааллах + 30 секунд тутамд шинэчлэх
+  // Unread Ñ‚Ð¾Ð¾ Ð°Ñ‡Ð°Ð°Ð»Ð»Ð°Ñ… + 30 ÑÐµÐºÑƒÐ½Ð´ Ñ‚ÑƒÑ‚Ð°Ð¼Ð´ ÑˆÐ¸Ð½ÑÑ‡Ð»ÑÑ…
   useEffect(() => {
     const fetchUnread = async () => {
       const data = await dbFetch("contact_messages?read=eq.false&select=id");
@@ -1599,18 +1599,18 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     const t = setInterval(fetchUnread, 30000);
     return () => clearInterval(t);
   }, [tab]);
-  const empty = { title: "", views: 0, op: 6000, price: 4000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820" };
+  const empty = { title: "", views: 0, op: 6000, price: 4000, badge: "Ð¥ÑÐ»Ñ‚ÑÐ¹", free: false, locked: true, url: "", img: "", bg: "#1a0820" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
   const save = async () => {
-    if (!form.title.trim()) { alert("Гарчиг оруулна уу"); return; }
+    if (!form.title.trim()) { alert("Ð“Ð°Ñ€Ñ‡Ð¸Ð³ Ð¾Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ"); return; }
     setSaving(true);
     await dbFetch("films", { method: "POST", body: JSON.stringify({ ...form, views: parseInt(form.views) || 0, op: parseInt(form.op) || 6000, price: parseInt(form.price) || 0 }) });
     setSaving(false); setForm(empty); setTab("list"); onRefresh();
   };
   const deletFilm = async (id: number) => {
-    if (!window.confirm("Устгах уу?")) return;
+    if (!window.confirm("Ð£ÑÑ‚Ð³Ð°Ñ… ÑƒÑƒ?")) return;
     await dbFetch(`films?id=eq.${id}`, { method: "DELETE" }); onRefresh();
   };
   const toggleLock = async (film: any) => {
@@ -1623,18 +1623,18 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 30 }}>
       <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-          <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>Кино удирдах</span>
+          <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>â†</button>
+          <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>ÐšÐ¸Ð½Ð¾ ÑƒÐ´Ð¸Ñ€Ð´Ð°Ñ…</span>
         </div>
-        <span style={{ fontSize: 12, color: C.muted }}>{films.length} кино</span>
+        <span style={{ fontSize: 12, color: C.muted }}>{films.length} ÐºÐ¸Ð½Ð¾</span>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", padding: "10px 14px", gap: 6 }}>
-        <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📋 Жагсаалт</button>
-        <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🧾 Захиалга</button>
-        <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>👥 Гишүүд</button>
-        <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>➕ Нэмэх</button>
+        <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>ðŸ“‹ Ð–Ð°Ð³ÑÐ°Ð°Ð»Ñ‚</button>
+        <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>ðŸ§¾ Ð—Ð°Ñ…Ð¸Ð°Ð»Ð³Ð°</button>
+        <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>ðŸ‘¥ Ð“Ð¸ÑˆÒ¯Ò¯Ð´</button>
+        <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>âž• ÐÑÐ¼ÑÑ…</button>
         <button onClick={() => { setTab("sms"); setUnreadCount(0); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11, position: "relative" }}>
-          💬 Холбогдох
+          ðŸ’¬ Ð¥Ð¾Ð»Ð±Ð¾Ð³Ð´Ð¾Ñ…
           {unreadCount > 0 && tab !== "sms" && (
             <span style={{ position: "absolute", top: 4, right: 4, background: C.red, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount}</span>
           )}
@@ -1648,25 +1648,25 @@ function AdminPage({ films, onBack, onRefresh }: any) {
       {tab === "add" && (
         <div style={{ padding: "0 14px" }}>
           <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16 }}>
-            <label style={lbl}>Гарчиг *</label>
-            <input style={inputSt} value={form.title} onChange={set("title")} placeholder="Кино нэр" />
+            <label style={lbl}>Ð“Ð°Ñ€Ñ‡Ð¸Ð³ *</label>
+            <input style={inputSt} value={form.title} onChange={set("title")} placeholder="ÐšÐ¸Ð½Ð¾ Ð½ÑÑ€" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
-              <div><label style={lbl}>Үзсэн тоо</label><input style={inputSt} value={form.views} onChange={set("views")} type="number" /></div>
+              <div><label style={lbl}>Ò®Ð·ÑÑÐ½ Ñ‚Ð¾Ð¾</label><input style={inputSt} value={form.views} onChange={set("views")} type="number" /></div>
               <div><label style={lbl}>Badge</label>
-                <select style={inputSt} value={form.badge} onChange={set("badge")}><option>Хэлтэй</option><option>Хадмал</option></select>
+                <select style={inputSt} value={form.badge} onChange={set("badge")}><option>Ð¥ÑÐ»Ñ‚ÑÐ¹</option><option>Ð¥Ð°Ð´Ð¼Ð°Ð»</option></select>
               </div>
-              <div><label style={lbl}>Хуучин үнэ ₮</label><input style={inputSt} value={form.op} onChange={set("op")} type="number" /></div>
-              <div><label style={lbl}>Зарах үнэ ₮</label><input style={inputSt} value={form.price} onChange={set("price")} type="number" /></div>
+              <div><label style={lbl}>Ð¥ÑƒÑƒÑ‡Ð¸Ð½ Ò¯Ð½Ñ â‚®</label><input style={inputSt} value={form.op} onChange={set("op")} type="number" /></div>
+              <div><label style={lbl}>Ð—Ð°Ñ€Ð°Ñ… Ò¯Ð½Ñ â‚®</label><input style={inputSt} value={form.price} onChange={set("price")} type="number" /></div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px", background: C.card2, borderRadius: 8 }}>
               <input type="checkbox" id="cb-free" checked={form.free} onChange={setChk("free")} style={{ width: 18, height: 18 }} />
-              <label htmlFor="cb-free" style={{ fontSize: 14, color: C.txt, cursor: "pointer" }}>🆓 Үнэгүй кино</label>
+              <label htmlFor="cb-free" style={{ fontSize: 14, color: C.txt, cursor: "pointer" }}>ðŸ†“ Ò®Ð½ÑÐ³Ò¯Ð¹ ÐºÐ¸Ð½Ð¾</label>
             </div>
-            <label style={{ ...lbl, marginTop: 12 }}>Видео URL (YouTube / MP4 / Google Drive)</label>
-            <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/... эсвэл .mp4 холбоос" />
-            <label style={{ ...lbl, marginTop: 10 }}>🎬 Preview URL (Bunny.net MP4)</label>
+            <label style={{ ...lbl, marginTop: 12 }}>Ð’Ð¸Ð´ÐµÐ¾ URL (YouTube / MP4 / Google Drive)</label>
+            <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/... ÑÑÐ²ÑÐ» .mp4 Ñ…Ð¾Ð»Ð±Ð¾Ð¾Ñ" />
+            <label style={{ ...lbl, marginTop: 10 }}>ðŸŽ¬ Preview URL (Bunny.net MP4)</label>
             <input style={inputSt} value={form.preview_url || ""} onChange={set("preview_url")} placeholder="https://your.b-cdn.net/preview.mp4" />
-            <label style={{ ...lbl, marginTop: 10 }}>Зургийн URL эсвэл файл</label>
+            <label style={{ ...lbl, marginTop: 10 }}>Ð—ÑƒÑ€Ð³Ð¸Ð¹Ð½ URL ÑÑÐ²ÑÐ» Ñ„Ð°Ð¹Ð»</label>
             <input style={inputSt} value={form.img} onChange={set("img")} placeholder="https://..." />
             <input type="file" accept="image/*" onChange={(e: any) => {
               const file = e.target.files?.[0]; if (!file) return;
@@ -1675,7 +1675,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
               reader.readAsDataURL(file);
             }} style={{ marginTop: 6, fontSize: 12, color: C.muted, width: "100%" }} />
             <button onClick={save} disabled={saving} style={{ ...goldBtn, marginTop: 16, opacity: saving ? 0.6 : 1 }}>
-              {saving ? "Хадгалж байна..." : "✅ Хадгалах"}
+              {saving ? "Ð¥Ð°Ð´Ð³Ð°Ð»Ð¶ Ð±Ð°Ð¹Ð½Ð°..." : "âœ… Ð¥Ð°Ð´Ð³Ð°Ð»Ð°Ñ…"}
             </button>
           </div>
         </div>
@@ -1687,20 +1687,20 @@ function AdminPage({ films, onBack, onRefresh }: any) {
             <div key={f.id} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
                 <div style={{ width: 44, height: 60, borderRadius: 6, background: f.bg || "#1a0820", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {f.img ? <img src={f.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 20 }}>🎬</span>}
+                  {f.img ? <img src={f.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 20 }}>ðŸŽ¬</span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.title}</div>
-                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{f.badge} · {f.free ? "Үнэгүй" : `${f.price?.toLocaleString()}₮`} · {f.views} үзсэн</div>
-                  <div style={{ fontSize: 11, marginTop: 2, color: f.locked ? C.red : C.green }}>{f.locked ? "🔒 Хаалттай" : "🔓 Нээлттэй"}</div>
+                  <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{f.badge} Â· {f.free ? "Ò®Ð½ÑÐ³Ò¯Ð¹" : `${f.price?.toLocaleString()}â‚®`} Â· {f.views} Ò¯Ð·ÑÑÐ½</div>
+                  <div style={{ fontSize: 11, marginTop: 2, color: f.locked ? C.red : C.green }}>{f.locked ? "ðŸ”’ Ð¥Ð°Ð°Ð»Ñ‚Ñ‚Ð°Ð¹" : "ðŸ”“ ÐÑÑÐ»Ñ‚Ñ‚ÑÐ¹"}</div>
                 </div>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => toggleLock(f)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `0.5px solid ${C.bd}`, background: f.locked ? "#166534" : "#7f1d1d", color: f.locked ? "#4ade80" : "#f87171", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  {f.locked ? "🔓 Нээх" : "🔒 Хаах"}
+                  {f.locked ? "ðŸ”“ ÐÑÑÑ…" : "ðŸ”’ Ð¥Ð°Ð°Ñ…"}
                 </button>
-                <button onClick={() => setEditId(editId === f.id ? null : f.id)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `0.5px solid ${C.bd}`, background: C.card2, color: C.muted, fontSize: 12, cursor: "pointer" }}>✏️ Засах</button>
-                <button onClick={() => deletFilm(f.id)} style={{ padding: "8px 12px", borderRadius: 8, border: `0.5px solid #3a1a1a`, background: "#1a0a0a", color: "#f05555", fontSize: 12, cursor: "pointer" }}>🗑️</button>
+                <button onClick={() => setEditId(editId === f.id ? null : f.id)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, border: `0.5px solid ${C.bd}`, background: C.card2, color: C.muted, fontSize: 12, cursor: "pointer" }}>âœï¸ Ð—Ð°ÑÐ°Ñ…</button>
+                <button onClick={() => deletFilm(f.id)} style={{ padding: "8px 12px", borderRadius: 8, border: `0.5px solid #3a1a1a`, background: "#1a0a0a", color: "#f05555", fontSize: 12, cursor: "pointer" }}>ðŸ—‘ï¸</button>
               </div>
               {editId === f.id && (
                 <EditFilmPanel f={f} onDone={() => { setEditId(null); onRefresh(); }} />
@@ -1729,7 +1729,7 @@ export default function Home() {
   useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
 
-  // PWA install prompt барих
+  // PWA install prompt Ð±Ð°Ñ€Ð¸Ñ…
   useEffect(() => {
     const handler = (e: any) => {
       e.preventDefault();
@@ -1754,13 +1754,13 @@ export default function Home() {
 
   useEffect(() => {
     const s = loadSession(); if (s) { setUser(s); syncAccessFromDB(s.id); }
-    // localStorage-с access map уншина
+    // localStorage-Ñ access map ÑƒÐ½ÑˆÐ¸Ð½Ð°
     try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
   }, []);
 
-  // DB-с confirmed төлбөрүүдийг татаж access олгох
+  // DB-Ñ confirmed Ñ‚Ó©Ð»Ð±Ó©Ñ€Ò¯Ò¯Ð´Ð¸Ð¹Ð³ Ñ‚Ð°Ñ‚Ð°Ð¶ access Ð¾Ð»Ð³Ð¾Ñ…
   const syncAccessFromDB = async (userId: number) => {
-    // Бүх захиалгыг татах (confirmed + revoked)
+    // Ð‘Ò¯Ñ… Ð·Ð°Ñ…Ð¸Ð°Ð»Ð³Ñ‹Ð³ Ñ‚Ð°Ñ‚Ð°Ñ… (confirmed + revoked)
     const payments = await dbFetch(
       `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
     );
@@ -1769,7 +1769,7 @@ export default function Home() {
     const newAccess: Record<string, number> = {};
 
     payments.forEach((p: any) => {
-      if (p.status !== "confirmed") return; // revoked болон pending-г орхино
+      if (p.status !== "confirmed") return; // revoked Ð±Ð¾Ð»Ð¾Ð½ pending-Ð³ Ð¾Ñ€Ñ…Ð¸Ð½Ð¾
       if (p.plan === "monthly") {
         const exp = new Date(p.created_at).getTime() + 30 * 24 * 60 * 60 * 1000;
         if (exp > now) newAccess["monthly"] = exp;
@@ -1779,7 +1779,7 @@ export default function Home() {
       }
     });
 
-    // localStorage-г бүрэн солих — revoked эрхүүд автоматаар арилна
+    // localStorage-Ð³ Ð±Ò¯Ñ€ÑÐ½ ÑÐ¾Ð»Ð¸Ñ… â€” revoked ÑÑ€Ñ…Ò¯Ò¯Ð´ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð°Ð°Ñ€ Ð°Ñ€Ð¸Ð»Ð½Ð°
     localStorage.setItem("kino_access", JSON.stringify(newAccess));
     setAccessMap(newAccess);
   };
@@ -1817,13 +1817,13 @@ export default function Home() {
 
   const handlePaid = () => {
     if (payFilm.monthly) {
-      // 1 сарын эрх
+      // 1 ÑÐ°Ñ€Ñ‹Ð½ ÑÑ€Ñ…
       saveAccess("monthly", Date.now() + 30 * 24 * 60 * 60 * 1000);
       setPayFilm(null);
-      // Бүх кино нээлттэй болно — нүүр хуудас руу буцах
+      // Ð‘Ò¯Ñ… ÐºÐ¸Ð½Ð¾ Ð½ÑÑÐ»Ñ‚Ñ‚ÑÐ¹ Ð±Ð¾Ð»Ð½Ð¾ â€” Ð½Ò¯Ò¯Ñ€ Ñ…ÑƒÑƒÐ´Ð°Ñ Ñ€ÑƒÑƒ Ð±ÑƒÑ†Ð°Ñ…
       setPage("home");
     } else {
-      // 72 цагийн эрх
+      // 72 Ñ†Ð°Ð³Ð¸Ð¹Ð½ ÑÑ€Ñ…
       const expires = Date.now() + 72 * 60 * 60 * 1000;
       saveAccess(`film_${payFilm.id}`, expires);
       setCurFilm({ ...payFilm, locked: false });
@@ -1851,7 +1851,7 @@ export default function Home() {
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
 
-      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={() => setPayFilm({ id: 0, title: "1 Сарын багц", price: 12500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+      {page === "home" && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={() => setPayFilm({ id: 0, title: "1 Ð¡Ð°Ñ€Ñ‹Ð½ Ð±Ð°Ð³Ñ†", price: 12500, monthly: true, locked: true })} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
@@ -1862,30 +1862,30 @@ export default function Home() {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-end", zIndex: 400 }}>
           <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "24px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.txt }}>📲 Утсанд суулгах заавар</div>
-              <button onClick={() => setShowInstall(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.txt }}>ðŸ“² Ð£Ñ‚ÑÐ°Ð½Ð´ ÑÑƒÑƒÐ»Ð³Ð°Ñ… Ð·Ð°Ð°Ð²Ð°Ñ€</div>
+              <button onClick={() => setShowInstall(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>âœ•</button>
             </div>
             <div style={{ background: C.card2, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 10 }}>🤖 Android (Chrome)</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 10 }}>ðŸ¤– Android (Chrome)</div>
               <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
-                1. Chrome цэс <span style={{ color: C.gold, fontWeight: 700 }}>⋮</span> дарна<br/>
-                2. <span style={{ color: C.gold, fontWeight: 700 }}>"Нүүр дэлгэцэнд нэмэх"</span> дарна<br/>
-                3. <span style={{ color: C.gold, fontWeight: 700 }}>"Суулгах"</span> дарна
+                1. Chrome Ñ†ÑÑ <span style={{ color: C.gold, fontWeight: 700 }}>â‹®</span> Ð´Ð°Ñ€Ð½Ð°<br/>
+                2. <span style={{ color: C.gold, fontWeight: 700 }}>"ÐÒ¯Ò¯Ñ€ Ð´ÑÐ»Ð³ÑÑ†ÑÐ½Ð´ Ð½ÑÐ¼ÑÑ…"</span> Ð´Ð°Ñ€Ð½Ð°<br/>
+                3. <span style={{ color: C.gold, fontWeight: 700 }}>"Ð¡ÑƒÑƒÐ»Ð³Ð°Ñ…"</span> Ð´Ð°Ñ€Ð½Ð°
               </div>
             </div>
             <div style={{ background: C.card2, borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.blue, marginBottom: 10 }}>🍎 iPhone (Safari)</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.blue, marginBottom: 10 }}>ðŸŽ iPhone (Safari)</div>
               <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
-                1. Safari дээр нээнэ<br/>
-                2. Share товч <span style={{ color: C.blue, fontWeight: 700 }}>□↑</span> дарна<br/>
-                3. <span style={{ color: C.blue, fontWeight: 700 }}>"Add to Home Screen"</span> дарна
+                1. Safari Ð´ÑÑÑ€ Ð½ÑÑÐ½Ñ<br/>
+                2. Share Ñ‚Ð¾Ð²Ñ‡ <span style={{ color: C.blue, fontWeight: 700 }}>â–¡â†‘</span> Ð´Ð°Ñ€Ð½Ð°<br/>
+                3. <span style={{ color: C.blue, fontWeight: 700 }}>"Add to Home Screen"</span> Ð´Ð°Ñ€Ð½Ð°
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
+      {/* â”€â”€ ÐÐ­Ð’Ð¢Ð Ð­Ð¥/Ð‘Ò®Ð Ð¢Ð“Ò®Ò®Ð›Ð­Ð¥ â€” Ð´ÑÐ»Ð³ÑÑ†Ð¸Ð¹Ð½ Ð³Ð¾Ð»Ð´ fixed, ÐºÐ¸Ð½Ð¾ scroll-Ð´ ÑÐ°Ð°Ð´ Ð±Ð¾Ð»Ð¾Ñ…Ð³Ò¯Ð¹ â”€â”€ */}
       {!user && mounted && createPortal(
         <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, width:"calc(100% - 24px)", maxWidth:500, pointerEvents:"none" }}>
           <div style={{
@@ -1895,8 +1895,8 @@ export default function Home() {
               border:"1px solid #1e2d4a",
               boxShadow:"0 10px 50px rgba(0,40,255,0.2)",
             }}>
-              <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
-              <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:14, textAlign:"center", letterSpacing:"0.02em" }}>Утасны дугаараа оруулна уу</div>
+              <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>âœ•</button>
+              <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:14, textAlign:"center", letterSpacing:"0.02em" }}>Ð£Ñ‚Ð°ÑÐ½Ñ‹ Ð´ÑƒÐ³Ð°Ð°Ñ€Ð°Ð° Ð¾Ñ€ÑƒÑƒÐ»Ð½Ð° ÑƒÑƒ</div>
               <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
             </div>
         </div>,
@@ -1905,3 +1905,4 @@ export default function Home() {
     </div>
   );
 }
+
