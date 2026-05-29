@@ -6,18 +6,28 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 async function dbFetch(path: string, opts?: RequestInit) {
-  const { headers: extraHeaders, ...restOpts } = opts || {};
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    ...restOpts,
-    headers: {
-      apikey: SUPABASE_KEY,
-      Authorization: `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-      ...(extraHeaders as Record<string, string> || {}),
-    },
-  });
-  return res.json();
+  try {
+    const { headers: extraHeaders, ...restOpts } = opts || {};
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      ...restOpts,
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=representation",
+        ...(extraHeaders as Record<string, string> || {}),
+      },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      console.error("dbFetch error:", path, err);
+      return err;
+    }
+    return res.json();
+  } catch(e) {
+    console.error("dbFetch catch:", path, e);
+    return null;
+  }
 }
 
 const ADMIN_KEY = "admin2024";
@@ -1650,13 +1660,20 @@ function EditFilmPanel({ f, onDone }: any) {
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
+    if (!title.trim()) { alert("Гарчиг оруулна уу"); return; }
     setSaving(true);
-    const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
-    const payload: any = { title, price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
-    if (img) payload.img = img;
-    await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
-    setSaving(false);
-    onDone();
+    try {
+      const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
+      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge };
+      if (img) payload.img = img;
+      const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      if (res && res.code) { alert("Алдаа: " + (res.message || JSON.stringify(res))); return; }
+      onDone();
+    } catch(e: any) {
+      alert("Алдаа: " + (e?.message || "Дахин оролдоно уу"));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -2005,10 +2022,9 @@ export default function Home() {
       } else if (p.plan?.startsWith("hyatad")) {
         if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
       }
-      if (false) {
-      } else {
-        const exp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
-        if (exp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, exp);
+      if (p.film_id) {
+        const filmExp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
+        if (filmExp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, filmExp);
       }
     });
 
@@ -2037,9 +2053,14 @@ export default function Home() {
 
   const loadFilms = async () => {
     setLoading(true);
-    const data = await dbFetch("films?order=created_at.desc&select=*");
-    setFilms(Array.isArray(data) ? data : []);
-    setLoading(false);
+    try {
+      const data = await dbFetch("films?order=created_at.desc&select=*");
+      setFilms(Array.isArray(data) ? data : []);
+    } catch(e) {
+      setFilms([]);
+    } finally {
+      setLoading(false);
+    }
   };
   useEffect(() => { loadFilms(); }, []);
 
