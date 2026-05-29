@@ -9,10 +9,41 @@ export async function POST(req: NextRequest) {
 
   const match = text.match(/KNM?\d{4,8}/i);
   if (!match) {
-    return NextResponse.json({ ok: false, msg: "KN kod oldsongu" });
+    return NextResponse.json({ ok: false, msg: "KN код олдсонгүй" });
   }
 
   const ref = match[0].toUpperCase();
+
+  // SMS мэссэжнээс дүн олох — Хаан банкны форматууд
+  const amountPatterns = [
+    /(\d[\d,]+)\s*[₮T]/i,
+    /орлого[:\s]+(\d[\d,]+)/i,
+    /(\d[\d,]+)\s*төгрөг/i,
+    /amount[:\s]+(\d[\d,]+)/i,
+  ];
+  let paidAmount = 0;
+  for (const pattern of amountPatterns) {
+    const m = text.match(pattern);
+    if (m) { paidAmount = parseInt(m[1].replace(/,/g, "")); break; }
+  }
+
+  // Pending төлбөр татах
+  const checkRes = await fetch(
+    `${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}&status=eq.pending&select=*`,
+    { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+  );
+  const pending = await checkRes.json();
+
+  if (!Array.isArray(pending) || pending.length === 0) {
+    return NextResponse.json({ ok: false, msg: "Төлбөр олдсонгүй" });
+  }
+
+  const payment = pending[0];
+
+  // Дүн хүрэхгүй бол confirmed болгохгүй
+  if (paidAmount > 0 && paidAmount < payment.amount) {
+    return NextResponse.json({ ok: false, msg: `Дүн хүрэхгүй: ${paidAmount} < ${payment.amount}` });
+  }
 
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/pending_payments?ref_code=eq.${ref}&status=eq.pending`,
