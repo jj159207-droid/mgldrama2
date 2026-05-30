@@ -1075,9 +1075,30 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         {user && <PlanModal onSelect={onMonthly} />}
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-          : <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: "0 10px" }}>
-              {filteredFilms.map((f: any) => <FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />)}
-            </div>
+          : (() => {
+              const items: any[] = [];
+              filteredFilms.forEach((f: any, i: number) => {
+                items.push(<FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />);
+                if ((i + 1) % 6 === 0 && i + 1 < filteredFilms.length) {
+                  items.push(<div key={`b${i}`} style={{ gridColumn: "1/-1", margin: "4px 0" }}>
+                    <div onClick={() => onMonthly("erotic_3day")} className="plan-glow" style={{ background: "linear-gradient(135deg,#2d1060,#0f1f3d)", border: "2px solid #8b5cf6", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontSize: 28 }}>🎬</span>
+                        <div>
+                          <div style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>Багц авах</div>
+                          <div style={{ fontSize: 12, color: "#ddd6fe", marginTop: 2 }}>Хязгааргүй үзэх эрх</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        <div style={{ fontSize: 24, fontWeight: 900, color: "#c4b5fd" }}>8,000₮</div>
+                        <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700 }}>-аас эхлэн</div>
+                      </div>
+                    </div>
+                  </div>);
+                }
+              });
+              return <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>{items}</div>;
+            })()
         }
       </div>
 
