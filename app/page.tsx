@@ -939,6 +939,13 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 // ══════════════════════════════════════════════
 function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    window.history.pushState({ planModal: true }, "");
+    const handlePop = () => { setOpen(false); };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, [open]);
   const cats = [
     { key: "erotic", label: "🔞 ЭРОТИК", color: "#a855f7", border: "#7c3aed", bg: "#1a0a1a", sub: "#c4b5fd" },
     { key: "gadaad", label: "🌍 ГАДААД", color: "#38bdf8", border: "#0ea5e9", bg: "#0a1220", sub: "#7dd3fc" },
