@@ -942,17 +942,17 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
   return (
     <>
       <div style={{ padding: "8px 12px" }}>
-        <div onClick={() => setOpen(true)} style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #0f1a2e 100%)", border: "1.5px solid rgba(139,92,246,0.7)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 18px rgba(139,92,246,0.2)" }}>
+        <div onClick={() => setOpen(true)} style={{ background: "linear-gradient(135deg, #2d1060 0%, #0f1f3d 100%)", border: "2px solid #8b5cf6", borderRadius: 18, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 28px rgba(139,92,246,0.45), inset 0 0 20px rgba(139,92,246,0.08)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontSize: 28 }}>🎬</span>
+            <span style={{ fontSize: 32 }}>🎬</span>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 900, color: "#fff", letterSpacing: "-0.3px" }}>Багц авах</div>
-              <div style={{ fontSize: 12, color: "#c4b5fd", marginTop: 2, fontWeight: 600 }}>Хязгааргүй үзэх эрх</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", letterSpacing: "-0.3px" }}>Багц авах</div>
+              <div style={{ fontSize: 13, color: "#ddd6fe", marginTop: 3, fontWeight: 600 }}>Хязгааргүй үзэх эрх</div>
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: "#a78bfa" }}>8,000₮</div>
-            <div style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600 }}>-аас эхлэн</div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: "#c4b5fd", letterSpacing: "-0.5px" }}>8,000₮</div>
+            <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, marginTop: 2 }}>-аас эхлэн</div>
           </div>
         </div>
       </div>
