@@ -190,19 +190,21 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Төлбөр үүсгэх + автомат polling эхлүүлэх
+  // Буцах товч дарахад сайтаас гарахгүй байлгах — нэг л удаа бүртгэх
   useEffect(() => {
-    // Буцах товч дарахад сайтаас гарахгүй байлгах
     window.history.pushState({ modal: true }, "");
-    const handlePop = () => {
+    const handlePop = (e: PopStateEvent) => {
+      e.preventDefault();
       window.history.pushState({ modal: true }, "");
       onClose();
     };
     window.addEventListener("popstate", handlePop);
-
-    if (step !== "waiting") return () => window.removeEventListener("popstate", handlePop);
-    // waiting үед ч listener байх
     return () => window.removeEventListener("popstate", handlePop);
+  }, []);
+
+  // Төлбөр үүсгэх + автомат polling эхлүүлэх
+  useEffect(() => {
+    if (step !== "waiting") return;
 
     // Supabase-д pending_payments үүсгэх
     dbFetch("pending_payments", {
@@ -217,7 +219,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
       }),
     });
 
-    // Автомат 5 секунд тутамд шалгах
+    // Автомат 4 секунд тутамд шалгах
     intervalRef.current = setInterval(async () => {
       setAutoStatus("checking");
       const rows = await dbFetch(
@@ -242,7 +244,6 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     return () => {
       clearInterval(intervalRef.current);
       clearTimeout(timeoutRef.current);
-      window.removeEventListener("popstate", handlePop);
     };
   }, [step]);
 
