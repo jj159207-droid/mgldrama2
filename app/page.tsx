@@ -2099,7 +2099,7 @@ export default function Home() {
       } else if (p.plan?.startsWith("hyatad")) {
         if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
       }
-      if (p.film_id && p.film_id > 0 && p.plan === "single") {
+      if (p.film_id && p.film_id > 0 && (p.plan === "single" || !p.plan?.includes("month") && !p.plan?.includes("day") && !p.plan?.includes("all"))) {
         const filmExp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
         if (filmExp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, filmExp);
       }
@@ -2143,8 +2143,12 @@ export default function Home() {
 
   const handleFilm = (f: any) => {
     if (f.free) { setCurFilm({ ...f, locked: false }); setPage("video"); return; }
+    if (!f.locked) { 
+      if (!user) { setShowLoginModal(true); return; }
+      setCurFilm({ ...f, locked: false }); setPage("video"); return;
+    }
     if (!user) { setShowLoginModal(true); return; }
-    if (!f.locked || hasAccess(f.id)) { setCurFilm({ ...f, locked: false }); setPage("video"); }
+    if (hasAccess(f.id, decodeCat(f.badge))) { setCurFilm({ ...f, locked: false }); setPage("video"); }
     else { setPayFilm(f); setPage("payment"); }
   };
 
