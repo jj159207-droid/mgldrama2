@@ -190,14 +190,10 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Буцах товч дарахад сайтаас гарахгүй байлгах — нэг л удаа бүртгэх
+  // Android back button-г block хийх
   useEffect(() => {
-    window.history.pushState({ modal: true }, "");
-    const handlePop = (e: PopStateEvent) => {
-      e.preventDefault();
-      window.history.pushState({ modal: true }, "");
-      onClose();
-    };
+    const handlePop = () => { onClose(); };
+    // history manipulation хийхгүй — зүгээр л listener
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
@@ -286,13 +282,12 @@ function BankModal({ film, onClose, onPaid, user }: any) {
 
   return (
     <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", alignItems: "flex-end", zIndex: 200 }}>
-        <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 20px 36px", width: "100%", border: `0.5px solid ${C.bd}`, maxHeight: "92vh", overflowY: "auto" }}>
-
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", flexDirection: "column", zIndex: 200 }}>
+        <div style={{ background: C.card, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
+          <div style={{ padding: "20px 20px 0" }}>
           {/* Header */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{film.title}</span>
-            <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
           </div>
 
           {/* Үнэ */}
@@ -358,7 +353,11 @@ function BankModal({ film, onClose, onPaid, user }: any) {
             </div>
           </div>
 
-          <button onClick={onClose} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer" }}>Буцах</button>
+          </div>
+          {/* Буцах товч — доод тулд */}
+          <div style={{ padding: "12px 20px 40px", marginTop: "auto" }}>
+            <button onClick={onClose} style={{ width: "100%", background: "#1a1a2e", border: "2px solid rgba(255,255,255,0.15)", color: "#fff", padding: "16px", borderRadius: 14, fontSize: 18, fontWeight: 800, cursor: "pointer", letterSpacing: "0.03em" }}>← Буцах</button>
+          </div>
         </div>
       </div>
       {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
