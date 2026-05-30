@@ -192,11 +192,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
 
   // Буцах товч дарахад сайтаас гарахгүй байлгах
   useEffect(() => {
-    window.history.pushState({ modal: true }, "");
-    const handlePop = () => {
-      window.history.pushState({ modal: true }, "");
-      onClose();
-    };
+    const handlePop = () => { onClose(); };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
@@ -941,7 +937,6 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
-    window.history.pushState({ planModal: true }, "");
     const handlePop = () => { setOpen(false); };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -1138,14 +1133,7 @@ function VideoPage({ film, onBack }: any) {
   const { type, src } = getVideoEmbed(mainUrl);
   useEffect(() => {
     const t = setTimeout(() => setShowControls(false), 4000);
-    // 2 pushState хийнэ — нэг буцахад video дотор үлдэнэ, хоёр дахинд нь гарна
-    window.history.pushState({ video: true }, "");
-    window.history.pushState({ video: true }, "");
-    const handlePop = () => {
-      // Дахин нэг pushState нэмж буцах дарахад сайтаас гарахгүй болгоно
-      window.history.pushState({ video: true }, "");
-      onBack();
-    };
+    const handlePop = () => { onBack(); };
     window.addEventListener("popstate", handlePop);
     return () => { 
       clearTimeout(t); 
