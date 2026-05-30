@@ -190,10 +190,13 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Android back button-г block хийх
+  // Буцах товч дарахад сайтаас гарахгүй байлгах
   useEffect(() => {
-    const handlePop = () => { onClose(); };
-    // history manipulation хийхгүй — зүгээр л listener
+    window.history.pushState({ modal: true }, "");
+    const handlePop = () => {
+      window.history.pushState({ modal: true }, "");
+      onClose();
+    };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
@@ -993,6 +996,8 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
                 <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>20,000₮</div>
               </div>
             </div>
+
+            <button onClick={() => setOpen(false)} style={{ width: "100%", marginTop: 16, background: "#1a1a2e", border: "2px solid rgba(255,255,255,0.15)", color: "#fff", padding: "16px", borderRadius: 14, fontSize: 18, fontWeight: 800, cursor: "pointer" }}>← Буцах</button>
           </div>
         </div>
       )}
