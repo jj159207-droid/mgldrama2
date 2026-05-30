@@ -942,7 +942,7 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
   return (
     <>
       <div style={{ padding: "8px 12px" }}>
-        <div onClick={() => setOpen(true)} style={{ background: "linear-gradient(135deg, #2d1060 0%, #0f1f3d 100%)", border: "2px solid #8b5cf6", borderRadius: 18, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 28px rgba(139,92,246,0.45), inset 0 0 20px rgba(139,92,246,0.08)" }}>
+        <div onClick={() => setOpen(true)} className="plan-glow" style={{ background: "linear-gradient(135deg, #2d1060 0%, #0f1f3d 100%)", border: "2px solid #8b5cf6", borderRadius: 18, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 28px rgba(139,92,246,0.45), inset 0 0 20px rgba(139,92,246,0.08)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span style={{ fontSize: 32 }}>🎬</span>
             <div>
@@ -2162,6 +2162,8 @@ export default function Home() {
     <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0}
+        @keyframes planGlow{0%,100%{box-shadow:0 0 28px rgba(139,92,246,0.45),inset 0 0 20px rgba(139,92,246,0.08);border-color:#8b5cf6}50%{box-shadow:0 0 45px rgba(167,139,250,0.85),0 0 80px rgba(139,92,246,0.4),inset 0 0 30px rgba(139,92,246,0.15);border-color:#c4b5fd}}
+        .plan-glow{animation:planGlow 2s ease-in-out infinite}
         html,body{background:#0d0d14;overflow-x:hidden}
         input,select,button,textarea{font-family:inherit}
         input:focus,select:focus,textarea:focus{outline:none;border-color:#e8a020!important}
