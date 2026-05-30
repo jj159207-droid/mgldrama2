@@ -201,6 +201,8 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     window.addEventListener("popstate", handlePop);
 
     if (step !== "waiting") return () => window.removeEventListener("popstate", handlePop);
+    // waiting үед ч listener байх
+    return () => window.removeEventListener("popstate", handlePop);
 
     // Supabase-д pending_payments үүсгэх
     dbFetch("pending_payments", {
