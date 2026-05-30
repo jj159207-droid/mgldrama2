@@ -942,16 +942,17 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
   return (
     <>
       <div style={{ padding: "8px 12px" }}>
-        <div onClick={() => setOpen(true)} style={{ background: "#13131f", border: "1px solid rgba(99,102,241,0.4)", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ fontSize: 24 }}>🎬</span>
+        <div onClick={() => setOpen(true)} style={{ background: "linear-gradient(135deg, #1a0a2e 0%, #0f1a2e 100%)", border: "1.5px solid rgba(139,92,246,0.7)", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 18px rgba(139,92,246,0.2)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span style={{ fontSize: 28 }}>🎬</span>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>Багц авах</div>
-              <div style={{ fontSize: 11, color: "#a5b4fc" }}>Эротик · Гадаад · Хятад</div>
+              <div style={{ fontSize: 16, fontWeight: 900, color: "#fff", letterSpacing: "-0.3px" }}>Багц авах</div>
+              <div style={{ fontSize: 12, color: "#c4b5fd", marginTop: 2, fontWeight: 600 }}>Хязгааргүй үзэх эрх</div>
             </div>
           </div>
-          <div style={{ background: "#6366f1", borderRadius: 10, padding: "7px 14px" }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>Сонгох →</span>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "#a78bfa" }}>8,000₮</div>
+            <div style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600 }}>-аас эхлэн</div>
           </div>
         </div>
       </div>
