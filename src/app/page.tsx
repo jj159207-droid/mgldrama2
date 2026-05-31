@@ -1103,7 +1103,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
                 items.push(<FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />);
                 if ((i + 1) % 6 === 0 && i + 1 < filteredFilms.length) {
                   items.push(<div key={`b${i}`} style={{ gridColumn: "1/-1", margin: "4px 0" }}>
-                    <div onClick={() => onMonthly("erotic_3day")} className="plan-glow" style={{ background: "linear-gradient(135deg,#2d1060,#0f1f3d)", border: "2px solid #8b5cf6", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                    <div onClick={() => onMonthly("show_plan")} className="plan-glow" style={{ background: "linear-gradient(135deg,#2d1060,#0f1f3d)", border: "2px solid #8b5cf6", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <span style={{ fontSize: 28 }}>🎬</span>
                         <div>
@@ -2460,6 +2460,11 @@ export default function Home() {
             "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
           };
           if (!user) { pendingPlanRef.current = plan; setShowLoginModal(true); return; }
+          if (plan === "show_plan") {
+            window.history.pushState({ page: "planmodal" }, "");
+            setShowPlanModal(true);
+            return;
+          }
           const p = PLANS[plan] || PLANS["all_1month"];
           setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
         }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
