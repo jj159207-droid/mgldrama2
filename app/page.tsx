@@ -1377,7 +1377,9 @@ function AdminMembersTab() {
   const [grantUser, setGrantUser] = useState<any>(null);
   const [granting, setGranting] = useState(false);
   const [grantFilmId, setGrantFilmId] = useState<number | null>(null);
-  const [grantStep, setGrantStep] = useState<"main"|"month_cat"|"3day_cat"|"film">("main");
+  const [grantStep, setGrantStep] = useState<"main"|"month_cat"|"3day_cat"|"film"|"revoke">("main");
+  const [userPayments, setUserPayments] = useState<any[]>([]);
+  const [loadingUserPayments, setLoadingUserPayments] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -1421,8 +1423,17 @@ function AdminMembersTab() {
     if (!window.confirm("Энэ эрхийг хасах уу?")) return;
     setRevoking(ref_code);
     await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, { method: "PATCH", body: JSON.stringify({ status: "revoked" }) });
+    setUserPayments(ps => ps.filter(p => p.ref_code !== ref_code));
     await load();
     setRevoking(null);
+  };
+
+  // Гишүүний эрхүүдийг татах
+  const loadUserPayments = async (userId: number) => {
+    setLoadingUserPayments(true);
+    const data = await dbFetch(`pending_payments?user_id=eq.${userId}&status=eq.confirmed&select=*&order=created_at.desc`);
+    setUserPayments(Array.isArray(data) ? data : []);
+    setLoadingUserPayments(false);
   };
 
   // Эрх өгөх функц
@@ -1478,7 +1489,7 @@ function AdminMembersTab() {
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 30, color: C.muted }}>Гишүүн олдсонгүй</div>
         ) : filtered.map((u: any) => (
-          <div key={u.id} onClick={() => setGrantUser(u)}
+          <div key={u.id} onClick={() => { setGrantUser(u); setGrantStep("main"); loadUserPayments(u.id); }}
             style={{ background: C.card, border: `0.5px solid ${grantUser?.id === u.id ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
@@ -1501,25 +1512,31 @@ function AdminMembersTab() {
               <button onClick={() => { setGrantUser(null); setGrantFilmId(null); setGrantStep("main"); }}
                 style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>✕</button>
             </div>
-            {/* Үндсэн 4 сонголт */}
+            {/* Үндсэн — Эрх өгөх / Эрх хасах сонголт */}
             {grantStep === "main" && (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {[
-                  ["all_1month", "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
-                  ["month_cat",  "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff"],
-                  ["3day_cat",   "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc"],
-                  ["film",       "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80"],
-                ].map(([key, icon, label, bg, border, color]) => (
-                  <button key={key} disabled={granting}
-                    onClick={() => {
-                      if (key === "all_1month") grantAccess("all_1month");
-                      else setGrantStep(key as any);
-                    }}
-                    style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
-                    <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: color as string }}>{label}</div>
-                  </button>
-                ))}
+              <div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+                  {[
+                    ["all_1month", "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
+                    ["month_cat",  "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff"],
+                    ["3day_cat",   "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc"],
+                    ["film",       "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80"],
+                  ].map(([key, icon, label, bg, border, color]) => (
+                    <button key={key} disabled={granting}
+                      onClick={() => {
+                        if (key === "all_1month") grantAccess("all_1month");
+                        else setGrantStep(key as any);
+                      }}
+                      style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
+                      <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: color as string }}>{label}</div>
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setGrantStep("revoke")}
+                  style={{ width: "100%", background: "#1a0505", border: `0.5px solid ${C.red}`, borderRadius: 10, padding: "11px 14px", color: C.red, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
+                  🚫 Эрх хасах
+                </button>
               </div>
             )}
 
@@ -1576,6 +1593,34 @@ function AdminMembersTab() {
                   ))}
                 </div>
                 <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 8 }}>← Буцах</button>
+              </div>
+            )}
+
+            {/* Эрх хасах */}
+            {grantStep === "revoke" && (
+              <div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>🚫 Идэвхтэй эрхүүд:</div>
+                {loadingUserPayments ? (
+                  <div style={{ textAlign: "center", color: C.muted, padding: 16 }}>Ачааллаж байна...</div>
+                ) : userPayments.length === 0 ? (
+                  <div style={{ textAlign: "center", color: C.muted, padding: 14, background: C.card, borderRadius: 10 }}>Идэвхтэй эрх байхгүй</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {userPayments.map((p: any) => (
+                      <div key={p.ref_code} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: C.txt }}>{planLabel(p.plan)}</div>
+                          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleDateString("mn-MN")} · {p.amount?.toLocaleString()}₮</div>
+                        </div>
+                        <button onClick={() => revokePayment(p.ref_code)} disabled={revoking === p.ref_code}
+                          style={{ background: "#1a0505", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0, opacity: revoking === p.ref_code ? 0.5 : 1 }}>
+                          {revoking === p.ref_code ? "..." : "🚫 Хасах"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 10 }}>← Буцах</button>
               </div>
             )}
           </div>
