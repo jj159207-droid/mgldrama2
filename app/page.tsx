@@ -1073,7 +1073,9 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               }
 
               <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
-              <button onClick={onInstall} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: "#60a5fa", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>📲 Апп</button>
+              <button onClick={onInstall} style={{ background: "linear-gradient(135deg,#1a1a2e,#0d0d18)", border: `1.5px solid #e8a020`, color: "#e8a020", cursor: "pointer", fontSize: 12, borderRadius: 10, padding: "6px 12px", fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
+                📲 <span>Апп татах</span>
+              </button>
             </div>
           </div>
         </div>
