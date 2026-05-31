@@ -1446,6 +1446,8 @@ function AdminMembersTab() {
   // Хугацаа дуусаагүй эрхүүдийг шүүх
   const now = Date.now();
   const isActive = (p: any) => {
+    // confirmed_at байхгүй бол идэвхтэй гэж үзнэ
+    if (!p.confirmed_at && !p.created_at) return true;
     const base = new Date(p.confirmed_at || p.created_at).getTime();
     const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
     return base + dur > now;
