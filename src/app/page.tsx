@@ -1394,6 +1394,14 @@ function AdminMembersTab() {
   // Нийт гишүүд харах
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [allSearch, setAllSearch] = useState("");
+
+  useEffect(() => {
+    const handleBack = () => {
+      if (showAllUsers) { setShowAllUsers(false); setAllSearch(""); setGrantUser(null); window.history.pushState({ page: "admin" }, ""); }
+    };
+    window.addEventListener("adminBackPress", handleBack);
+    return () => window.removeEventListener("adminBackPress", handleBack);
+  }, [showAllUsers]);
   // Эрх өгөх
   const [grantUser, setGrantUser] = useState<any>(null);
   const [granting, setGranting] = useState(false);
@@ -1655,7 +1663,7 @@ function AdminMembersTab() {
     <div style={{ padding: "0 14px" }}>
       {/* Нийт тоо — дарахад жагсаалт нээгдэнэ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <div onClick={() => setShowAllUsers(true)}
+        <div onClick={() => { window.history.pushState({ page: "admin-members" }, ""); setShowAllUsers(true); }}
           style={{ background: C.card, border: `0.5px solid ${C.blue}`, borderRadius: 10, padding: 12, cursor: "pointer" }}>
           <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Нийт гишүүн</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.txt }}>{loading ? "..." : users.length}</div>
@@ -1735,6 +1743,14 @@ function AdminContactTab() {
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleBack = () => {
+      if (selectedUser !== null) { setSelectedUser(null); window.history.pushState({ page: "admin" }, ""); }
+    };
+    window.addEventListener("adminBackPress", handleBack);
+    return () => window.removeEventListener("adminBackPress", handleBack);
+  }, [selectedUser]);
 
   const load = async () => {
     setLoading(true);
@@ -1858,7 +1874,7 @@ function AdminContactTab() {
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Мессеж байхгүй байна</div>
       ) : (
         users.map((u: any) => (
-          <div key={u.user_id || u.phone} onClick={() => setSelectedUser(u.user_id || u.phone)}
+          <div key={u.user_id || u.phone} onClick={() => { window.history.pushState({ page: "admin-chat" }, ""); setSelectedUser(u.user_id || u.phone); }}
             style={{ background: C.card, border: `0.5px solid ${u.unread > 0 ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ background: C.card2, borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
@@ -2220,15 +2236,33 @@ export default function Home() {
   };
 
   // ── Браузерийн буцах товч ──
+  const pageRef = useRef("home");
+  useEffect(() => { pageRef.current = page; }, [page]);
+
   useEffect(() => {
     const handlePop = () => {
-      // Бүх modal/overlay хаах, home руу буцах
-      setPage("home");
+      const cur = pageRef.current;
+      // Admin дотрын navigation (chat, members) — custom event-р мэдэгдэнэ
+      const adminBack = new CustomEvent("adminBackPress");
+      window.dispatchEvent(adminBack);
+      // Admin дотор байвал admin-д үлдэнэ (дотрын буцах нь custom event-р хийгдэнэ)
+      if (cur === "admin") {
+        return;
+      }
+      if (cur === "adminlogin") {
+        setPage("home");
+        return;
+      }
+      if (cur === "video" || cur === "search" || cur === "payment") {
+        setPage("home");
+        setCurFilm(null);
+        setPayFilm(null);
+        return;
+      }
+      // Modal хаах
       setShowContact(false);
       setShowLoginModal(false);
       setShowInstall(false);
-      setPayFilm(null);
-      setCurFilm(null);
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
