@@ -1224,7 +1224,7 @@ function AdminOrdersTab() {
       const [pend, fl, us] = await Promise.all([
         dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
         dbFetch("films?select=id,title"),
-        dbFetch("users?select=id,phone,user_id"),
+        dbFetch("users?select=id,phone,user_id&order=id.desc&limit=2000"),
       ]);
       setOrders(Array.isArray(pend) ? pend : []);
       setFilms(Array.isArray(fl) ? fl : []);
@@ -1269,7 +1269,10 @@ function AdminOrdersTab() {
   };
 
   const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
-  const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
+  const getPhone = (uid: number, order?: any) => {
+    if (order?.phone) return order.phone;
+    return uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
+  };
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.red;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
@@ -1279,7 +1282,7 @@ function AdminOrdersTab() {
     else { if (o.status !== filter) return false; }
     if (search.trim()) {
       const s = search.trim().toLowerCase();
-      const phone = getPhone(o.user_id).toLowerCase();
+      const phone = getPhone(o.user_id, o).toLowerCase();
       const ref = (o.ref_code || "").toLowerCase();
       return phone.includes(s) || ref.includes(s);
     }
@@ -1343,7 +1346,7 @@ function AdminOrdersTab() {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
                 <div style={{ fontSize: 12, color: C.txt, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
-                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id)}</div>
+                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id, o)}</div>
                 {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Сарын багц</div>}
               </div>
               <div style={{ textAlign: "right" }}>
@@ -1440,11 +1443,20 @@ function AdminMembersTab() {
     return p?.phone || users.find(u => u.id === userId)?.phone || "—";
   };
 
-  const paymentsAllBag = allPayments.filter(p => p.plan === "all_1month");
-  const paymentsMonthly = allPayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
-  const payments3Day = allPayments.filter(p => p.plan && p.plan.endsWith("_3day"));
-  const paymentsFilm = allPayments.filter(p => p.plan === "single" || (!p.plan?.includes("month") && !p.plan?.includes("3day") && !p.plan?.includes("all")));
-  const totalWithAccess = new Set(allPayments.map(p => p.user_id)).size;
+  // Хугацаа дуусаагүй эрхүүдийг шүүх
+  const now = Date.now();
+  const isActive = (p: any) => {
+    const base = new Date(p.confirmed_at || p.created_at).getTime();
+    const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
+    return base + dur > now;
+  };
+  const activePayments = allPayments.filter(isActive);
+
+  const paymentsAllBag = activePayments.filter(p => p.plan === "all_1month");
+  const paymentsMonthly = activePayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
+  const payments3Day = activePayments.filter(p => p.plan && p.plan.endsWith("_3day"));
+  const paymentsFilm = activePayments.filter(p => p.plan === "single" || (!p.plan?.includes("month") && !p.plan?.includes("3day") && !p.plan?.includes("all")));
+  const totalWithAccess = new Set(activePayments.map(p => p.user_id)).size;
 
   const currentPayments = filterTab === "allbag" ? paymentsAllBag : filterTab === "monthly" ? paymentsMonthly : filterTab === "3day" ? payments3Day : paymentsFilm;
   const filteredPayments = currentPayments.filter(p => !search.trim() || getPhone(p.user_id).includes(search.trim()));
