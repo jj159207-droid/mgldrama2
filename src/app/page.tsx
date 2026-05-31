@@ -393,9 +393,9 @@ function AdminSmsTab() {
     if (!result) return;
     await dbFetch(`pending_payments?ref_code=eq.${result.ref_code}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: "confirmed" }),
+      body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString() }),
     });
-    setResult((r: any) => ({ ...r, status: "confirmed" }));
+    setResult((r: any) => ({ ...r, status: "confirmed", confirmed_at: new Date().toISOString() }));
   };
 
   return (
@@ -1390,7 +1390,13 @@ function AdminMembersTab() {
 
   useEffect(() => {
     const handleBack = () => {
-      if (showAllUsers) { setShowAllUsers(false); setAllSearch(""); setGrantUser(null); window.history.pushState({ page: "admin" }, ""); }
+      if (showAllUsers) {
+        setShowAllUsers(false);
+        setAllSearch("");
+        setGrantUser(null);
+        setGrantStep("main");
+        window.history.pushState({ page: "admin" }, "");
+      }
     };
     window.addEventListener("adminBackPress", handleBack);
     return () => window.removeEventListener("adminBackPress", handleBack);
