@@ -2188,13 +2188,14 @@ export default function Home() {
 
     payments.forEach((p: any) => {
       if (p.status !== "confirmed") return; // revoked болон pending-г орхино
+      const baseTime = new Date(p.confirmed_at || p.created_at).getTime();
       const is3day = p.plan?.endsWith("_3day");
       const dur = is3day ? 3*24*60*60*1000 : 30*24*60*60*1000;
-      const exp = new Date(p.created_at).getTime() + dur;
+      const exp = baseTime + dur;
       if (p.plan === "monthly" || p.plan === "1month" || p.plan === "3day" || p.plan === "1year") {
         if (exp > now) newAccess["monthly"] = Math.max(newAccess["monthly"] || 0, exp);
       } else if (p.plan === "all_1month") {
-        if (exp > now) { newAccess["cat_erotic"] = exp; newAccess["cat_gadaad"] = exp; newAccess["cat_hyatad"] = exp; }
+        if (exp > now) { newAccess["cat_erotic"] = Math.max(newAccess["cat_erotic"] || 0, exp); newAccess["cat_gadaad"] = Math.max(newAccess["cat_gadaad"] || 0, exp); newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp); }
       } else if (p.plan?.startsWith("erotic")) {
         if (exp > now) newAccess["cat_erotic"] = Math.max(newAccess["cat_erotic"] || 0, exp);
       } else if (p.plan?.startsWith("gadaad")) {
@@ -2202,8 +2203,8 @@ export default function Home() {
       } else if (p.plan?.startsWith("hyatad")) {
         if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
       }
-      if (p.film_id && p.film_id > 0 && (p.plan === "single" || !p.plan?.includes("month") && !p.plan?.includes("day") && !p.plan?.includes("all"))) {
-        const filmExp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
+      if (p.film_id && p.film_id > 0 && p.plan === "single") {
+        const filmExp = baseTime + 72 * 60 * 60 * 1000;
         if (filmExp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, filmExp);
       }
     });
