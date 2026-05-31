@@ -292,7 +292,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
           {/* Үнэ */}
           <div style={{ textAlign: "center", marginBottom: 16 }}>
             <div style={{ fontSize: 36, fontWeight: 900, color: film.monthly ? "#a855f7" : C.gold }}>{film.price?.toLocaleString()}₮</div>
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{film.monthly ? "1 сарын хязгааргүй эрх" : "дараах данс руу шилжүүлнэ үү"}</div>
+            <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн хязгааргүй эрх" : "1 сарын хязгааргүй эрх") : "дараах данс руу шилжүүлнэ үү"}</div>
           </div>
 
           {/* Дансны мэдээлэл */}
@@ -2245,6 +2245,7 @@ export default function Home() {
   const [adminAuth, setAdminAuth] = useState(false);
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -2358,6 +2359,7 @@ export default function Home() {
   // ── Браузерийн буцах товч ──
   const pageRef = useRef("home");
   useEffect(() => { pageRef.current = page; }, [page]);
+  const pendingPlanRef = useRef<string | null>(null);
 
   useEffect(() => {
     const handlePop = () => {
@@ -2369,7 +2371,7 @@ export default function Home() {
       if (cur === "video" || cur === "search" || cur === "payment") {
         setPage("home"); setCurFilm(null); setPayFilm(null); return;
       }
-      setShowContact(false); setShowLoginModal(false); setShowInstall(false);
+      setShowContact(false); setShowLoginModal(false); setShowInstall(false); setShowPlanModal(false);
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
@@ -2415,7 +2417,18 @@ export default function Home() {
     }
   };
 
-  const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
+  const handleLogin = (u: any) => {
+    setUser(u);
+    syncAccessFromDB(u.id);
+    setShowLoginModal(false);
+    if (pendingPlanRef.current) {
+      pendingPlanRef.current = null;
+      window.history.pushState({ page: "planmodal" }, "");
+      setShowPlanModal(true);
+      return;
+    }
+    setPage("home");
+  };
   const handleLogout = () => { clearSession(); setUser(null); };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
 
@@ -2446,7 +2459,7 @@ export default function Home() {
             "hyatad_1month":{ title: "🇨🇳 Хятад · 1 сар",    price: 12500, plan: "hyatad_1month" },
             "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
           };
-          if (!user) { setShowLoginModal(true); return; }
+          if (!user) { pendingPlanRef.current = plan; setShowLoginModal(true); return; }
           const p = PLANS[plan] || PLANS["all_1month"];
           setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
         }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
@@ -2456,6 +2469,31 @@ export default function Home() {
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
       {payFilm && page === "payment" && <BankModal film={payFilm} onClose={() => { setPayFilm(null); setPage("home"); }} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
+      {showPlanModal && user && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
+          <div style={{ width: "100%", background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 16px 40px", border: `0.5px solid ${C.bd}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 16, fontWeight: 800, color: C.txt }}>🎬 Багц сонгох</div>
+              <button onClick={() => setShowPlanModal(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
+            </div>
+            <PlanModal onSelect={(plan: string) => {
+              setShowPlanModal(false);
+              const PLANS: any = {
+                "erotic_3day":  { title: "🔞 Эротик · 3 хоног",  price: 8000,  plan: "erotic_3day" },
+                "erotic_1month":{ title: "🔞 Эротик · 1 сар",    price: 12500, plan: "erotic_1month" },
+                "gadaad_3day":  { title: "🌍 Гадаад · 3 хоног",  price: 8000,  plan: "gadaad_3day" },
+                "gadaad_1month":{ title: "🌍 Гадаад · 1 сар",    price: 12500, plan: "gadaad_1month" },
+                "hyatad_3day":  { title: "🇨🇳 Хятад · 3 хоног",  price: 8000,  plan: "hyatad_3day" },
+                "hyatad_1month":{ title: "🇨🇳 Хятад · 1 сар",    price: 12500, plan: "hyatad_1month" },
+                "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
+              };
+              const p = PLANS[plan] || PLANS["all_1month"];
+              setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true });
+              navigateTo("payment");
+            }} />
+          </div>
+        </div>
+      )}
       {showInstall && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-end", zIndex: 400 }}>
           <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "24px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
