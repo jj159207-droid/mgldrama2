@@ -1094,7 +1094,16 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         </div>
 
         {/* ── БАГЦ АВАХ ТОВЧ ── */}
-        {user && <PlanModal onSelect={onMonthly} />}
+        <div onClick={() => onMonthly("show_plan")} style={{ margin: "8px 16px", background: "linear-gradient(135deg,#1a0a2e,#0d0d18)", border: "1.5px solid #8b5cf6", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 24 }}>🎬</span>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Багц авах</div>
+              <div style={{ fontSize: 11, color: "#ddd6fe" }}>Хязгааргүй үзэх эрх</div>
+            </div>
+          </div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: "#c4b5fd" }}>8,000₮-аас</div>
+        </div>
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : (() => {
