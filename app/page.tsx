@@ -1225,7 +1225,7 @@ function AdminOrdersTab() {
       const [pend, fl, us] = await Promise.all([
         dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
         dbFetch("films?select=id,title"),
-        dbFetch("users?select=id,phone,user_id"),
+        dbFetch("users?select=id,phone,user_id&order=id.desc&limit=2000"),
       ]);
       setOrders(Array.isArray(pend) ? pend : []);
       setFilms(Array.isArray(fl) ? fl : []);
@@ -2366,13 +2366,15 @@ export default function Home() {
   };
   useEffect(() => { loadFilms(); }, []);
 
+  const pendingFilmRef = useRef<any>(null);
+
   const handleFilm = (f: any) => {
     if (f.free) { setCurFilm({ ...f, locked: false }); navigateTo("video"); return; }
-    if (!f.locked) { 
-      if (!user) { setShowLoginModal(true); return; }
+    if (!f.locked) {
+      if (!user) { pendingFilmRef.current = f; setShowLoginModal(true); return; }
       setCurFilm({ ...f, locked: false }); navigateTo("video"); return;
     }
-    if (!user) { setShowLoginModal(true); return; }
+    if (!user) { pendingFilmRef.current = f; setShowLoginModal(true); return; }
     if (hasAccess(f.id, decodeCat(f.badge))) { setCurFilm({ ...f, locked: false }); navigateTo("video"); }
     else { setPayFilm(f); navigateTo("payment"); }
   };
@@ -2406,7 +2408,38 @@ export default function Home() {
     }
   };
 
-  const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
+  const handleLogin = (u: any) => {
+    setUser(u);
+    syncAccessFromDB(u.id);
+    setShowLoginModal(false);
+    // Нэвтрэхийн өмнө кино дарсан бол тэр кинод үргэлжлүүлэх
+    if (pendingFilmRef.current) {
+      const f = pendingFilmRef.current;
+      pendingFilmRef.current = null;
+      if (!f.locked) { setCurFilm({ ...f, locked: false }); navigateTo("video"); return; }
+      // Эрх шалгах — syncAccessFromDB async тул accessMap шууд шинэчлэгдэхгүй
+      // Тиймээс DB-с шалгаж үзнэ
+      dbFetch(`pending_payments?user_id=eq.${u.id}&status=eq.confirmed&select=plan,film_id`).then((pays: any) => {
+        if (!Array.isArray(pays)) { setPayFilm(f); navigateTo("payment"); return; }
+        const now = Date.now();
+        const cat = decodeCat(f.badge);
+        const catKey: any = { "Эротик": "erotic", "Гадаад": "gadaad", "Хятад": "hyatad" };
+        const hasA = pays.some((p: any) => {
+          const base = new Date(p.confirmed_at || p.created_at).getTime();
+          const dur = p.plan?.endsWith("_3day") ? 3*24*3600*1000 : 30*24*3600*1000;
+          if (base + dur < now) return false;
+          if (p.plan === "all_1month") return true;
+          if (p.plan?.startsWith(catKey[cat] || "erotic")) return true;
+          if (p.plan === "single" && p.film_id === f.id) return true;
+          return false;
+        });
+        if (hasA) { setCurFilm({ ...f, locked: false }); navigateTo("video"); }
+        else { setPayFilm(f); navigateTo("payment"); }
+      });
+      return;
+    }
+    setPage("home");
+  };
   const handleLogout = () => { clearSession(); setUser(null); setAccessMap({}); localStorage.removeItem("kino_access"); };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
 
