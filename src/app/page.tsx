@@ -609,96 +609,84 @@ function FilmCard({ film, onClick, expiry }: any) {
 }
 
 function ContactModal({ onClose, user }: any) {
-  const [msgs, setMsgs] = useState<any[]>([]);
-  const [msg, setMsg] = useState("");
+  const [phone, setPhone] = useState(user?.phone || "");
+  const [issue, setIssue] = useState("");
   const [sending, setSending] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const bottomRef = useRef<any>(null);
-
-  const load = async () => {
-    if (!user?.id) { setLoading(false); return; }
-    const data = await dbFetch(`contact_messages?user_id=eq.${user.id}&order=created_at.asc&select=*`);
-    setMsgs(Array.isArray(data) ? data : []);
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState("");
 
   const send = async () => {
-    if (!msg.trim()) return;
+    const ph = phone.replace(/\D/g, "");
+    if (ph.length < 8) { setErr("Утасны дугаараа оруулна уу"); return; }
+    if (!issue.trim()) { setErr("Асуудлаа бичнэ үү"); return; }
+    setErr("");
     setSending(true);
-    const newMsg = { phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false };
-    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
-    setMsg("");
-    // Сүүлийн 3 мэссэж л хадгалах — хуучныг устгах
-    const allMsgs = await dbFetch(`contact_messages?user_id=eq.${user?.id}&order=created_at.asc&select=id`);
-    if (Array.isArray(allMsgs) && allMsgs.length > 3) {
-      const toDelete = allMsgs.slice(0, allMsgs.length - 3);
-      for (const m of toDelete) {
-        await dbFetch(`contact_messages?id=eq.${m.id}`, { method: "DELETE" });
-      }
-    }
-    await load();
+    const payload = {
+      phone: ph,
+      message: issue.trim(),
+      user_id: user?.id || null,
+      read: false,
+    };
+    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(payload) });
     setSending(false);
+    setSent(true);
   };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 300, display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Админтай холбогдох</div>
-            <div style={{ fontSize: 11, color: C.green }}>● Онлайн</div>
+      <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
+        <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Холбогдох</div>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: "28px 20px" }}>
+        {sent ? (
+          <div style={{ textAlign: "center", marginTop: 60 }}>
+            <div style={{ fontSize: 60, marginBottom: 16 }}>✅</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: C.txt, marginBottom: 10 }}>Амжилттай илгээлээ!</div>
+            <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7 }}>Таны мэдээллийг хүлээн авлаа.<br/>Удахгүй админ тань руу залгах болно.</div>
+            <button onClick={onClose} style={{ ...goldBtn, marginTop: 30, borderRadius: 12 }}>Буцах</button>
           </div>
-        </div>
-      </div>
-
-      {/* Чатын мессежүүд */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-        {loading ? (
-          <div style={{ textAlign: "center", color: C.muted, marginTop: 40 }}>Ачааллаж байна...</div>
-        ) : msgs.length === 0 ? (
-          <div style={{ textAlign: "center", color: C.muted, marginTop: 40, fontSize: 13 }}>Асуулт, санал хүсэлтээ бичнэ үү</div>
         ) : (
-          msgs.map(m => (
-            <div key={m.id}>
-              {/* Хэрэглэгчийн мессеж — баруун тал */}
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-                <div style={{ background: C.blue, borderRadius: "16px 16px 4px 16px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: "#fff" }}>
-                  {m.message}
-                </div>
-              </div>
-              {/* Админы хариу — зүүн тал */}
-              {m.reply && (
-                <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 4 }}>
-                  <div style={{ background: C.card2, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: C.txt, border: `0.5px solid ${C.bd}` }}>
-                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Админ</div>
-                    {m.reply}
-                  </div>
-                </div>
-              )}
+          <>
+            {/* Мэдэгдэл */}
+            <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 14, padding: "16px 18px", marginBottom: 24 }}>
+              <div style={{ fontSize: 22, marginBottom: 8 }}>📞</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.txt, marginBottom: 6 }}>Холбогдох дугаараа үлдээнэ үү</div>
+              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>Мэдээллээ илгээсний дараа удахгүй тань руу <span style={{ color: C.gold, fontWeight: 700 }}>админ залгах</span> болно. Түр хүлээнэ үү.</div>
             </div>
-          ))
-        )}
-        <div ref={bottomRef} />
-      </div>
 
-      {/* Мессеж бичих хэсэг */}
-      <div style={{ background: C.card, borderTop: `0.5px solid ${C.bd}`, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
-        <textarea
-          value={msg}
-          onChange={(e: any) => setMsg(e.target.value)}
-          onKeyDown={(e: any) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-          placeholder="Мессеж бичнэ үү..."
-          style={{ ...inputSt, flex: 1, height: 44, resize: "none", lineHeight: 1.5, borderRadius: 22, padding: "11px 16px" }}
-        />
-        <button onClick={send} disabled={sending || !msg.trim()}
-          style={{ background: msg.trim() ? C.blue : C.card2, border: "none", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: 18 }}>
-          ➤
-        </button>
+            {/* Утасны дугаар */}
+            <label style={lbl}>Утасны дугаар</label>
+            <input
+              type="tel"
+              inputMode="numeric"
+              maxLength={8}
+              value={phone}
+              onChange={(e: any) => { setPhone(e.target.value.replace(/\D/g, "").slice(0, 8)); setErr(""); }}
+              placeholder="88123456"
+              
+              style={{ ...inputSt, fontSize: 18, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 16, opacity: 1 }}
+            />
+
+            {/* Асуудал */}
+            <label style={lbl}>Асуудал / Санал хүсэлт</label>
+            <textarea
+              value={issue}
+              onChange={(e: any) => { setIssue(e.target.value); setErr(""); }}
+              placeholder="Асуудлаа дэлгэрэнгүй бичнэ үү..."
+              style={{ ...inputSt, height: 130, resize: "none", lineHeight: 1.6, marginBottom: 16 }}
+            />
+
+            {err && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{err}</div>}
+
+            <button onClick={send} disabled={sending}
+              style={{ ...goldBtn, borderRadius: 12, opacity: sending ? 0.6 : 1 }}>
+              {sending ? "Илгээж байна..." : "📨 Илгээх"}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1379,11 +1367,9 @@ function AdminMembersTab() {
   const [films, setFilms] = useState<any[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<any>(null);
-  const [userPayments, setUserPayments] = useState<any[]>([]);
-  const [loadingPayments, setLoadingPayments] = useState(false);
-  const [showRights, setShowRights] = useState(false);
-  const [filterTab, setFilterTab] = useState<"all"|"monthly"|"film">("all");
+  const [filterTab, setFilterTab] = useState<"allbag"|"monthly"|"3day"|"film">("allbag");
+  const [search, setSearch] = useState("");
+  const [revoking, setRevoking] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -1403,154 +1389,122 @@ function AdminMembersTab() {
     }
   };
 
-  const hasMonthly = (userId: number) => allPayments.some(p => p.user_id === userId && p.plan === "monthly");
-  const hasFilm = (userId: number) => allPayments.some(p => p.user_id === userId && p.plan !== "monthly");
-  const activeCount = (userId: number) => allPayments.filter(p => p.user_id === userId).length;
-
   useEffect(() => { load(); }, []);
 
-  const openUser = async (u: any) => {
-    setSelected(u);
-    setShowRights(false);
-    setLoadingPayments(true);
-    try {
-      const payments = await dbFetch(`pending_payments?user_id=eq.${u.id}&order=created_at.desc&select=*`);
-      setUserPayments(Array.isArray(payments) ? payments : []);
-    } catch(e) {
-      setUserPayments([]);
-    } finally {
-      setLoadingPayments(false);
-    }
+  const getPhone = (userId: number) => users.find(u => u.id === userId)?.phone || "—";
+
+  // Эрх тус бүрийн filter
+  const paymentsAllBag = allPayments.filter(p => p.plan === "all_1month");
+  const paymentsMonthly = allPayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
+  const payments3Day = allPayments.filter(p => p.plan && p.plan.endsWith("_3day"));
+  const paymentsFilm = allPayments.filter(p => p.plan === "single" || (!p.plan?.includes("month") && !p.plan?.includes("3day") && !p.plan?.includes("all")));
+
+  const currentPayments = filterTab === "allbag" ? paymentsAllBag
+    : filterTab === "monthly" ? paymentsMonthly
+    : filterTab === "3day" ? payments3Day
+    : paymentsFilm;
+
+  const filteredPayments = currentPayments.filter(p => {
+    const phone = getPhone(p.user_id);
+    return !search.trim() || phone.includes(search.trim());
+  });
+
+  const totalWithAccess = new Set(allPayments.map(p => p.user_id)).size;
+
+  const planLabel = (plan: string) => {
+    if (plan === "all_1month") return "🌟 Бүх багц";
+    if (plan?.endsWith("_1month")) return "👑 1 сарын эрх";
+    if (plan?.endsWith("_3day")) return "⏱ 3 хоногийн эрх";
+    return "🎬 Кино эрх";
   };
 
-  const revokeAccess = async (ref_code: string) => {
+  const revokePayment = async (ref_code: string) => {
     if (!window.confirm("Энэ эрхийг хасах уу?")) return;
+    setRevoking(ref_code);
     await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
       method: "PATCH",
       body: JSON.stringify({ status: "revoked" }),
     });
-    setUserPayments(ps => ps.map(p => p.ref_code === ref_code ? { ...p, status: "revoked" } : p));
+    await load();
+    setRevoking(null);
   };
 
-  const deleteUser = async (id: number) => {
-    if (!window.confirm("Хэрэглэгчийг устгах уу?")) return;
-    await dbFetch(`users?id=eq.${id}`, { method: "DELETE" });
-    setUsers(us => us.filter(u => u.id !== id));
-    setSelected(null);
-  };
-
-  const getFilmName = (id: number) => id === 0 ? "👑 Сарын багц" : films.find(f => f.id === id)?.title || `Кино #${id}`;
-  const statusColor = (s: string) => s === "confirmed" ? C.green : s === "revoked" ? C.red : C.gold;
-  const statusLabel = (s: string) => s === "confirmed" ? "✅ Идэвхтэй" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
-  const activePayments = userPayments.filter(p => p.status === "confirmed");
-
-  if (selected) return (
-    <div style={{ padding: "0 14px" }}>
-      <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>← Буцах</button>
-      
-      {/* Гишүүний мэдээлэл */}
-      <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
-        <div style={{ fontSize: 18, fontWeight: 800, color: C.gold, marginBottom: 4 }}>📞 {selected.phone}</div>
-        <div style={{ fontSize: 12, color: C.muted }}>ID: {selected.user_id}</div>
-        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Бүртгэгдсэн: {new Date(selected.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <button onClick={() => setShowRights(!showRights)} style={{ flex: 1, background: showRights ? C.blue : C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "9px", color: showRights ? "#fff" : C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            🎬 Кино үзэх эрх {loadingPayments ? "..." : `(${activePayments.length})`}
-          </button>
-          <button onClick={() => deleteUser(selected.id)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "9px 14px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
-        </div>
-      </div>
-
-      {/* Идэвхтэй эрхүүд */}
-      {showRights && (
-        <div style={{ marginBottom: 14 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>
-            🎬 Идэвхтэй кино эрхүүд
-          </div>
-          {loadingPayments ? (
-            <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
-          ) : activePayments.length === 0 ? (
-            <div style={{ textAlign: "center", padding: 16, color: C.muted, background: C.card, borderRadius: 10 }}>Идэвхтэй эрх байхгүй</div>
-          ) : activePayments.map(p => (
-            <div key={p.id} style={{ background: C.card, border: `0.5px solid ${C.green}`, borderRadius: 12, padding: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{getFilmName(p.film_id)}</div>
-                <div style={{ fontSize: 11, color: C.green, marginTop: 2 }}>✅ Идэвхтэй · {p.amount?.toLocaleString()}₮</div>
-                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
-              </div>
-              <button onClick={() => revokeAccess(p.ref_code)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-                🚫 Хасах
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Бүх захиалгын түүх */}
-      <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>Захиалгын түүх</div>
-      {loadingPayments ? (
-        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
-      ) : userPayments.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Захиалга байхгүй</div>
-      ) : userPayments.map(p => (
-        <div key={p.id} style={{ background: C.card, border: `0.5px solid ${statusColor(p.status)}22`, borderRadius: 12, padding: 14, marginBottom: 8 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: "#fb923c", fontFamily: "monospace" }}>{p.ref_code}</div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{getFilmName(p.film_id)}</div>
-              <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
-            </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>{p.amount?.toLocaleString()}₮</div>
-              <div style={{ fontSize: 11, color: statusColor(p.status), marginTop: 2 }}>{statusLabel(p.status)}</div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  const tabLabel = filterTab === "allbag" ? "🌟 Бүх багц авсан гишүүд"
+    : filterTab === "monthly" ? "👑 1 сарын эрхтэй гишүүд"
+    : filterTab === "3day" ? "⏱ 3 хоногийн эрхтэй гишүүд"
+    : "🎬 1 кино эрхтэй гишүүд";
 
   return (
     <div style={{ padding: "0 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{users.length} гишүүн</span>
-        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
+      {/* Нийт тоо */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+        <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Нийт гишүүн</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.txt }}>{loading ? "..." : users.length}</div>
+        </div>
+        <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: 12 }}>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Эрхтэй гишүүн</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: C.gold }}>{loading ? "..." : totalWithAccess}</div>
+        </div>
       </div>
 
-      {/* Filter */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
-        {([["all","Бүгд"],["monthly","👑 Сарын"],["film","🎬 Кино"]] as any[]).map(([k,l]) => (
-          <button key={k} onClick={() => setFilterTab(k)}
-            style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: filterTab === k ? C.gold : C.card2, color: filterTab === k ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-            {l}
-          </button>
+      {/* 4 filter таб */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+        {([
+          ["allbag",  "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d", paymentsAllBag.length],
+          ["monthly", "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff", paymentsMonthly.length],
+          ["3day",    "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc", payments3Day.length],
+          ["film",    "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80", paymentsFilm.length],
+        ] as any[]).map(([k, icon, label, bg, border, color, count]) => (
+          <div key={k} onClick={() => { setFilterTab(k); setSearch(""); }}
+            style={{ background: bg, border: `${filterTab === k ? "2px" : "0.5px"} solid ${border}`, borderRadius: 10, padding: "11px 10px", cursor: "pointer" }}>
+            <div style={{ fontSize: 16, marginBottom: 4 }}>{icon}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color }}>{label}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color, marginTop: 2 }}>{loading ? "..." : count}</div>
+          </div>
         ))}
       </div>
 
+      {/* Гарчиг + Хайлт */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{tabLabel}</span>
+        <div style={{ flex: 1, position: "relative" }}>
+          <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>🔍</span>
+          <input
+            value={search}
+            onChange={(e: any) => setSearch(e.target.value)}
+            placeholder="Дугаар хайх..."
+            style={{ ...inputSt, paddingLeft: 28, padding: "7px 10px 7px 28px", fontSize: 12 }}
+          />
+        </div>
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "7px 10px", color: C.muted, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>🔄</button>
+      </div>
+
+      {/* Жагсаалт */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-      ) : users.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Гишүүн байхгүй байна</div>
+      ) : filteredPayments.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 30, color: C.muted }}>Гишүүн олдсонгүй</div>
       ) : (
-        users
-          .filter(u => {
-            if (filterTab === "monthly") return hasMonthly(u.id);
-            if (filterTab === "film") return hasFilm(u.id) && !hasMonthly(u.id);
-            return true;
-          })
-          .map(u => (
-          <div key={u.id} onClick={() => openUser(u)} style={{ background: C.card, border: `0.5px solid ${activeCount(u.id) > 0 ? C.green : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        filteredPayments.map((p: any) => (
+          <div key={p.ref_code} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: "13px 14px", marginBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
-                <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
-                  {hasMonthly(u.id) && <span style={{ background: "#3b0764", border: `0.5px solid #a855f7`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "#e9d5ff", fontWeight: 700 }}>👑 Сарын эрх</span>}
-                  {hasFilm(u.id) && <span style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: C.green, fontWeight: 700 }}>🎬 {allPayments.filter(p => p.user_id === u.id && p.plan !== "monthly").length} кино</span>}
-                  {!hasMonthly(u.id) && !hasFilm(u.id) && <span style={{ fontSize: 11, color: C.muted }}>Эрхгүй</span>}
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {getPhone(p.user_id)}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleDateString("mn-MN")} · {p.amount?.toLocaleString()}₮</div>
               </div>
-              <span style={{ color: C.muted, fontSize: 16 }}>›</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${C.bd}` }}>
+              <span style={{
+                borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700,
+                background: p.plan === "all_1month" ? "#1a0a3a" : p.plan?.endsWith("_1month") ? "#3b0764" : p.plan?.endsWith("_3day") ? "#0a1628" : "#052e16",
+                border: `0.5px solid ${p.plan === "all_1month" ? "#f59e0b" : p.plan?.endsWith("_1month") ? "#a855f7" : p.plan?.endsWith("_3day") ? "#38bdf8" : "#16a34a"}`,
+                color: p.plan === "all_1month" ? "#fcd34d" : p.plan?.endsWith("_1month") ? "#e9d5ff" : p.plan?.endsWith("_3day") ? "#7dd3fc" : "#4ade80",
+              }}>{planLabel(p.plan)}</span>
+              <button onClick={() => revokePayment(p.ref_code)} disabled={revoking === p.ref_code}
+                style={{ background: "#1a0505", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "7px 14px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: revoking === p.ref_code ? 0.5 : 1 }}>
+                {revoking === p.ref_code ? "..." : "🚫 Эрх хасах"}
+              </button>
             </div>
           </div>
         ))
