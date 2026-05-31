@@ -190,12 +190,8 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Буцах товч дарахад сайтаас гарахгүй байлгах
-  useEffect(() => {
-    const handlePop = () => { onClose(); };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, []);
+  // Буцах нь Home component-ийн popstate-р хийгдэнэ
+  useEffect(() => {}, []);
 
   // Төлбөр үүсгэх + автомат polling эхлүүлэх
   useEffect(() => {
@@ -2204,26 +2200,6 @@ function AdminPage({ films, onBack, onRefresh }: any) {
 export default function Home() {
   const [page, setPage] = useState("home");
   const [films, setFilms] = useState<any[]>([]);
-
-  // Браузерийн буцах товч ажиллуулах
-  const navigateTo = (newPage: string) => {
-    if (newPage !== "home") {
-      window.history.pushState({ page: newPage }, "", "");
-    }
-    setPage(newPage);
-  };
-
-  useEffect(() => {
-    const handlePop = () => {
-      setPage("home");
-      setShowContact(false);
-      setShowLoginModal(false);
-      setPayFilm(null);
-      setCurFilm(null);
-    };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, []);
   const [loading, setLoading] = useState(true);
   const [payFilm, setPayFilm] = useState<any>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
@@ -2236,6 +2212,27 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
+
+  // ── Навигацийн helper — history.pushState + setPage ──
+  const navigateTo = (newPage: string) => {
+    window.history.pushState({ page: newPage }, "");
+    setPage(newPage);
+  };
+
+  // ── Браузерийн буцах товч ──
+  useEffect(() => {
+    const handlePop = () => {
+      // Бүх modal/overlay хаах, home руу буцах
+      setPage("home");
+      setShowContact(false);
+      setShowLoginModal(false);
+      setShowInstall(false);
+      setPayFilm(null);
+      setCurFilm(null);
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   // PWA install prompt барих
   useEffect(() => {
@@ -2256,7 +2253,7 @@ export default function Home() {
         (window as any).__pwaPrompt = null;
       });
     } else {
-      setShowInstall(true);
+      window.history.pushState({ page: "install" }, ""); setShowInstall(true);
     }
   };
 
@@ -2408,7 +2405,7 @@ export default function Home() {
           };
           const p = PLANS[plan] || PLANS["all_1month"];
           setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
-        }} onContact={() => { window.history.pushState({ page: "contact" }, "", ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
+        }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); navigateTo("admin"); }} onBack={() => setPage("home")} />}
