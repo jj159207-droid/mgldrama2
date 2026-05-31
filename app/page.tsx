@@ -1364,19 +1364,26 @@ function AdminOrdersTab() {
 
 function AdminMembersTab() {
   const [users, setUsers] = useState<any[]>([]);
-  const [films, setFilms] = useState<any[]>([]);
   const [allPayments, setAllPayments] = useState<any[]>([]);
+  const [films, setFilms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterTab, setFilterTab] = useState<"allbag"|"monthly"|"3day"|"film">("allbag");
   const [search, setSearch] = useState("");
+  const [filterTab, setFilterTab] = useState<"allbag"|"monthly"|"3day"|"film">("allbag");
   const [revoking, setRevoking] = useState<string | null>(null);
+  // Нийт гишүүд харах
+  const [showAllUsers, setShowAllUsers] = useState(false);
+  const [allSearch, setAllSearch] = useState("");
+  // Эрх өгөх
+  const [grantUser, setGrantUser] = useState<any>(null);
+  const [granting, setGranting] = useState(false);
+  const [grantFilmId, setGrantFilmId] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
       const [us, fl, pay] = await Promise.all([
         dbFetch("users?order=id.desc&select=*"),
-        dbFetch("films?select=id,title"),
+        dbFetch("films?select=id,title&order=id.desc&limit=50"),
         dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,ref_code"),
       ]);
       setUsers(Array.isArray(us) ? us : []);
@@ -1393,23 +1400,14 @@ function AdminMembersTab() {
 
   const getPhone = (userId: number) => users.find(u => u.id === userId)?.phone || "—";
 
-  // Эрх тус бүрийн filter
   const paymentsAllBag = allPayments.filter(p => p.plan === "all_1month");
   const paymentsMonthly = allPayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
   const payments3Day = allPayments.filter(p => p.plan && p.plan.endsWith("_3day"));
   const paymentsFilm = allPayments.filter(p => p.plan === "single" || (!p.plan?.includes("month") && !p.plan?.includes("3day") && !p.plan?.includes("all")));
-
-  const currentPayments = filterTab === "allbag" ? paymentsAllBag
-    : filterTab === "monthly" ? paymentsMonthly
-    : filterTab === "3day" ? payments3Day
-    : paymentsFilm;
-
-  const filteredPayments = currentPayments.filter(p => {
-    const phone = getPhone(p.user_id);
-    return !search.trim() || phone.includes(search.trim());
-  });
-
   const totalWithAccess = new Set(allPayments.map(p => p.user_id)).size;
+
+  const currentPayments = filterTab === "allbag" ? paymentsAllBag : filterTab === "monthly" ? paymentsMonthly : filterTab === "3day" ? payments3Day : paymentsFilm;
+  const filteredPayments = currentPayments.filter(p => !search.trim() || getPhone(p.user_id).includes(search.trim()));
 
   const planLabel = (plan: string) => {
     if (plan === "all_1month") return "🌟 Бүх багц";
@@ -1421,26 +1419,132 @@ function AdminMembersTab() {
   const revokePayment = async (ref_code: string) => {
     if (!window.confirm("Энэ эрхийг хасах уу?")) return;
     setRevoking(ref_code);
-    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status: "revoked" }),
-    });
+    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, { method: "PATCH", body: JSON.stringify({ status: "revoked" }) });
     await load();
     setRevoking(null);
   };
 
-  const tabLabel = filterTab === "allbag" ? "🌟 Бүх багц авсан гишүүд"
-    : filterTab === "monthly" ? "👑 1 сарын эрхтэй гишүүд"
-    : filterTab === "3day" ? "⏱ 3 хоногийн эрхтэй гишүүд"
-    : "🎬 1 кино эрхтэй гишүүд";
+  // Эрх өгөх функц
+  const grantAccess = async (plan: string, filmId?: number) => {
+    if (!grantUser) return;
+    setGranting(true);
+    const ref_code = String(Math.floor(100000 + Math.random() * 900000));
+    const is3day = plan.endsWith("_3day");
+    const isSingle = plan === "single";
+    const prices: any = { "all_1month": 20000, "erotic_1month": 12500, "gadaad_1month": 12500, "hyatad_1month": 12500, "erotic_3day": 8000, "gadaad_3day": 8000, "hyatad_3day": 8000, "single": 0 };
+    await dbFetch("pending_payments", {
+      method: "POST",
+      body: JSON.stringify({
+        ref_code,
+        film_id: isSingle ? (filmId || 0) : 0,
+        amount: prices[plan] || 0,
+        status: "confirmed",
+        user_id: grantUser.id,
+        plan,
+        confirmed_at: new Date().toISOString(),
+      }),
+    });
+    await load();
+    setGranting(false);
+    setGrantUser(null);
+    setGrantFilmId(null);
+    alert("✅ Эрх амжилттай олгогдлоо!");
+  };
 
+  const tabLabel = filterTab === "allbag" ? "🌟 Бүх багц авсан гишүүд" : filterTab === "monthly" ? "👑 1 сарын эрхтэй гишүүд" : filterTab === "3day" ? "⏱ 3 хоногийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
+
+  // ── Нийт гишүүдийн жагсаалт дэлгэц ──
+  if (showAllUsers) {
+    const filtered = users.filter(u => !allSearch.trim() || u.phone?.includes(allSearch.trim()));
+    return (
+      <div style={{ padding: "0 14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <button onClick={() => { setShowAllUsers(false); setAllSearch(""); setGrantUser(null); }}
+            style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>Нийт гишүүд ({users.length})</span>
+          <button onClick={load} style={{ marginLeft: "auto", background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 10px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
+        </div>
+        {/* Хайлт */}
+        <div style={{ position: "relative", marginBottom: 12 }}>
+          <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>🔍</span>
+          <input value={allSearch} onChange={(e: any) => setAllSearch(e.target.value)}
+            placeholder="Дугаар хайх..."
+            style={{ ...inputSt, paddingLeft: 28, padding: "8px 10px 8px 28px", fontSize: 12 }} />
+        </div>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 30, color: C.muted }}>Гишүүн олдсонгүй</div>
+        ) : filtered.map((u: any) => (
+          <div key={u.id} onClick={() => setGrantUser(u)}
+            style={{ background: C.card, border: `0.5px solid ${grantUser?.id === u.id ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+              </div>
+              <span style={{ color: C.muted, fontSize: 16 }}>›</span>
+            </div>
+          </div>
+        ))}
+
+        {/* Эрх өгөх панел */}
+        {grantUser && (
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1.5px solid ${C.gold}`, borderRadius: "18px 18px 0 0", padding: "20px 16px 36px", zIndex: 50 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, color: C.muted }}>Эрх өгөх хэрэглэгч</div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: C.gold }}>📞 {grantUser.phone}</div>
+              </div>
+              <button onClick={() => { setGrantUser(null); setGrantFilmId(null); }}
+                style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>✕</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+              {[
+                ["all_1month",    "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
+                ["erotic_1month", "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff"],
+                ["erotic_3day",   "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc"],
+                ["single",        "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80"],
+              ].map(([plan, icon, label, bg, border, color]) => (
+                <button key={plan} onClick={() => plan === "single" ? setGrantFilmId(-1) : grantAccess(plan as string)}
+                  disabled={granting}
+                  style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: color as string }}>{label}</div>
+                </button>
+              ))}
+            </div>
+            {/* 1 кино сонгох */}
+            {grantFilmId === -1 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Кино сонгох:</div>
+                <div style={{ maxHeight: 160, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+                  {films.map((f: any) => (
+                    <button key={f.id} onClick={() => grantAccess("single", f.id)} disabled={granting}
+                      style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 12px", color: C.txt, fontSize: 13, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
+                      🎬 {f.title}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setGrantFilmId(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 6 }}>← Буцах</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Үндсэн дэлгэц ──
   return (
     <div style={{ padding: "0 14px" }}>
-      {/* Нийт тоо */}
+      {/* Нийт тоо — дарахад жагсаалт нээгдэнэ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: 12 }}>
+        <div onClick={() => setShowAllUsers(true)}
+          style={{ background: C.card, border: `0.5px solid ${C.blue}`, borderRadius: 10, padding: 12, cursor: "pointer" }}>
           <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Нийт гишүүн</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.txt }}>{loading ? "..." : users.length}</div>
+          <div style={{ fontSize: 10, color: C.blue, marginTop: 4 }}>Дарж харах →</div>
         </div>
         <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: 12 }}>
           <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Эрхтэй гишүүн</div>
@@ -1470,17 +1574,13 @@ function AdminMembersTab() {
         <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{tabLabel}</span>
         <div style={{ flex: 1, position: "relative" }}>
           <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>🔍</span>
-          <input
-            value={search}
-            onChange={(e: any) => setSearch(e.target.value)}
-            placeholder="Дугаар хайх..."
-            style={{ ...inputSt, paddingLeft: 28, padding: "7px 10px 7px 28px", fontSize: 12 }}
-          />
+          <input value={search} onChange={(e: any) => setSearch(e.target.value)} placeholder="Дугаар хайх..."
+            style={{ ...inputSt, paddingLeft: 28, padding: "7px 10px 7px 28px", fontSize: 12 }} />
         </div>
         <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "7px 10px", color: C.muted, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>🔄</button>
       </div>
 
-      {/* Жагсаалт */}
+      {/* Эрхтэй гишүүдийн жагсаалт */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
       ) : filteredPayments.length === 0 ? (
