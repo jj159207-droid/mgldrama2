@@ -206,6 +206,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
         amount: film.price,
         status: "pending",
         user_id: user?.id || null,
+        phone: user?.phone || null,
         plan: film.plan || (film.monthly ? "monthly" : "single"),
       }),
     });
@@ -1215,23 +1216,20 @@ function AdminOrdersTab() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [films, setFilms] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "revoked" | "monthly">("all");
   const [search, setSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
-      const [pend, fl, us] = await Promise.all([
-        dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
+      const [pend, fl] = await Promise.all([
+        dbFetch("pending_payments?order=created_at.desc&limit=200&select=*"),
         dbFetch("films?select=id,title"),
-        dbFetch("users?select=id,phone,user_id&order=id.desc&limit=2000"),
       ]);
       setOrders(Array.isArray(pend) ? pend : []);
       setFilms(Array.isArray(fl) ? fl : []);
-      setUsers(Array.isArray(us) ? us : []);
     } catch(e) {
-      setOrders([]); setFilms([]); setUsers([]);
+      setOrders([]); setFilms([]);
     } finally {
       setLoading(false);
     }
@@ -1270,7 +1268,7 @@ function AdminOrdersTab() {
   };
 
   const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
-  const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
+  const getPhone = (uid: number, order?: any) => order?.phone || (uid ? "—" : "—");
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.red;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
@@ -1280,7 +1278,7 @@ function AdminOrdersTab() {
     else { if (o.status !== filter) return false; }
     if (search.trim()) {
       const s = search.trim().toLowerCase();
-      const phone = getPhone(o.user_id).toLowerCase();
+      const phone = (o.phone || getPhone(o.user_id, o)).toLowerCase();
       const ref = (o.ref_code || "").toLowerCase();
       return phone.includes(s) || ref.includes(s);
     }
@@ -1344,7 +1342,7 @@ function AdminOrdersTab() {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
                 <div style={{ fontSize: 12, color: C.txt, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
-                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id)}</div>
+                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {o.phone || getPhone(o.user_id, o)}</div>
                 {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Сарын багц</div>}
               </div>
               <div style={{ textAlign: "right" }}>
@@ -1416,7 +1414,7 @@ function AdminMembersTab() {
       const [us, fl, pay] = await Promise.all([
         dbFetch("users?order=id.desc&select=*"),
         dbFetch("films?select=id,title&order=id.desc&limit=50"),
-        dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,ref_code"),
+        dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,confirmed_at,ref_code,phone"),
       ]);
       setUsers(Array.isArray(us) ? us : []);
       setFilms(Array.isArray(fl) ? fl : []);
@@ -1430,7 +1428,10 @@ function AdminMembersTab() {
 
   useEffect(() => { load(); }, []);
 
-  const getPhone = (userId: number) => users.find(u => u.id === userId)?.phone || "—";
+  const getPhone = (userId: number) => {
+    const p = allPayments.find(p => p.user_id === userId);
+    return p?.phone || users.find(u => u.id === userId)?.phone || "—";
+  };
 
   const paymentsAllBag = allPayments.filter(p => p.plan === "all_1month");
   const paymentsMonthly = allPayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
@@ -1481,6 +1482,7 @@ function AdminMembersTab() {
         amount: prices[plan] || 0,
         status: "confirmed",
         user_id: grantUser.id,
+        phone: grantUser.phone || null,
         plan,
         confirmed_at: new Date().toISOString(),
       }),
