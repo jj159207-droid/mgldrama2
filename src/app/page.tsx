@@ -1143,12 +1143,7 @@ function VideoPage({ film, onBack }: any) {
   const { type, src } = getVideoEmbed(mainUrl);
   useEffect(() => {
     const t = setTimeout(() => setShowControls(false), 4000);
-    const handlePop = () => { onBack(); };
-    window.addEventListener("popstate", handlePop);
-    return () => { 
-      clearTimeout(t); 
-      window.removeEventListener("popstate", handlePop);
-    };
+    return () => { clearTimeout(t); };
   }, []);
   return (
     <div onClick={() => setShowControls(v => !v)} style={{ background: "#000", position: "fixed", inset: 0, zIndex: 50 }}>
@@ -2421,7 +2416,7 @@ export default function Home() {
       if (!f.locked) { setCurFilm({ ...f, locked: false }); navigateTo("video"); return; }
       // Эрх шалгах — syncAccessFromDB async тул accessMap шууд шинэчлэгдэхгүй
       // Тиймээс DB-с шалгаж үзнэ
-      dbFetch(`pending_payments?user_id=eq.${u.id}&status=eq.confirmed&select=plan,film_id`).then((pays: any) => {
+      dbFetch(`pending_payments?user_id=eq.${u.id}&status=eq.confirmed&select=plan,film_id,confirmed_at,created_at`).then((pays: any) => {
         if (!Array.isArray(pays)) { setPayFilm(f); navigateTo("payment"); return; }
         const now = Date.now();
         const cat = decodeCat(f.badge);
