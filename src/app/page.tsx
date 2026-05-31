@@ -2356,7 +2356,7 @@ export default function Home() {
   };
 
   const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
-  const handleLogout = () => { clearSession(); setUser(null); };
+  const handleLogout = () => { clearSession(); setUser(null); setAccessMap({}); localStorage.removeItem("kino_access"); };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
 
   return (
