@@ -1377,6 +1377,7 @@ function AdminMembersTab() {
   const [grantUser, setGrantUser] = useState<any>(null);
   const [granting, setGranting] = useState(false);
   const [grantFilmId, setGrantFilmId] = useState<number | null>(null);
+  const [grantStep, setGrantStep] = useState<"main"|"month_cat"|"3day_cat"|"film">("main");
 
   const load = async () => {
     setLoading(true);
@@ -1448,6 +1449,7 @@ function AdminMembersTab() {
     setGranting(false);
     setGrantUser(null);
     setGrantFilmId(null);
+    setGrantStep("main");
     alert("✅ Эрх амжилттай олгогдлоо!");
   };
 
@@ -1490,43 +1492,90 @@ function AdminMembersTab() {
 
         {/* Эрх өгөх панел */}
         {grantUser && (
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1.5px solid ${C.gold}`, borderRadius: "18px 18px 0 0", padding: "20px 16px 36px", zIndex: 50 }}>
+          <div style={{ background: C.card2, border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "16px 14px", marginTop: 6, marginBottom: 16 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div>
-                <div style={{ fontSize: 13, color: C.muted }}>Эрх өгөх хэрэглэгч</div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: C.gold }}>📞 {grantUser.phone}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>Эрх өгөх хэрэглэгч</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: C.gold }}>📞 {grantUser.phone}</div>
               </div>
-              <button onClick={() => { setGrantUser(null); setGrantFilmId(null); }}
+              <button onClick={() => { setGrantUser(null); setGrantFilmId(null); setGrantStep("main"); }}
                 style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>✕</button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
-              {[
-                ["all_1month",    "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
-                ["erotic_1month", "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff"],
-                ["erotic_3day",   "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc"],
-                ["single",        "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80"],
-              ].map(([plan, icon, label, bg, border, color]) => (
-                <button key={plan} onClick={() => plan === "single" ? setGrantFilmId(-1) : grantAccess(plan as string)}
-                  disabled={granting}
-                  style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
-                  <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: color as string }}>{label}</div>
-                </button>
-              ))}
-            </div>
-            {/* 1 кино сонгох */}
-            {grantFilmId === -1 && (
-              <div style={{ marginTop: 8 }}>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Кино сонгох:</div>
-                <div style={{ maxHeight: 160, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* Үндсэн 4 сонголт */}
+            {grantStep === "main" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                {[
+                  ["all_1month", "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
+                  ["month_cat",  "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff"],
+                  ["3day_cat",   "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc"],
+                  ["film",       "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80"],
+                ].map(([key, icon, label, bg, border, color]) => (
+                  <button key={key} disabled={granting}
+                    onClick={() => {
+                      if (key === "all_1month") grantAccess("all_1month");
+                      else setGrantStep(key as any);
+                    }}
+                    style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
+                    <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: color as string }}>{label}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* 1 сарын эрх — багц сонгох */}
+            {grantStep === "month_cat" && (
+              <div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>👑 1 сарын — аль багц?</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    ["erotic_1month", "🔞 Эротик · 1 сар"],
+                    ["gadaad_1month", "🌍 Гадаад · 1 сар"],
+                    ["hyatad_1month", "🇨🇳 Хятад · 1 сар"],
+                  ].map(([plan, label]) => (
+                    <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
+                      style={{ background: "#2a0550", border: `0.5px solid #a855f7`, borderRadius: 10, padding: "12px 14px", color: "#e9d5ff", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 10 }}>← Буцах</button>
+              </div>
+            )}
+
+            {/* 3 хоногийн эрх — багц сонгох */}
+            {grantStep === "3day_cat" && (
+              <div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>⏱ 3 хоног — аль багц?</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {[
+                    ["erotic_3day", "🔞 Эротик · 3 хоног"],
+                    ["gadaad_3day", "🌍 Гадаад · 3 хоног"],
+                    ["hyatad_3day", "🇨🇳 Хятад · 3 хоног"],
+                  ].map(([plan, label]) => (
+                    <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
+                      style={{ background: "#061220", border: `0.5px solid #38bdf8`, borderRadius: 10, padding: "12px 14px", color: "#7dd3fc", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 10 }}>← Буцах</button>
+              </div>
+            )}
+
+            {/* 1 кино — кино сонгох */}
+            {grantStep === "film" && (
+              <div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>🎬 Кино сонгох:</div>
+                <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
                   {films.map((f: any) => (
                     <button key={f.id} onClick={() => grantAccess("single", f.id)} disabled={granting}
-                      style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 12px", color: C.txt, fontSize: 13, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
+                      style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px 12px", color: C.txt, fontSize: 13, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
                       🎬 {f.title}
                     </button>
                   ))}
                 </div>
-                <button onClick={() => setGrantFilmId(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 6 }}>← Буцах</button>
+                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 8 }}>← Буцах</button>
               </div>
             )}
           </div>
