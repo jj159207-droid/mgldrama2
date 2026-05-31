@@ -944,8 +944,10 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 // ══════════════════════════════════════════════
 // БАГЦ АВАХ MODAL
 // ══════════════════════════════════════════════
-function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
+function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
+  const handleClose = () => { setOpen(false); if (onAutoClose) onAutoClose(); };
   useEffect(() => {
     if (!open) return;
     const handlePop = () => { setOpen(false); };
@@ -976,7 +978,7 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
       </div>
 
       {open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-end", zIndex: 300 }} onClick={() => setOpen(false)}>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-end", zIndex: 300 }} onClick={handleClose}>
           <div style={{ background: "#0d0d18", borderRadius: "20px 20px 0 0", padding: "20px 16px 40px", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
             <div style={{ width: 36, height: 4, background: "#2a2a40", borderRadius: 2, margin: "0 auto 18px" }} />
             <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 16, textAlign: "center" }}>Багц сонгох</div>
@@ -985,12 +987,12 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
               <div key={c.key} style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 12, color: c.color, fontWeight: 700, letterSpacing: "0.06em", textAlign: "center", marginBottom: 8 }}>{c.label}</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  <div onClick={() => { setOpen(false); onSelect(`${c.key}_3day`); }}
+                  <div onClick={() => { handleClose(); onSelect(`${c.key}_3day`); }}
                     style={{ background: c.bg, border: `0.5px solid ${c.border}`, borderRadius: 12, padding: 12, textAlign: "center", cursor: "pointer" }}>
                     <div style={{ fontSize: 11, color: c.sub, marginBottom: 4 }}>3 хоног</div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>8,000₮</div>
                   </div>
-                  <div onClick={() => { setOpen(false); onSelect(`${c.key}_1month`); }}
+                  <div onClick={() => { handleClose(); onSelect(`${c.key}_1month`); }}
                     style={{ background: c.bg, border: `1.5px solid ${c.color}`, borderRadius: 12, padding: 12, textAlign: "center", cursor: "pointer" }}>
                     <div style={{ fontSize: 11, color: c.sub, marginBottom: 4 }}>1 сар</div>
                     <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>12,500₮</div>
@@ -999,7 +1001,7 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
               </div>
             ))}
 
-            <div onClick={() => { setOpen(false); onSelect("all_1month"); }}
+            <div onClick={() => { handleClose(); onSelect("all_1month"); }}
               style={{ background: "#0f1a0f", border: "1.5px solid #4ade80", borderRadius: 12, padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginTop: 4 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#4ade80" }}>🌟 Бүх багц</div>
@@ -1010,7 +1012,7 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
               </div>
             </div>
 
-            <button onClick={() => setOpen(false)} style={{ width: "100%", marginTop: 16, background: "#1a1a2e", border: "2px solid rgba(255,255,255,0.15)", color: "#fff", padding: "16px", borderRadius: 14, fontSize: 18, fontWeight: 800, cursor: "pointer" }}>← Буцах</button>
+            <button onClick={handleClose} style={{ width: "100%", marginTop: 16, background: "#1a1a2e", border: "2px solid rgba(255,255,255,0.15)", color: "#fff", padding: "16px", borderRadius: 14, fontSize: 18, fontWeight: 800, cursor: "pointer" }}>← Буцах</button>
           </div>
         </div>
       )}
@@ -1018,7 +1020,9 @@ function PlanModal({ onSelect }: { onSelect: (plan: string) => void }) {
   );
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin, showPlan, onPlanClose }: any) {
+  const [planAutoOpen, setPlanAutoOpen] = useState(false);
+  useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const [activeCat, setActiveCat] = useState("Бүгд");
   const CATS = ["Бүгд", "Эротик", "Гадаад", "Хятад"];
   const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => decodeCat(f.badge) === activeCat);
@@ -1094,16 +1098,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         </div>
 
         {/* ── БАГЦ АВАХ ТОВЧ ── */}
-        <div onClick={() => onMonthly("show_plan")} style={{ margin: "8px 16px", background: "linear-gradient(135deg,#1a0a2e,#0d0d18)", border: "1.5px solid #8b5cf6", borderRadius: 14, padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 24 }}>🎬</span>
-            <div>
-              <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>Багц авах</div>
-              <div style={{ fontSize: 11, color: "#ddd6fe" }}>Хязгааргүй үзэх эрх</div>
-            </div>
-          </div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "#c4b5fd" }}>8,000₮-аас</div>
-        </div>
+        <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => { setPlanAutoOpen(false); if (onPlanClose) onPlanClose(); }} />
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : (() => {
@@ -2476,38 +2471,14 @@ export default function Home() {
           }
           const p = PLANS[plan] || PLANS["all_1month"];
           setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
-        }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
+        }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); navigateTo("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
       {payFilm && page === "payment" && <BankModal film={payFilm} onClose={() => { setPayFilm(null); setPage("home"); }} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
-      {showPlanModal && user && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 300, display: "flex", alignItems: "flex-end" }}>
-          <div style={{ width: "100%", background: C.card, borderRadius: "18px 18px 0 0", padding: "20px 16px 40px", border: `0.5px solid ${C.bd}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.txt }}>🎬 Багц сонгох</div>
-              <button onClick={() => setShowPlanModal(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
-            </div>
-            <PlanModal onSelect={(plan: string) => {
-              setShowPlanModal(false);
-              const PLANS: any = {
-                "erotic_3day":  { title: "🔞 Эротик · 3 хоног",  price: 8000,  plan: "erotic_3day" },
-                "erotic_1month":{ title: "🔞 Эротик · 1 сар",    price: 12500, plan: "erotic_1month" },
-                "gadaad_3day":  { title: "🌍 Гадаад · 3 хоног",  price: 8000,  plan: "gadaad_3day" },
-                "gadaad_1month":{ title: "🌍 Гадаад · 1 сар",    price: 12500, plan: "gadaad_1month" },
-                "hyatad_3day":  { title: "🇨🇳 Хятад · 3 хоног",  price: 8000,  plan: "hyatad_3day" },
-                "hyatad_1month":{ title: "🇨🇳 Хятад · 1 сар",    price: 12500, plan: "hyatad_1month" },
-                "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
-              };
-              const p = PLANS[plan] || PLANS["all_1month"];
-              setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true });
-              navigateTo("payment");
-            }} />
-          </div>
-        </div>
-      )}
+
       {showInstall && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-end", zIndex: 400 }}>
           <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "24px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
