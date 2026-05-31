@@ -2204,6 +2204,26 @@ function AdminPage({ films, onBack, onRefresh }: any) {
 export default function Home() {
   const [page, setPage] = useState("home");
   const [films, setFilms] = useState<any[]>([]);
+
+  // Браузерийн буцах товч ажиллуулах
+  const navigateTo = (newPage: string) => {
+    if (newPage !== "home") {
+      window.history.pushState({ page: newPage }, "", "");
+    }
+    setPage(newPage);
+  };
+
+  useEffect(() => {
+    const handlePop = () => {
+      setPage("home");
+      setShowContact(false);
+      setShowLoginModal(false);
+      setPayFilm(null);
+      setCurFilm(null);
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [payFilm, setPayFilm] = useState<any>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
@@ -2316,14 +2336,14 @@ export default function Home() {
   useEffect(() => { loadFilms(); }, []);
 
   const handleFilm = (f: any) => {
-    if (f.free) { setCurFilm({ ...f, locked: false }); setPage("video"); return; }
+    if (f.free) { setCurFilm({ ...f, locked: false }); navigateTo("video"); return; }
     if (!f.locked) { 
       if (!user) { setShowLoginModal(true); return; }
-      setCurFilm({ ...f, locked: false }); setPage("video"); return;
+      setCurFilm({ ...f, locked: false }); navigateTo("video"); return;
     }
     if (!user) { setShowLoginModal(true); return; }
-    if (hasAccess(f.id, decodeCat(f.badge))) { setCurFilm({ ...f, locked: false }); setPage("video"); }
-    else { setPayFilm(f); setPage("payment"); }
+    if (hasAccess(f.id, decodeCat(f.badge))) { setCurFilm({ ...f, locked: false }); navigateTo("video"); }
+    else { setPayFilm(f); navigateTo("payment"); }
   };
 
   const handlePaid = () => {
@@ -2351,7 +2371,7 @@ export default function Home() {
       saveAccess(`film_${payFilm.id}`, expires);
       setCurFilm({ ...payFilm, locked: false });
       setPayFilm(null);
-      setPage("video");
+      navigateTo("video");
     }
   };
 
@@ -2376,7 +2396,7 @@ export default function Home() {
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
 
-      {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={(plan: string) => {
+      {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={(plan: string) => {
           const PLANS: any = {
             "erotic_3day":  { title: "🔞 Эротик · 3 хоног",  price: 8000,  plan: "erotic_3day" },
             "erotic_1month":{ title: "🔞 Эротик · 1 сар",    price: 12500, plan: "erotic_1month" },
@@ -2387,11 +2407,11 @@ export default function Home() {
             "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
           };
           const p = PLANS[plan] || PLANS["all_1month"];
-          setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); setPage("payment");
-        }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
+          setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
+        }} onContact={() => { window.history.pushState({ page: "contact" }, "", ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
-      {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
+      {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); navigateTo("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
       {payFilm && page === "payment" && <BankModal film={payFilm} onClose={() => { setPayFilm(null); setPage("home"); }} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
