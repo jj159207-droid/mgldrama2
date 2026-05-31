@@ -247,7 +247,7 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     setShowSms(false);
     setManualChecking(true);
     const rows = await dbFetch(
-      `pending_payments?ref_code=eq.${foundRef}&film_id=eq.${film.id}&select=*`
+      `pending_payments?ref_code=eq.${foundRef}&select=*`
     );
     if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "pending") {
       await dbFetch(`pending_payments?ref_code=eq.${foundRef}`, {
