@@ -809,6 +809,19 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   };
 
   // PIN dots харуулах
+  // Тоон товчлуур дарахад pin state шинэчлэх
+  const handleKeyPress = (num: string, currentPin: string, setter: (v: string) => void, onComplete?: (v: string) => void) => {
+    if (currentPin.length >= 4) return;
+    const next = currentPin + num;
+    setter(next);
+    setErr("");
+    if (next.length === 4 && onComplete) onComplete(next);
+  };
+  const handleKeyDelete = (currentPin: string, setter: (v: string) => void) => {
+    setter(currentPin.slice(0, -1));
+    setErr("");
+  };
+
   const PinDots = ({ val }: { val: string }) => (
     <div style={{ display: "flex", gap: 14, justifyContent: "center", margin: "16px 0" }}>
       {[0,1,2,3].map(i => (
@@ -822,6 +835,27 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
         }}>
           {val[i] ? "●" : ""}
         </div>
+      ))}
+    </div>
+  );
+
+  const NumPad = ({ currentPin, setter, onComplete }: { currentPin: string; setter: (v: string) => void; onComplete?: (v: string) => void }) => (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, margin: "8px 0 4px" }}>
+      {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, i) => (
+        <button key={i} onClick={() => {
+          if (k === "⌫") handleKeyDelete(currentPin, setter);
+          else if (k !== "") handleKeyPress(k, currentPin, setter, onComplete);
+        }}
+          disabled={k === ""}
+          style={{
+            height: 58, borderRadius: 12, border: "none", fontSize: k === "⌫" ? 22 : 20,
+            fontWeight: 700, cursor: k === "" ? "default" : "pointer",
+            background: k === "" ? "transparent" : k === "⌫" ? "#1a1a2e" : "#13131c",
+            color: k === "⌫" ? C.muted : C.txt,
+            transition: "background 0.1s",
+          }}>
+          {k}
+        </button>
       ))}
     </div>
   );
@@ -860,14 +894,13 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
       <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>
         {isNew ? "Шинэ PIN тохируулна уу" : "PIN код"}
       </label>
-      {/* Далд input + харагдах dots */}
-      <div style={{ position: "relative" }}>
-        <PinDots val={pin} />
-        <input ref={pinRef} type="tel" inputMode="numeric" maxLength={4} value={pin}
-          onChange={(e: any) => handlePinChange(e.target.value)}
-          style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
-        />
-      </div>
+      {/* PIN dots + NumPad */}
+      <PinDots val={pin} />
+      <NumPad currentPin={pin} setter={setPin} onComplete={(v) => {
+        setErr("");
+        if (!isNew) submitPin(v);
+        else submitRegisterWithPin(v);
+      }} />
       {isNew && err && <div style={{ color: C.red, fontSize: 12, marginTop: 8, textAlign: "center" }}>{err}</div>}
       {isNew && loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Бүртгэж байна...</div>}
       {!isNew && err && (
@@ -887,21 +920,11 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
         <div style={{ marginTop: 4 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12, textAlign:"center" }}>🔑 Шинэ PIN тохируулах</div>
           <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>Шинэ PIN</label>
-          <div style={{ position: "relative" }}>
-            <PinDots val={pin} />
-            <input ref={pinRef} type="tel" inputMode="numeric" maxLength={4} value={pin}
-              onChange={(e: any) => { setPin(e.target.value.replace(/\D/g,"").slice(0,4)); setErr(""); }}
-              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
-            />
-          </div>
-          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>PIN давтах</label>
-          <div style={{ position: "relative" }}>
-            <PinDots val={pin2} />
-            <input ref={pin2Ref} type="tel" inputMode="numeric" maxLength={4} value={pin2}
-              onChange={(e: any) => { setPin2(e.target.value.replace(/\D/g,"").slice(0,4)); setErr(""); }}
-              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
-            />
-          </div>
+          <PinDots val={pin} />
+          {pin.length < 4 && <NumPad currentPin={pin} setter={setPin} />}
+          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block", marginTop: 8 }}>PIN давтах</label>
+          <PinDots val={pin2} />
+          {pin.length === 4 && <NumPad currentPin={pin2} setter={setPin2} />}
           {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
           <button onClick={resetPin} disabled={loading || pin.length !== 4 || pin2.length !== 4}
             style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 || pin2.length !== 4 ? 0.5 : 1, marginTop: 4 }}>
