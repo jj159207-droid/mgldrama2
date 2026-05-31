@@ -190,8 +190,12 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     document.body.removeChild(el);
   };
 
-  // Буцах нь Home component-ийн popstate-р хийгдэнэ
-  useEffect(() => {}, []);
+  // Буцах товч дарахад сайтаас гарахгүй байлгах
+  useEffect(() => {
+    const handlePop = () => { onClose(); };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   // Төлбөр үүсгэх + автомат polling эхлүүлэх
   useEffect(() => {
@@ -206,7 +210,6 @@ function BankModal({ film, onClose, onPaid, user }: any) {
         amount: film.price,
         status: "pending",
         user_id: user?.id || null,
-        phone: user?.phone || null,
         plan: film.plan || (film.monthly ? "monthly" : "single"),
       }),
     });
@@ -393,9 +396,9 @@ function AdminSmsTab() {
     if (!result) return;
     await dbFetch(`pending_payments?ref_code=eq.${result.ref_code}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString() }),
+      body: JSON.stringify({ status: "confirmed" }),
     });
-    setResult((r: any) => ({ ...r, status: "confirmed", confirmed_at: new Date().toISOString() }));
+    setResult((r: any) => ({ ...r, status: "confirmed" }));
   };
 
   return (
@@ -606,84 +609,96 @@ function FilmCard({ film, onClick, expiry }: any) {
 }
 
 function ContactModal({ onClose, user }: any) {
-  const [phone, setPhone] = useState(user?.phone || "");
-  const [issue, setIssue] = useState("");
+  const [msgs, setMsgs] = useState<any[]>([]);
+  const [msg, setMsg] = useState("");
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
+  const bottomRef = useRef<any>(null);
+
+  const load = async () => {
+    if (!user?.id) { setLoading(false); return; }
+    const data = await dbFetch(`contact_messages?user_id=eq.${user.id}&order=created_at.asc&select=*`);
+    setMsgs(Array.isArray(data) ? data : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
 
   const send = async () => {
-    const ph = phone.replace(/\D/g, "");
-    if (ph.length < 8) { setErr("Утасны дугаараа оруулна уу"); return; }
-    if (!issue.trim()) { setErr("Асуудлаа бичнэ үү"); return; }
-    setErr("");
+    if (!msg.trim()) return;
     setSending(true);
-    const payload = {
-      phone: ph,
-      message: issue.trim(),
-      user_id: user?.id || null,
-      read: false,
-    };
-    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(payload) });
+    const newMsg = { phone: user?.phone || "—", message: msg.trim(), user_id: user?.id || null, read: false };
+    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(newMsg) });
+    setMsg("");
+    // Сүүлийн 3 мэссэж л хадгалах — хуучныг устгах
+    const allMsgs = await dbFetch(`contact_messages?user_id=eq.${user?.id}&order=created_at.asc&select=id`);
+    if (Array.isArray(allMsgs) && allMsgs.length > 3) {
+      const toDelete = allMsgs.slice(0, allMsgs.length - 3);
+      for (const m of toDelete) {
+        await dbFetch(`contact_messages?id=eq.${m.id}`, { method: "DELETE" });
+      }
+    }
+    await load();
     setSending(false);
-    setSent(true);
   };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 300, display: "flex", flexDirection: "column" }}>
       {/* Header */}
-      <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Холбогдох</div>
+      <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Админтай холбогдох</div>
+            <div style={{ fontSize: 11, color: C.green }}>● Онлайн</div>
+          </div>
+        </div>
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "28px 20px" }}>
-        {sent ? (
-          <div style={{ textAlign: "center", marginTop: 60 }}>
-            <div style={{ fontSize: 60, marginBottom: 16 }}>✅</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.txt, marginBottom: 10 }}>Амжилттай илгээлээ!</div>
-            <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7 }}>Таны мэдээллийг хүлээн авлаа.<br/>Удахгүй админ тань руу залгах болно.</div>
-            <button onClick={onClose} style={{ ...goldBtn, marginTop: 30, borderRadius: 12 }}>Буцах</button>
-          </div>
+      {/* Чатын мэссэжүүд */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {loading ? (
+          <div style={{ textAlign: "center", color: C.muted, marginTop: 40 }}>Ачааллаж байна...</div>
+        ) : msgs.length === 0 ? (
+          <div style={{ textAlign: "center", color: C.muted, marginTop: 40, fontSize: 13 }}>Асуулт, санал хүсэлтээ бичнэ үү</div>
         ) : (
-          <>
-            {/* Мэдэгдэл */}
-            <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 14, padding: "16px 18px", marginBottom: 24 }}>
-              <div style={{ fontSize: 22, marginBottom: 8 }}>📞</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.txt, marginBottom: 6 }}>Холбогдох дугаараа үлдээнэ үү</div>
-              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>Мэдээллээ илгээсний дараа удахгүй тань руу <span style={{ color: C.gold, fontWeight: 700 }}>админ залгах</span> болно. Түр хүлээнэ үү.</div>
+          msgs.map(m => (
+            <div key={m.id}>
+              {/* Хэрэглэгчийн мэссэж — баруун тал */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+                <div style={{ background: C.blue, borderRadius: "16px 16px 4px 16px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: "#fff" }}>
+                  {m.message}
+                </div>
+              </div>
+              {/* Админы хариу — зүүн тал */}
+              {m.reply && (
+                <div style={{ display: "flex", justifyContent: "flex-start", marginTop: 4 }}>
+                  <div style={{ background: C.card2, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", maxWidth: "75%", fontSize: 14, color: C.txt, border: `0.5px solid ${C.bd}` }}>
+                    <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Админ</div>
+                    {m.reply}
+                  </div>
+                </div>
+              )}
             </div>
-
-            {/* Утасны дугаар */}
-            <label style={lbl}>Утасны дугаар</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              maxLength={8}
-              value={phone}
-              onChange={(e: any) => { setPhone(e.target.value.replace(/\D/g, "").slice(0, 8)); setErr(""); }}
-              placeholder="88123456"
-              
-              style={{ ...inputSt, fontSize: 18, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 16, opacity: 1 }}
-            />
-
-            {/* Асуудал */}
-            <label style={lbl}>Асуудал / Санал хүсэлт</label>
-            <textarea
-              value={issue}
-              onChange={(e: any) => { setIssue(e.target.value); setErr(""); }}
-              placeholder="Асуудлаа дэлгэрэнгүй бичнэ үү..."
-              style={{ ...inputSt, height: 130, resize: "none", lineHeight: 1.6, marginBottom: 16 }}
-            />
-
-            {err && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{err}</div>}
-
-            <button onClick={send} disabled={sending}
-              style={{ ...goldBtn, borderRadius: 12, opacity: sending ? 0.6 : 1 }}>
-              {sending ? "Илгээж байна..." : "📨 Илгээх"}
-            </button>
-          </>
+          ))
         )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Мессеж бичих хэсэг */}
+      <div style={{ background: C.card, borderTop: `0.5px solid ${C.bd}`, padding: "12px 14px", display: "flex", gap: 10, alignItems: "flex-end", flexShrink: 0 }}>
+        <textarea
+          value={msg}
+          onChange={(e: any) => setMsg(e.target.value)}
+          onKeyDown={(e: any) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="Мессеж бичнэ үү..."
+          style={{ ...inputSt, flex: 1, height: 44, resize: "none", lineHeight: 1.5, borderRadius: 22, padding: "11px 16px" }}
+        />
+        <button onClick={send} disabled={sending || !msg.trim()}
+          style={{ background: msg.trim() ? C.blue : C.card2, border: "none", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, fontSize: 18 }}>
+          ➤
+        </button>
       </div>
     </div>
   );
@@ -806,19 +821,6 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   };
 
   // PIN dots харуулах
-  // Тоон товчлуур дарахад pin state шинэчлэх
-  const handleKeyPress = (num: string, currentPin: string, setter: (v: string) => void, onComplete?: (v: string) => void) => {
-    if (currentPin.length >= 4) return;
-    const next = currentPin + num;
-    setter(next);
-    setErr("");
-    if (next.length === 4 && onComplete) onComplete(next);
-  };
-  const handleKeyDelete = (currentPin: string, setter: (v: string) => void) => {
-    setter(currentPin.slice(0, -1));
-    setErr("");
-  };
-
   const PinDots = ({ val }: { val: string }) => (
     <div style={{ display: "flex", gap: 14, justifyContent: "center", margin: "16px 0" }}>
       {[0,1,2,3].map(i => (
@@ -832,27 +834,6 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
         }}>
           {val[i] ? "●" : ""}
         </div>
-      ))}
-    </div>
-  );
-
-  const NumPad = ({ currentPin, setter, onComplete }: { currentPin: string; setter: (v: string) => void; onComplete?: (v: string) => void }) => (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, margin: "8px 0 4px" }}>
-      {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, i) => (
-        <button key={i} onClick={() => {
-          if (k === "⌫") handleKeyDelete(currentPin, setter);
-          else if (k !== "") handleKeyPress(k, currentPin, setter, onComplete);
-        }}
-          disabled={k === ""}
-          style={{
-            height: 58, borderRadius: 12, border: "none", fontSize: k === "⌫" ? 22 : 20,
-            fontWeight: 700, cursor: k === "" ? "default" : "pointer",
-            background: k === "" ? "transparent" : k === "⌫" ? "#1a1a2e" : "#13131c",
-            color: k === "⌫" ? C.muted : C.txt,
-            transition: "background 0.1s",
-          }}>
-          {k}
-        </button>
       ))}
     </div>
   );
@@ -891,13 +872,14 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
       <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>
         {isNew ? "Шинэ PIN тохируулна уу" : "PIN код"}
       </label>
-      {/* PIN dots + NumPad */}
-      <PinDots val={pin} />
-      <NumPad currentPin={pin} setter={setPin} onComplete={(v) => {
-        setErr("");
-        if (!isNew) submitPin(v);
-        else submitRegisterWithPin(v);
-      }} />
+      {/* Далд input + харагдах dots */}
+      <div style={{ position: "relative" }}>
+        <PinDots val={pin} />
+        <input ref={pinRef} type="tel" inputMode="numeric" maxLength={4} value={pin}
+          onChange={(e: any) => handlePinChange(e.target.value)}
+          style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
+        />
+      </div>
       {isNew && err && <div style={{ color: C.red, fontSize: 12, marginTop: 8, textAlign: "center" }}>{err}</div>}
       {isNew && loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Бүртгэж байна...</div>}
       {!isNew && err && (
@@ -917,11 +899,21 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
         <div style={{ marginTop: 4 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12, textAlign:"center" }}>🔑 Шинэ PIN тохируулах</div>
           <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>Шинэ PIN</label>
-          <PinDots val={pin} />
-          {pin.length < 4 && <NumPad currentPin={pin} setter={setPin} />}
-          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block", marginTop: 8 }}>PIN давтах</label>
-          <PinDots val={pin2} />
-          {pin.length === 4 && <NumPad currentPin={pin2} setter={setPin2} />}
+          <div style={{ position: "relative" }}>
+            <PinDots val={pin} />
+            <input ref={pinRef} type="tel" inputMode="numeric" maxLength={4} value={pin}
+              onChange={(e: any) => { setPin(e.target.value.replace(/\D/g,"").slice(0,4)); setErr(""); }}
+              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
+            />
+          </div>
+          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>PIN давтах</label>
+          <div style={{ position: "relative" }}>
+            <PinDots val={pin2} />
+            <input ref={pin2Ref} type="tel" inputMode="numeric" maxLength={4} value={pin2}
+              onChange={(e: any) => { setPin2(e.target.value.replace(/\D/g,"").slice(0,4)); setErr(""); }}
+              style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%", height: "100%" }}
+            />
+          </div>
           {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
           <button onClick={resetPin} disabled={loading || pin.length !== 4 || pin2.length !== 4}
             style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 || pin2.length !== 4 ? 0.5 : 1, marginTop: 4 }}>
@@ -1070,9 +1062,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
               }
 
               <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
-              <button onClick={onInstall} style={{ background: "linear-gradient(135deg,#1a1a2e,#0d0d18)", border: `1.5px solid #e8a020`, color: "#e8a020", cursor: "pointer", fontSize: 12, borderRadius: 10, padding: "6px 12px", fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
-                📲 <span>Апп татах</span>
-              </button>
+              <button onClick={onInstall} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: "#60a5fa", cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px", fontWeight: 700 }}>📲 Апп</button>
             </div>
           </div>
         </div>
@@ -1143,7 +1133,12 @@ function VideoPage({ film, onBack }: any) {
   const { type, src } = getVideoEmbed(mainUrl);
   useEffect(() => {
     const t = setTimeout(() => setShowControls(false), 4000);
-    return () => { clearTimeout(t); };
+    const handlePop = () => { onBack(); };
+    window.addEventListener("popstate", handlePop);
+    return () => { 
+      clearTimeout(t); 
+      window.removeEventListener("popstate", handlePop);
+    };
   }, []);
   return (
     <div onClick={() => setShowControls(v => !v)} style={{ background: "#000", position: "fixed", inset: 0, zIndex: 50 }}>
@@ -1211,20 +1206,23 @@ function AdminOrdersTab() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState<string | null>(null);
   const [films, setFilms] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "revoked" | "monthly">("all");
   const [search, setSearch] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
-      const [pend, fl] = await Promise.all([
-        dbFetch("pending_payments?order=created_at.desc&limit=200&select=*"),
+      const [pend, fl, us] = await Promise.all([
+        dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
         dbFetch("films?select=id,title"),
+        dbFetch("users?select=id,phone,user_id"),
       ]);
       setOrders(Array.isArray(pend) ? pend : []);
       setFilms(Array.isArray(fl) ? fl : []);
+      setUsers(Array.isArray(us) ? us : []);
     } catch(e) {
-      setOrders([]); setFilms([]);
+      setOrders([]); setFilms([]); setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -1263,7 +1261,7 @@ function AdminOrdersTab() {
   };
 
   const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
-  const getPhone = (uid: number, order?: any) => order?.phone || (uid ? "—" : "—");
+  const getPhone = (uid: number) => uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.red;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
@@ -1273,7 +1271,7 @@ function AdminOrdersTab() {
     else { if (o.status !== filter) return false; }
     if (search.trim()) {
       const s = search.trim().toLowerCase();
-      const phone = (o.phone || getPhone(o.user_id, o)).toLowerCase();
+      const phone = getPhone(o.user_id).toLowerCase();
       const ref = (o.ref_code || "").toLowerCase();
       return phone.includes(s) || ref.includes(s);
     }
@@ -1337,7 +1335,7 @@ function AdminOrdersTab() {
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
                 <div style={{ fontSize: 12, color: C.txt, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
-                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {o.phone || getPhone(o.user_id, o)}</div>
+                <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id)}</div>
                 {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Сарын багц</div>}
               </div>
               <div style={{ textAlign: "right" }}>
@@ -1378,44 +1376,22 @@ function AdminOrdersTab() {
 
 function AdminMembersTab() {
   const [users, setUsers] = useState<any[]>([]);
-  const [allPayments, setAllPayments] = useState<any[]>([]);
   const [films, setFilms] = useState<any[]>([]);
+  const [allPayments, setAllPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterTab, setFilterTab] = useState<"allbag"|"monthly"|"3day"|"film">("allbag");
-  const [revoking, setRevoking] = useState<string | null>(null);
-  // Нийт гишүүд харах
-  const [showAllUsers, setShowAllUsers] = useState(false);
-  const [allSearch, setAllSearch] = useState("");
-
-  useEffect(() => {
-    const handleBack = () => {
-      if (showAllUsers) {
-        setShowAllUsers(false);
-        setAllSearch("");
-        setGrantUser(null);
-        setGrantStep("main");
-        window.history.pushState({ page: "admin" }, "");
-      }
-    };
-    window.addEventListener("adminBackPress", handleBack);
-    return () => window.removeEventListener("adminBackPress", handleBack);
-  }, [showAllUsers]);
-  // Эрх өгөх
-  const [grantUser, setGrantUser] = useState<any>(null);
-  const [granting, setGranting] = useState(false);
-  const [grantFilmId, setGrantFilmId] = useState<number | null>(null);
-  const [grantStep, setGrantStep] = useState<"main"|"month_cat"|"3day_cat"|"film"|"revoke">("main");
+  const [selected, setSelected] = useState<any>(null);
   const [userPayments, setUserPayments] = useState<any[]>([]);
-  const [loadingUserPayments, setLoadingUserPayments] = useState(false);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [showRights, setShowRights] = useState(false);
+  const [filterTab, setFilterTab] = useState<"all"|"monthly"|"film">("all");
 
   const load = async () => {
     setLoading(true);
     try {
       const [us, fl, pay] = await Promise.all([
         dbFetch("users?order=id.desc&select=*"),
-        dbFetch("films?select=id,title&order=id.desc&limit=50"),
-        dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,confirmed_at,ref_code,phone"),
+        dbFetch("films?select=id,title"),
+        dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,ref_code"),
       ]);
       setUsers(Array.isArray(us) ? us : []);
       setFilms(Array.isArray(fl) ? fl : []);
@@ -1427,310 +1403,154 @@ function AdminMembersTab() {
     }
   };
 
+  const hasMonthly = (userId: number) => allPayments.some(p => p.user_id === userId && p.plan === "monthly");
+  const hasFilm = (userId: number) => allPayments.some(p => p.user_id === userId && p.plan !== "monthly");
+  const activeCount = (userId: number) => allPayments.filter(p => p.user_id === userId).length;
+
   useEffect(() => { load(); }, []);
 
-  const getPhone = (userId: number) => {
-    const p = allPayments.find(p => p.user_id === userId);
-    return p?.phone || users.find(u => u.id === userId)?.phone || "—";
+  const openUser = async (u: any) => {
+    setSelected(u);
+    setShowRights(false);
+    setLoadingPayments(true);
+    try {
+      const payments = await dbFetch(`pending_payments?user_id=eq.${u.id}&order=created_at.desc&select=*`);
+      setUserPayments(Array.isArray(payments) ? payments : []);
+    } catch(e) {
+      setUserPayments([]);
+    } finally {
+      setLoadingPayments(false);
+    }
   };
 
-  const paymentsAllBag = allPayments.filter(p => p.plan === "all_1month");
-  const paymentsMonthly = allPayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
-  const payments3Day = allPayments.filter(p => p.plan && p.plan.endsWith("_3day"));
-  const paymentsFilm = allPayments.filter(p => p.plan === "single" || (!p.plan?.includes("month") && !p.plan?.includes("3day") && !p.plan?.includes("all")));
-  const totalWithAccess = new Set(allPayments.map(p => p.user_id)).size;
-
-  const currentPayments = filterTab === "allbag" ? paymentsAllBag : filterTab === "monthly" ? paymentsMonthly : filterTab === "3day" ? payments3Day : paymentsFilm;
-  const filteredPayments = currentPayments.filter(p => !search.trim() || getPhone(p.user_id).includes(search.trim()));
-
-  const planLabel = (plan: string) => {
-    if (plan === "all_1month") return "🌟 Бүх багц";
-    if (plan?.endsWith("_1month")) return "👑 1 сарын эрх";
-    if (plan?.endsWith("_3day")) return "⏱ 3 хоногийн эрх";
-    return "🎬 Кино эрх";
-  };
-
-  const revokePayment = async (ref_code: string) => {
+  const revokeAccess = async (ref_code: string) => {
     if (!window.confirm("Энэ эрхийг хасах уу?")) return;
-    setRevoking(ref_code);
-    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, { method: "PATCH", body: JSON.stringify({ status: "revoked" }) });
-    setUserPayments(ps => ps.filter(p => p.ref_code !== ref_code));
-    await load();
-    setRevoking(null);
-  };
-
-  // Гишүүний эрхүүдийг татах
-  const loadUserPayments = async (userId: number) => {
-    setLoadingUserPayments(true);
-    const data = await dbFetch(`pending_payments?user_id=eq.${userId}&status=eq.confirmed&select=*&order=created_at.desc`);
-    setUserPayments(Array.isArray(data) ? data : []);
-    setLoadingUserPayments(false);
-  };
-
-  // Эрх өгөх функц
-  const grantAccess = async (plan: string, filmId?: number) => {
-    if (!grantUser) return;
-    setGranting(true);
-    const ref_code = String(Math.floor(100000 + Math.random() * 900000));
-    const is3day = plan.endsWith("_3day");
-    const isSingle = plan === "single";
-    const prices: any = { "all_1month": 20000, "erotic_1month": 12500, "gadaad_1month": 12500, "hyatad_1month": 12500, "erotic_3day": 8000, "gadaad_3day": 8000, "hyatad_3day": 8000, "single": 0 };
-    await dbFetch("pending_payments", {
-      method: "POST",
-      body: JSON.stringify({
-        ref_code,
-        film_id: isSingle ? (filmId || 0) : 0,
-        amount: prices[plan] || 0,
-        status: "confirmed",
-        user_id: grantUser.id,
-        phone: grantUser.phone || null,
-        plan,
-        confirmed_at: new Date().toISOString(),
-      }),
+    await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "revoked" }),
     });
-    await load();
-    setGranting(false);
-    setGrantUser(null);
-    setGrantFilmId(null);
-    setGrantStep("main");
-    alert("✅ Эрх амжилттай олгогдлоо!");
+    setUserPayments(ps => ps.map(p => p.ref_code === ref_code ? { ...p, status: "revoked" } : p));
   };
 
-  const tabLabel = filterTab === "allbag" ? "🌟 Бүх багц авсан гишүүд" : filterTab === "monthly" ? "👑 1 сарын эрхтэй гишүүд" : filterTab === "3day" ? "⏱ 3 хоногийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
+  const deleteUser = async (id: number) => {
+    if (!window.confirm("Хэрэглэгчийг устгах уу?")) return;
+    await dbFetch(`users?id=eq.${id}`, { method: "DELETE" });
+    setUsers(us => us.filter(u => u.id !== id));
+    setSelected(null);
+  };
 
-  // ── Нийт гишүүдийн жагсаалт дэлгэц ──
-  if (showAllUsers) {
-    const filtered = users.filter(u => !allSearch.trim() || u.phone?.includes(allSearch.trim()));
-    return (
-      <div style={{ padding: "0 14px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <button onClick={() => { setShowAllUsers(false); setAllSearch(""); setGrantUser(null); }}
-            style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>Нийт гишүүд ({users.length})</span>
-          <button onClick={load} style={{ marginLeft: "auto", background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 10px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
+  const getFilmName = (id: number) => id === 0 ? "👑 Сарын багц" : films.find(f => f.id === id)?.title || `Кино #${id}`;
+  const statusColor = (s: string) => s === "confirmed" ? C.green : s === "revoked" ? C.red : C.gold;
+  const statusLabel = (s: string) => s === "confirmed" ? "✅ Идэвхтэй" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
+  const activePayments = userPayments.filter(p => p.status === "confirmed");
+
+  if (selected) return (
+    <div style={{ padding: "0 14px" }}>
+      <button onClick={() => setSelected(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 14, cursor: "pointer", marginBottom: 12 }}>← Буцах</button>
+      
+      {/* Гишүүний мэдээлэл */}
+      <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 14 }}>
+        <div style={{ fontSize: 18, fontWeight: 800, color: C.gold, marginBottom: 4 }}>📞 {selected.phone}</div>
+        <div style={{ fontSize: 12, color: C.muted }}>ID: {selected.user_id}</div>
+        <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Бүртгэгдсэн: {new Date(selected.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button onClick={() => setShowRights(!showRights)} style={{ flex: 1, background: showRights ? C.blue : C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "9px", color: showRights ? "#fff" : C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            🎬 Кино үзэх эрх {loadingPayments ? "..." : `(${activePayments.length})`}
+          </button>
+          <button onClick={() => deleteUser(selected.id)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "9px 14px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
         </div>
-        {/* Хайлт */}
-        <div style={{ position: "relative", marginBottom: 12 }}>
-          <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>🔍</span>
-          <input value={allSearch} onChange={(e: any) => setAllSearch(e.target.value)}
-            placeholder="Дугаар хайх..."
-            style={{ ...inputSt, paddingLeft: 28, padding: "8px 10px 8px 28px", fontSize: 12 }} />
-        </div>
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 30, color: C.muted }}>Гишүүн олдсонгүй</div>
-        ) : filtered.map((u: any) => (
-          <div key={u.id} onClick={() => { setGrantUser(u); setGrantStep("main"); loadUserPayments(u.id); }}
-            style={{ background: C.card, border: `0.5px solid ${grantUser?.id === u.id ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
-              </div>
-              <span style={{ color: C.muted, fontSize: 16 }}>›</span>
-            </div>
-          </div>
-        ))}
-
-        {/* Эрх өгөх панел */}
-        {grantUser && (
-          <div style={{ background: C.card2, border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "16px 14px", marginTop: 6, marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div>
-                <div style={{ fontSize: 12, color: C.muted }}>Эрх өгөх хэрэглэгч</div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: C.gold }}>📞 {grantUser.phone}</div>
-              </div>
-              <button onClick={() => { setGrantUser(null); setGrantFilmId(null); setGrantStep("main"); }}
-                style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>✕</button>
-            </div>
-            {/* Үндсэн — Эрх өгөх / Эрх хасах сонголт */}
-            {grantStep === "main" && (
-              <div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                  {[
-                    ["all_1month", "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
-                    ["month_cat",  "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff"],
-                    ["3day_cat",   "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc"],
-                    ["film",       "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80"],
-                  ].map(([key, icon, label, bg, border, color]) => (
-                    <button key={key} disabled={granting}
-                      onClick={() => {
-                        if (key === "all_1month") grantAccess("all_1month");
-                        else setGrantStep(key as any);
-                      }}
-                      style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
-                      <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: color as string }}>{label}</div>
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => setGrantStep("revoke")}
-                  style={{ width: "100%", background: "#1a0505", border: `0.5px solid ${C.red}`, borderRadius: 10, padding: "11px 14px", color: C.red, fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
-                  🚫 Эрх хасах
-                </button>
-              </div>
-            )}
-
-            {/* 1 сарын эрх — багц сонгох */}
-            {grantStep === "month_cat" && (
-              <div>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>👑 1 сарын — аль багц?</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {[
-                    ["erotic_1month", "🔞 Эротик · 1 сар"],
-                    ["gadaad_1month", "🌍 Гадаад · 1 сар"],
-                    ["hyatad_1month", "🇨🇳 Хятад · 1 сар"],
-                  ].map(([plan, label]) => (
-                    <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
-                      style={{ background: "#2a0550", border: `0.5px solid #a855f7`, borderRadius: 10, padding: "12px 14px", color: "#e9d5ff", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 10 }}>← Буцах</button>
-              </div>
-            )}
-
-            {/* 3 хоногийн эрх — багц сонгох */}
-            {grantStep === "3day_cat" && (
-              <div>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>⏱ 3 хоног — аль багц?</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {[
-                    ["erotic_3day", "🔞 Эротик · 3 хоног"],
-                    ["gadaad_3day", "🌍 Гадаад · 3 хоног"],
-                    ["hyatad_3day", "🇨🇳 Хятад · 3 хоног"],
-                  ].map(([plan, label]) => (
-                    <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
-                      style={{ background: "#061220", border: `0.5px solid #38bdf8`, borderRadius: 10, padding: "12px 14px", color: "#7dd3fc", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 10 }}>← Буцах</button>
-              </div>
-            )}
-
-            {/* 1 кино — кино сонгох */}
-            {grantStep === "film" && (
-              <div>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>🎬 Кино сонгох:</div>
-                <div style={{ maxHeight: 200, overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-                  {films.map((f: any) => (
-                    <button key={f.id} onClick={() => grantAccess("single", f.id)} disabled={granting}
-                      style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px 12px", color: C.txt, fontSize: 13, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
-                      🎬 {f.title}
-                    </button>
-                  ))}
-                </div>
-                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 8 }}>← Буцах</button>
-              </div>
-            )}
-
-            {/* Эрх хасах */}
-            {grantStep === "revoke" && (
-              <div>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>🚫 Идэвхтэй эрхүүд:</div>
-                {loadingUserPayments ? (
-                  <div style={{ textAlign: "center", color: C.muted, padding: 16 }}>Ачааллаж байна...</div>
-                ) : userPayments.length === 0 ? (
-                  <div style={{ textAlign: "center", color: C.muted, padding: 14, background: C.card, borderRadius: 10 }}>Идэвхтэй эрх байхгүй</div>
-                ) : (
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {userPayments.map((p: any) => (
-                      <div key={p.ref_code} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <div>
-                          <div style={{ fontSize: 12, fontWeight: 700, color: C.txt }}>{planLabel(p.plan)}</div>
-                          <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleDateString("mn-MN")} · {p.amount?.toLocaleString()}₮</div>
-                        </div>
-                        <button onClick={() => revokePayment(p.ref_code)} disabled={revoking === p.ref_code}
-                          style={{ background: "#1a0505", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0, opacity: revoking === p.ref_code ? 0.5 : 1 }}>
-                          {revoking === p.ref_code ? "..." : "🚫 Хасах"}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <button onClick={() => setGrantStep("main")} style={{ background: "none", border: "none", color: C.muted, fontSize: 12, cursor: "pointer", marginTop: 10 }}>← Буцах</button>
-              </div>
-            )}
-          </div>
-        )}
       </div>
-    );
-  }
 
-  // ── Үндсэн дэлгэц ──
+      {/* Идэвхтэй эрхүүд */}
+      {showRights && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>
+            🎬 Идэвхтэй кино эрхүүд
+          </div>
+          {loadingPayments ? (
+            <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
+          ) : activePayments.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 16, color: C.muted, background: C.card, borderRadius: 10 }}>Идэвхтэй эрх байхгүй</div>
+          ) : activePayments.map(p => (
+            <div key={p.id} style={{ background: C.card, border: `0.5px solid ${C.green}`, borderRadius: 12, padding: 14, marginBottom: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{getFilmName(p.film_id)}</div>
+                <div style={{ fontSize: 11, color: C.green, marginTop: 2 }}>✅ Идэвхтэй · {p.amount?.toLocaleString()}₮</div>
+                <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
+              </div>
+              <button onClick={() => revokeAccess(p.ref_code)} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "8px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
+                🚫 Хасах
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Бүх захиалгын түүх */}
+      <div style={{ fontSize: 13, fontWeight: 700, color: C.txt, marginBottom: 10 }}>Захиалгын түүх</div>
+      {loadingPayments ? (
+        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Ачааллаж байна...</div>
+      ) : userPayments.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 20, color: C.muted }}>Захиалга байхгүй</div>
+      ) : userPayments.map(p => (
+        <div key={p.id} style={{ background: C.card, border: `0.5px solid ${statusColor(p.status)}22`, borderRadius: 12, padding: 14, marginBottom: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#fb923c", fontFamily: "monospace" }}>{p.ref_code}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{getFilmName(p.film_id)}</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleString("mn-MN")}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold }}>{p.amount?.toLocaleString()}₮</div>
+              <div style={{ fontSize: 11, color: statusColor(p.status), marginTop: 2 }}>{statusLabel(p.status)}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div style={{ padding: "0 14px" }}>
-      {/* Нийт тоо — дарахад жагсаалт нээгдэнэ */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
-        <div onClick={() => { window.history.pushState({ page: "admin-members" }, ""); setShowAllUsers(true); }}
-          style={{ background: C.card, border: `0.5px solid ${C.blue}`, borderRadius: 10, padding: 12, cursor: "pointer" }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Нийт гишүүн</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.txt }}>{loading ? "..." : users.length}</div>
-          <div style={{ fontSize: 10, color: C.blue, marginTop: 4 }}>Дарж харах →</div>
-        </div>
-        <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: 12 }}>
-          <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Эрхтэй гишүүн</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: C.gold }}>{loading ? "..." : totalWithAccess}</div>
-        </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <span style={{ fontSize: 13, color: C.muted }}>{users.length} гишүүн</span>
+        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄 Шинэчлэх</button>
       </div>
 
-      {/* 4 filter таб */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
-        {([
-          ["allbag",  "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d", paymentsAllBag.length],
-          ["monthly", "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff", paymentsMonthly.length],
-          ["3day",    "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc", payments3Day.length],
-          ["film",    "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80", paymentsFilm.length],
-        ] as any[]).map(([k, icon, label, bg, border, color, count]) => (
-          <div key={k} onClick={() => { setFilterTab(k); setSearch(""); }}
-            style={{ background: bg, border: `${filterTab === k ? "2px" : "0.5px"} solid ${border}`, borderRadius: 10, padding: "11px 10px", cursor: "pointer" }}>
-            <div style={{ fontSize: 16, marginBottom: 4 }}>{icon}</div>
-            <div style={{ fontSize: 11, fontWeight: 700, color }}>{label}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color, marginTop: 2 }}>{loading ? "..." : count}</div>
-          </div>
+      {/* Filter */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+        {([["all","Бүгд"],["monthly","👑 Сарын"],["film","🎬 Кино"]] as any[]).map(([k,l]) => (
+          <button key={k} onClick={() => setFilterTab(k)}
+            style={{ flex: 1, padding: "7px", borderRadius: 8, border: "none", background: filterTab === k ? C.gold : C.card2, color: filterTab === k ? "#000" : C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {l}
+          </button>
         ))}
       </div>
 
-      {/* Гарчиг + Хайлт */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <span style={{ fontSize: 11, color: C.muted, fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{tabLabel}</span>
-        <div style={{ flex: 1, position: "relative" }}>
-          <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>🔍</span>
-          <input value={search} onChange={(e: any) => setSearch(e.target.value)} placeholder="Дугаар хайх..."
-            style={{ ...inputSt, paddingLeft: 28, padding: "7px 10px 7px 28px", fontSize: 12 }} />
-        </div>
-        <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "7px 10px", color: C.muted, fontSize: 12, cursor: "pointer", flexShrink: 0 }}>🔄</button>
-      </div>
-
-      {/* Эрхтэй гишүүдийн жагсаалт */}
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-      ) : filteredPayments.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 30, color: C.muted }}>Гишүүн олдсонгүй</div>
+      ) : users.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Гишүүн байхгүй байна</div>
       ) : (
-        filteredPayments.map((p: any) => (
-          <div key={p.ref_code} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: "13px 14px", marginBottom: 8 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        users
+          .filter(u => {
+            if (filterTab === "monthly") return hasMonthly(u.id);
+            if (filterTab === "film") return hasFilm(u.id) && !hasMonthly(u.id);
+            return true;
+          })
+          .map(u => (
+          <div key={u.id} onClick={() => openUser(u)} style={{ background: C.card, border: `0.5px solid ${activeCount(u.id) > 0 ? C.green : C.bd}`, borderRadius: 12, padding: 14, marginBottom: 10, cursor: "pointer" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {getPhone(p.user_id)}</div>
-                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(p.created_at).toLocaleDateString("mn-MN")} · {p.amount?.toLocaleString()}₮</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+                <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+                  {hasMonthly(u.id) && <span style={{ background: "#3b0764", border: `0.5px solid #a855f7`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: "#e9d5ff", fontWeight: 700 }}>👑 Сарын эрх</span>}
+                  {hasFilm(u.id) && <span style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 6, padding: "2px 8px", fontSize: 11, color: C.green, fontWeight: 700 }}>🎬 {allPayments.filter(p => p.user_id === u.id && p.plan !== "monthly").length} кино</span>}
+                  {!hasMonthly(u.id) && !hasFilm(u.id) && <span style={{ fontSize: 11, color: C.muted }}>Эрхгүй</span>}
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10, paddingTop: 10, borderTop: `0.5px solid ${C.bd}` }}>
-              <span style={{
-                borderRadius: 6, padding: "3px 10px", fontSize: 11, fontWeight: 700,
-                background: p.plan === "all_1month" ? "#1a0a3a" : p.plan?.endsWith("_1month") ? "#3b0764" : p.plan?.endsWith("_3day") ? "#0a1628" : "#052e16",
-                border: `0.5px solid ${p.plan === "all_1month" ? "#f59e0b" : p.plan?.endsWith("_1month") ? "#a855f7" : p.plan?.endsWith("_3day") ? "#38bdf8" : "#16a34a"}`,
-                color: p.plan === "all_1month" ? "#fcd34d" : p.plan?.endsWith("_1month") ? "#e9d5ff" : p.plan?.endsWith("_3day") ? "#7dd3fc" : "#4ade80",
-              }}>{planLabel(p.plan)}</span>
-              <button onClick={() => revokePayment(p.ref_code)} disabled={revoking === p.ref_code}
-                style={{ background: "#1a0505", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "7px 14px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer", opacity: revoking === p.ref_code ? 0.5 : 1 }}>
-                {revoking === p.ref_code ? "..." : "🚫 Эрх хасах"}
-              </button>
+              <span style={{ color: C.muted, fontSize: 16 }}>›</span>
             </div>
           </div>
         ))
@@ -1746,14 +1566,6 @@ function AdminContactTab() {
   const [replyText, setReplyText] = useState("");
   const [sending, setSending] = useState(false);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
-
-  useEffect(() => {
-    const handleBack = () => {
-      if (selectedUser !== null) { setSelectedUser(null); window.history.pushState({ page: "admin" }, ""); }
-    };
-    window.addEventListener("adminBackPress", handleBack);
-    return () => window.removeEventListener("adminBackPress", handleBack);
-  }, [selectedUser]);
 
   const load = async () => {
     setLoading(true);
@@ -1816,7 +1628,7 @@ function AdminContactTab() {
         </div>
         {u.msgs.map((m: any) => (
           <div key={m.id} style={{ marginBottom: 14 }}>
-            {/* Хэрэглэгчийн мессеж — баруун */}
+            {/* Хэрэглэгчийн мэссэж — баруун */}
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
               <div style={{ background: C.blue, borderRadius: "16px 16px 4px 16px", padding: "10px 14px", maxWidth: "80%", fontSize: 13, color: "#fff" }}>
                 <div>{m.message}</div>
@@ -1877,7 +1689,7 @@ function AdminContactTab() {
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Мессеж байхгүй байна</div>
       ) : (
         users.map((u: any) => (
-          <div key={u.user_id || u.phone} onClick={() => { window.history.pushState({ page: "admin-chat" }, ""); setSelectedUser(u.user_id || u.phone); }}
+          <div key={u.user_id || u.phone} onClick={() => setSelectedUser(u.user_id || u.phone)}
             style={{ background: C.card, border: `0.5px solid ${u.unread > 0 ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ background: C.card2, borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
@@ -1890,7 +1702,7 @@ function AdminContactTab() {
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
               {u.unread > 0 && <span style={{ background: C.gold, color: "#000", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 800 }}>{u.unread}</span>}
-              <span style={{ fontSize: 10, color: C.muted }}>{u.msgs.length} мессеж</span>
+              <span style={{ fontSize: 10, color: C.muted }}>{u.msgs.length} мэссэж</span>
             </div>
           </div>
         ))
@@ -2232,45 +2044,6 @@ export default function Home() {
   useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
 
-  // ── Навигацийн helper — history.pushState + setPage ──
-  const navigateTo = (newPage: string) => {
-    window.history.pushState({ page: newPage }, "");
-    setPage(newPage);
-  };
-
-  // ── Браузерийн буцах товч ──
-  const pageRef = useRef("home");
-  useEffect(() => { pageRef.current = page; }, [page]);
-
-  useEffect(() => {
-    const handlePop = () => {
-      const cur = pageRef.current;
-      // Admin дотрын navigation (chat, members) — custom event-р мэдэгдэнэ
-      const adminBack = new CustomEvent("adminBackPress");
-      window.dispatchEvent(adminBack);
-      // Admin дотор байвал admin-д үлдэнэ (дотрын буцах нь custom event-р хийгдэнэ)
-      if (cur === "admin") {
-        return;
-      }
-      if (cur === "adminlogin") {
-        setPage("home");
-        return;
-      }
-      if (cur === "video" || cur === "search" || cur === "payment") {
-        setPage("home");
-        setCurFilm(null);
-        setPayFilm(null);
-        return;
-      }
-      // Modal хаах
-      setShowContact(false);
-      setShowLoginModal(false);
-      setShowInstall(false);
-    };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, []);
-
   // PWA install prompt барих
   useEffect(() => {
     const handler = (e: any) => {
@@ -2290,7 +2063,7 @@ export default function Home() {
         (window as any).__pwaPrompt = null;
       });
     } else {
-      window.history.pushState({ page: "install" }, ""); setShowInstall(true);
+      setShowInstall(true);
     }
   };
 
@@ -2304,7 +2077,7 @@ export default function Home() {
   const syncAccessFromDB = async (userId: number) => {
     // Бүх захиалгыг татах (confirmed + revoked)
     const payments = await dbFetch(
-      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,confirmed_at,status`
+      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
     );
     if (!Array.isArray(payments)) return;
     const now = Date.now();
@@ -2312,14 +2085,13 @@ export default function Home() {
 
     payments.forEach((p: any) => {
       if (p.status !== "confirmed") return; // revoked болон pending-г орхино
-      const baseTime = new Date(p.confirmed_at || p.created_at).getTime();
       const is3day = p.plan?.endsWith("_3day");
       const dur = is3day ? 3*24*60*60*1000 : 30*24*60*60*1000;
-      const exp = baseTime + dur;
+      const exp = new Date(p.created_at).getTime() + dur;
       if (p.plan === "monthly" || p.plan === "1month" || p.plan === "3day" || p.plan === "1year") {
         if (exp > now) newAccess["monthly"] = Math.max(newAccess["monthly"] || 0, exp);
       } else if (p.plan === "all_1month") {
-        if (exp > now) { newAccess["cat_erotic"] = Math.max(newAccess["cat_erotic"] || 0, exp); newAccess["cat_gadaad"] = Math.max(newAccess["cat_gadaad"] || 0, exp); newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp); }
+        if (exp > now) { newAccess["cat_erotic"] = exp; newAccess["cat_gadaad"] = exp; newAccess["cat_hyatad"] = exp; }
       } else if (p.plan?.startsWith("erotic")) {
         if (exp > now) newAccess["cat_erotic"] = Math.max(newAccess["cat_erotic"] || 0, exp);
       } else if (p.plan?.startsWith("gadaad")) {
@@ -2328,7 +2100,7 @@ export default function Home() {
         if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
       }
       if (p.film_id && p.film_id > 0 && p.plan === "single") {
-        const filmExp = baseTime + 72 * 60 * 60 * 1000;
+        const filmExp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
         if (filmExp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, filmExp);
       }
     });
@@ -2369,17 +2141,11 @@ export default function Home() {
   };
   useEffect(() => { loadFilms(); }, []);
 
-  const pendingFilmRef = useRef<any>(null);
-
   const handleFilm = (f: any) => {
-    if (f.free) { setCurFilm({ ...f, locked: false }); navigateTo("video"); return; }
-    if (!f.locked) {
-      if (!user) { pendingFilmRef.current = f; setShowLoginModal(true); return; }
-      setCurFilm({ ...f, locked: false }); navigateTo("video"); return;
-    }
-    if (!user) { pendingFilmRef.current = f; setShowLoginModal(true); return; }
-    if (hasAccess(f.id, decodeCat(f.badge))) { setCurFilm({ ...f, locked: false }); navigateTo("video"); }
-    else { setPayFilm(f); navigateTo("payment"); }
+    if (f.free) { setCurFilm({ ...f, locked: false }); setPage("video"); return; }
+    if (!user) { setShowLoginModal(true); return; }
+    if (!f.locked || hasAccess(f.id)) { setCurFilm({ ...f, locked: false }); setPage("video"); }
+    else { setPayFilm(f); setPage("payment"); }
   };
 
   const handlePaid = () => {
@@ -2407,43 +2173,12 @@ export default function Home() {
       saveAccess(`film_${payFilm.id}`, expires);
       setCurFilm({ ...payFilm, locked: false });
       setPayFilm(null);
-      navigateTo("video");
+      setPage("video");
     }
   };
 
-  const handleLogin = (u: any) => {
-    setUser(u);
-    syncAccessFromDB(u.id);
-    setShowLoginModal(false);
-    // Нэвтрэхийн өмнө кино дарсан бол тэр кинод үргэлжлүүлэх
-    if (pendingFilmRef.current) {
-      const f = pendingFilmRef.current;
-      pendingFilmRef.current = null;
-      if (!f.locked) { setCurFilm({ ...f, locked: false }); navigateTo("video"); return; }
-      // Эрх шалгах — syncAccessFromDB async тул accessMap шууд шинэчлэгдэхгүй
-      // Тиймээс DB-с шалгаж үзнэ
-      dbFetch(`pending_payments?user_id=eq.${u.id}&status=eq.confirmed&select=plan,film_id,confirmed_at,created_at`).then((pays: any) => {
-        if (!Array.isArray(pays)) { setPayFilm(f); navigateTo("payment"); return; }
-        const now = Date.now();
-        const cat = decodeCat(f.badge);
-        const catKey: any = { "Эротик": "erotic", "Гадаад": "gadaad", "Хятад": "hyatad" };
-        const hasA = pays.some((p: any) => {
-          const base = new Date(p.confirmed_at || p.created_at).getTime();
-          const dur = p.plan?.endsWith("_3day") ? 3*24*3600*1000 : 30*24*3600*1000;
-          if (base + dur < now) return false;
-          if (p.plan === "all_1month") return true;
-          if (p.plan?.startsWith(catKey[cat] || "erotic")) return true;
-          if (p.plan === "single" && p.film_id === f.id) return true;
-          return false;
-        });
-        if (hasA) { setCurFilm({ ...f, locked: false }); navigateTo("video"); }
-        else { setPayFilm(f); navigateTo("payment"); }
-      });
-      return;
-    }
-    setPage("home");
-  };
-  const handleLogout = () => { clearSession(); setUser(null); setAccessMap({}); localStorage.removeItem("kino_access"); };
+  const handleLogin = (u: any) => { setUser(u); syncAccessFromDB(u.id); setShowLoginModal(false); setPage("home"); };
+  const handleLogout = () => { clearSession(); setUser(null); };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
 
   return (
@@ -2463,7 +2198,7 @@ export default function Home() {
         @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
       `}</style>
 
-      {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={(plan: string) => {
+      {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => setPage("search")} onAdmin={() => setPage("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={(plan: string) => {
           const PLANS: any = {
             "erotic_3day":  { title: "🔞 Эротик · 3 хоног",  price: 8000,  plan: "erotic_3day" },
             "erotic_1month":{ title: "🔞 Эротик · 1 сар",    price: 12500, plan: "erotic_1month" },
@@ -2474,11 +2209,11 @@ export default function Home() {
             "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
           };
           const p = PLANS[plan] || PLANS["all_1month"];
-          setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
-        }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
+          setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); setPage("payment");
+        }} onContact={() => setShowContact(true)} accessMap={accessMap} onInstall={handleInstallClick} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
-      {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); navigateTo("admin"); }} onBack={() => setPage("home")} />}
+      {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); setPage("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
       {payFilm && page === "payment" && <BankModal film={payFilm} onClose={() => { setPayFilm(null); setPage("home"); }} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
@@ -2510,7 +2245,7 @@ export default function Home() {
       )}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
-      {showLoginModal && !user && mounted && createPortal(
+      {!user && mounted && createPortal(
         <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, width:"calc(100% - 24px)", maxWidth:500, pointerEvents:"none" }}>
           <div style={{
               pointerEvents:"all",
