@@ -2444,6 +2444,7 @@ export default function Home() {
             "hyatad_1month":{ title: "🇨🇳 Хятад · 1 сар",    price: 12500, plan: "hyatad_1month" },
             "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
           };
+          if (!user) { setShowLoginModal(true); return; }
           const p = PLANS[plan] || PLANS["all_1month"];
           setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
         }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} />}
