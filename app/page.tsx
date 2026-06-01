@@ -944,7 +944,7 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 // ══════════════════════════════════════════════
 // БАГЦ АВАХ MODAL
 // ══════════════════════════════════════════════
-function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void }) {
+function PlanModal({ onSelect, autoOpen, onAutoClose, user, onOpenLogin }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; onOpenLogin?: () => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
   const handleClose = () => { setOpen(false); if (onAutoClose) onAutoClose(); };
@@ -962,7 +962,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: strin
   return (
     <>
       <div style={{ padding: "8px 12px" }}>
-        <div onClick={() => setOpen(true)} className="plan-glow" style={{ background: "linear-gradient(135deg, #2d1060 0%, #0f1f3d 100%)", border: "2px solid #8b5cf6", borderRadius: 18, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 28px rgba(139,92,246,0.45), inset 0 0 20px rgba(139,92,246,0.08)" }}>
+        <div onClick={() => { if (!user && onOpenLogin) { onOpenLogin(); return; } setOpen(true); }} className="plan-glow" style={{ background: "linear-gradient(135deg, #2d1060 0%, #0f1f3d 100%)", border: "2px solid #8b5cf6", borderRadius: 18, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 28px rgba(139,92,246,0.45), inset 0 0 20px rgba(139,92,246,0.08)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <span style={{ fontSize: 32 }}>🎬</span>
             <div>
@@ -1023,7 +1023,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: strin
 function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin, showPlan, onPlanClose }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
-  const [activeCat, setActiveCat] = useState("Бүгд");
+  const [activeCat, setActiveCat] = useState("Эротик");
   const CATS = ["Бүгд", "Эротик", "Гадаад", "Хятад"];
   const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => decodeCat(f.badge) === activeCat);
   const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
@@ -1098,7 +1098,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
         </div>
 
         {/* ── БАГЦ АВАХ ТОВЧ ── */}
-        <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => { setPlanAutoOpen(false); if (onPlanClose) onPlanClose(); }} />
+        <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => { setPlanAutoOpen(false); if (onPlanClose) onPlanClose(); }} user={user} onOpenLogin={onOpenLogin} />
         {loading
           ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
           : (() => {
@@ -1107,7 +1107,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
                 items.push(<FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />);
                 if ((i + 1) % 6 === 0 && i + 1 < filteredFilms.length) {
                   items.push(<div key={`b${i}`} style={{ gridColumn: "1/-1", margin: "4px 0" }}>
-                    <div onClick={() => onMonthly("show_plan")} className="plan-glow" style={{ background: "linear-gradient(135deg,#2d1060,#0f1f3d)", border: "2px solid #8b5cf6", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+                    <div onClick={() => { if (!user && onOpenLogin) { onOpenLogin(); return; } onMonthly("show_plan"); }} className="plan-glow" style={{ background: "linear-gradient(135deg,#2d1060,#0f1f3d)", border: "2px solid #8b5cf6", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <span style={{ fontSize: 28 }}>🎬</span>
                         <div>
