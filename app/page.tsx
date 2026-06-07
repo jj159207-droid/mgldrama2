@@ -1400,6 +1400,8 @@ function AdminMembersTab() {
   // Нийт гишүүд харах
   const [showAllUsers, setShowAllUsers] = useState(false);
   const [allSearch, setAllSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     const handleBack = () => {
@@ -1524,7 +1526,7 @@ function AdminMembersTab() {
 
   // ── Нийт гишүүдийн жагсаалт дэлгэц ──
   if (showAllUsers) {
-    const filtered = users.filter(u => !allSearch.trim() || u.phone?.includes(allSearch.trim()));
+    const filtered = allSearch.trim().length >= 3 ? searchResults : (allSearch.trim() ? [] : users);
     return (
       <div style={{ padding: "0 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
@@ -1536,9 +1538,21 @@ function AdminMembersTab() {
         {/* Хайлт */}
         <div style={{ position: "relative", marginBottom: 12 }}>
           <span style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>🔍</span>
-          <input value={allSearch} onChange={(e: any) => setAllSearch(e.target.value)}
-            placeholder="Дугаар хайх..."
+          <input value={allSearch} onChange={async (e: any) => {
+              const val = e.target.value;
+              setAllSearch(val);
+              if (val.trim().length >= 3) {
+                setSearching(true);
+                const res = await dbFetch(`users?phone=like.*${val.trim()}*&select=*&limit=50`);
+                setSearchResults(Array.isArray(res) ? res : []);
+                setSearching(false);
+              } else {
+                setSearchResults([]);
+              }
+            }}
+            placeholder="Дугаар хайх (3+ цифр)..."
             style={{ ...inputSt, paddingLeft: 28, padding: "8px 10px 8px 28px", fontSize: 12 }} />
+          {searching && <div style={{ fontSize: 11, color: C.muted, marginTop: 4, paddingLeft: 4 }}>Хайж байна...</div>}
         </div>
         {loading ? (
           <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
