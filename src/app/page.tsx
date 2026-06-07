@@ -2286,11 +2286,21 @@ export default function Home() {
     try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
   }, []);
 
+  // Хэрэглэгч нэвтэрсэн бол 30 секунд тутамд DB-с access шинэчлэх
+  // (SMS хоцорсон ч, modal хаасан ч эрх автоматаар нээгдэнэ)
+  useEffect(() => {
+    if (!user?.id) return;
+    const timer = setInterval(() => {
+      syncAccessFromDB(user.id);
+    }, 30000);
+    return () => clearInterval(timer);
+  }, [user?.id]);
+
   // DB-с confirmed төлбөрүүдийг татаж access олгох
   const syncAccessFromDB = async (userId: number) => {
     // Бүх захиалгыг татах (confirmed + revoked)
     const payments = await dbFetch(
-      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,status`
+      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,confirmed_at,status`
     );
     if (!Array.isArray(payments)) return;
     const now = Date.now();
@@ -2300,7 +2310,8 @@ export default function Home() {
       if (p.status !== "confirmed") return; // revoked болон pending-г орхино
       const is3day = p.plan?.endsWith("_3day");
       const dur = is3day ? 3*24*60*60*1000 : 30*24*60*60*1000;
-      const exp = new Date(p.created_at).getTime() + dur;
+      const base = new Date(p.confirmed_at || p.created_at).getTime();
+      const exp = base + dur;
       if (p.plan === "monthly" || p.plan === "1month" || p.plan === "3day" || p.plan === "1year") {
         if (exp > now) newAccess["monthly"] = Math.max(newAccess["monthly"] || 0, exp);
       } else if (p.plan === "all_1month") {
@@ -2313,7 +2324,7 @@ export default function Home() {
         if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
       }
       if (p.film_id && p.film_id > 0 && (p.plan === "single" || !p.plan?.includes("month") && !p.plan?.includes("day") && !p.plan?.includes("all"))) {
-        const filmExp = new Date(p.created_at).getTime() + 72 * 60 * 60 * 1000;
+        const filmExp = new Date(p.confirmed_at || p.created_at).getTime() + 72 * 60 * 60 * 1000;
         if (filmExp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, filmExp);
       }
     });
@@ -2410,7 +2421,7 @@ export default function Home() {
       }
       setPayFilm(null);
       setPage("home");
-      if (user?.id) syncAccessFromDB(user.id);
+      setTimeout(() => { if (user?.id) syncAccessFromDB(user.id); }, 3000);
     } else {
       // 72 цагийн эрх
       const expires = Date.now() + 72 * 60 * 60 * 1000;

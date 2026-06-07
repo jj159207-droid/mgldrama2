@@ -7,15 +7,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const text = body.text || "";
 
-  // 6 оронтой тоо олох — гүйлгээний утга
-  const match = text.match(/\b(\d{6})\b/);
-  if (!match) {
-    return NextResponse.json({ ok: false, msg: "6 оронтой код олдсонгүй" });
+  // Хаан банк SMS формат: "...bolloo.Utga:770921"
+  // Utga: keyword-оос хойш яг 6 оронтой тоо авна
+  const utgMatch = text.match(/Utga[:\s]+(\d{6})\b/i);
+  if (!utgMatch) {
+    return NextResponse.json({ ok: false, msg: "6 оронтой гүйлгээний утга олдсонгүй" });
   }
 
-  const ref = match[1];
+  const ref = utgMatch[1];
 
-  // SMS-ээс зөвхөн ORLOGO дүнг авна
+  // SMS-ээс ORLOGO дүнг авна
   let paidAmount = 0;
   const om = text.match(/ORLOGO:([\d,]+)\.?\d*MNT/i) || text.match(/ORLOGO[\s:]+([\d,]+)/i);
   if (om) { paidAmount = parseInt(om[1].replace(/,/g, "")); }
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
   const pending = await cr.json();
 
   if (!Array.isArray(pending) || pending.length === 0) {
-    return NextResponse.json({ ok: false, msg: "Төлбөр олдсонгүй" });
+    return NextResponse.json({ ok: false, msg: "Төлбөр олдсонгүй: " + ref });
   }
 
   const payment = pending[0];
