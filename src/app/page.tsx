@@ -37,10 +37,10 @@ const ADMIN_KEY = "admin2024";
 // ══════════════════════════════════════════════
 const BANK_ACCOUNT = {
   bank: "Хаан банк",
-  number: "5402504824",
-  ibn: "IBN11000500",
+  number: "5403972086",
+  ibn: "MN95000500",
   name: "Т.Жаргалбаяр",
-  shortNumber: "MN11000500",
+  shortNumber: "MN95000500",
 };
 
 function saveSession(user: any) { const s = { user, expires: Date.now() + 7 * 24 * 60 * 60 * 1000 }; localStorage.setItem("kino_session", JSON.stringify(s)); }
