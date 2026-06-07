@@ -1837,7 +1837,7 @@ function AdminContactTab() {
   const load = async () => {
     setLoading(true);
     loadAnnouncement();
-    const data = await dbFetch("contact_messages?is_announcement=eq.false&order=created_at.asc&limit=200&select=*");
+    const data = await dbFetch("contact_messages?is_announcement=neq.true&order=created_at.asc&limit=200&select=*");
     setMsgs(Array.isArray(data) ? data : []);
     setLoading(false);
   };
