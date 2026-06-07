@@ -614,6 +614,12 @@ function ContactModal({ onClose, user }: any) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState("");
+  const [announcement, setAnnouncement] = useState<any>(null);
+
+  useEffect(() => {
+    dbFetch("contact_messages?is_announcement=eq.true&order=created_at.desc&limit=1&select=*")
+      .then((data: any) => { if (Array.isArray(data) && data.length > 0) setAnnouncement(data[0]); });
+  }, []);
 
   const send = async () => {
     const ph = phone.replace(/\D/g, "");
@@ -641,6 +647,17 @@ function ContactModal({ onClose, user }: any) {
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "28px 20px" }}>
+        {/* Админы зар */}
+        {announcement && (
+          <div style={{ background: "#1a0a3a", border: "1.5px solid #f59e0b", borderRadius: 14, padding: "16px", marginBottom: 20 }}>
+            <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700, marginBottom: 10 }}>📢 Мэдэгдэл</div>
+            {announcement.announcement_image && (
+              <img src={announcement.announcement_image} alt="" style={{ width: "100%", borderRadius: 10, marginBottom: 10, maxHeight: 200, objectFit: "cover" }} />
+            )}
+            <div style={{ fontSize: 14, color: C.txt, lineHeight: 1.7 }}>{announcement.message}</div>
+          </div>
+        )}
+
         {sent ? (
           <div style={{ textAlign: "center", marginTop: 60 }}>
             <div style={{ fontSize: 60, marginBottom: 16 }}>✅</div>
@@ -1847,9 +1864,40 @@ function AdminContactTab() {
     return () => window.removeEventListener("adminBackPress", handleBack);
   }, [selectedUser]);
 
+  const [annText, setAnnText] = useState("");
+  const [annImage, setAnnImage] = useState("");
+  const [annSaving, setAnnSaving] = useState(false);
+  const [announcement, setAnnouncement] = useState<any>(null);
+  const [showAnnForm, setShowAnnForm] = useState(false);
+
+  const loadAnnouncement = async () => {
+    const data = await dbFetch("contact_messages?is_announcement=eq.true&order=created_at.desc&limit=1&select=*");
+    setAnnouncement(Array.isArray(data) && data.length > 0 ? data[0] : null);
+  };
+
+  const saveAnnouncement = async () => {
+    if (!annText.trim()) return;
+    setAnnSaving(true);
+    // Хуучин зарыг устгах
+    await dbFetch("contact_messages?is_announcement=eq.true", { method: "DELETE" });
+    // Шинэ зар үүсгэх
+    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify({ message: annText.trim(), announcement_image: annImage.trim() || null, is_announcement: true, read: true, phone: "admin" }) });
+    await loadAnnouncement();
+    setAnnText("");
+    setAnnImage("");
+    setAnnSaving(false);
+    setShowAnnForm(false);
+  };
+
+  const deleteAnnouncement = async () => {
+    await dbFetch("contact_messages?is_announcement=eq.true", { method: "DELETE" });
+    setAnnouncement(null);
+  };
+
   const load = async () => {
     setLoading(true);
-    const data = await dbFetch("contact_messages?order=created_at.asc&limit=200&select=*");
+    loadAnnouncement();
+    const data = await dbFetch("contact_messages?is_announcement=eq.false&order=created_at.asc&limit=200&select=*");
     setMsgs(Array.isArray(data) ? data : []);
     setLoading(false);
   };
@@ -1963,6 +2011,59 @@ function AdminContactTab() {
           <button onClick={deleteAll} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
         </div>
       </div>
+      {/* Зар — Админ бичих хэсэг */}
+      <div style={{ marginBottom: 16 }}>
+        {!showAnnForm ? (
+          <div>
+            {announcement ? (
+              <div style={{ background: "#1a0a3a", border: "1.5px solid #f59e0b", borderRadius: 14, padding: "14px 16px", marginBottom: 8 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                  <div style={{ fontSize: 11, color: "#f59e0b", fontWeight: 700 }}>📢 Одоогийн зар</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => { setAnnText(announcement.message); setAnnImage(announcement.announcement_image || ""); setShowAnnForm(true); }}
+                      style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 6, padding: "4px 10px", color: C.muted, fontSize: 11, cursor: "pointer" }}>✏️ Засах</button>
+                    <button onClick={deleteAnnouncement}
+                      style={{ background: "#1a0505", border: `0.5px solid ${C.red}`, borderRadius: 6, padding: "4px 10px", color: C.red, fontSize: 11, cursor: "pointer" }}>🗑️</button>
+                  </div>
+                </div>
+                {announcement.announcement_image && (
+                  <img src={announcement.announcement_image} alt="" style={{ width: "100%", borderRadius: 10, marginBottom: 8, maxHeight: 160, objectFit: "cover" }} />
+                )}
+                <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.6 }}>{announcement.message}</div>
+              </div>
+            ) : (
+              <button onClick={() => setShowAnnForm(true)}
+                style={{ width: "100%", background: "#1a0a3a", border: "1.5px dashed #f59e0b", borderRadius: 14, padding: "14px", color: "#f59e0b", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "center" }}>
+                📢 Зар / мэдэгдэл нэмэх
+              </button>
+            )}
+          </div>
+        ) : (
+          <div style={{ background: C.card2, border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "14px 16px" }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 12 }}>📢 Зар бичих</div>
+            <label style={lbl}>Текст</label>
+            <textarea value={annText} onChange={(e: any) => setAnnText(e.target.value)}
+              placeholder="Хэрэглэгчдэд харуулах мэдэгдэл..."
+              style={{ ...inputSt, height: 90, resize: "none", lineHeight: 1.6, marginBottom: 10 }} />
+            <label style={lbl}>Зургийн URL (заавал биш)</label>
+            <input value={annImage} onChange={(e: any) => setAnnImage(e.target.value)}
+              placeholder="https://i.imgbb.com/..."
+              style={{ ...inputSt, marginBottom: 12 }} />
+            {annImage.trim() && (
+              <img src={annImage.trim()} alt="" style={{ width: "100%", borderRadius: 10, marginBottom: 10, maxHeight: 140, objectFit: "cover" }} />
+            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={saveAnnouncement} disabled={annSaving || !annText.trim()}
+                style={{ flex: 1, background: C.gold, border: "none", borderRadius: 10, padding: "11px", color: "#000", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: annSaving ? 0.6 : 1 }}>
+                {annSaving ? "Хадгалж байна..." : "✅ Хадгалах"}
+              </button>
+              <button onClick={() => { setShowAnnForm(false); setAnnText(""); setAnnImage(""); }}
+                style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "11px 16px", color: C.muted, fontSize: 13, cursor: "pointer" }}>Болих</button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {loading ? (
         <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
       ) : users.length === 0 ? (
