@@ -609,105 +609,45 @@ function FilmCard({ film, onClick, expiry }: any) {
 }
 
 function ContactModal({ onClose, user }: any) {
-  const [phone, setPhone] = useState(user?.phone || "");
-  const [issue, setIssue] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [err, setErr] = useState("");
   const [announcement, setAnnouncement] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     dbFetch("contact_messages?is_announcement=eq.true&order=created_at.desc&limit=1&select=*")
-      .then((data: any) => { if (Array.isArray(data) && data.length > 0) setAnnouncement(data[0]); });
+      .then((data: any) => {
+        if (Array.isArray(data) && data.length > 0) setAnnouncement(data[0]);
+        setLoading(false);
+      });
   }, []);
-
-  const send = async () => {
-    const ph = phone.replace(/\D/g, "");
-    if (ph.length < 8) { setErr("Утасны дугаараа оруулна уу"); return; }
-    if (!issue.trim()) { setErr("Асуудлаа бичнэ үү"); return; }
-    setErr("");
-    setSending(true);
-    const payload = {
-      phone: ph,
-      message: issue.trim(),
-      user_id: user?.id || null,
-      read: false,
-    };
-    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify(payload) });
-    setSending(false);
-    setSent(true);
-  };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 300, display: "flex", flexDirection: "column" }}>
-      {/* Header */}
       <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
         <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Холбогдох</div>
+        <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Мэссэж</div>
       </div>
-
-      <div style={{ flex: 1, overflowY: "auto", padding: "28px 20px" }}>
-        {/* Админы зар */}
-        {announcement && (
-          <div style={{ background: "#1a0a3a", border: "1.5px solid #f59e0b", borderRadius: 14, padding: "16px", marginBottom: 20 }}>
-            <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700, marginBottom: 10 }}>📢 Мэдэгдэл</div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 60, color: C.muted }}>Ачааллаж байна...</div>
+        ) : announcement ? (
+          <div style={{ background: "#1a0a3a", border: "1.5px solid #f59e0b", borderRadius: 16, padding: "20px" }}>
+            <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700, marginBottom: 12 }}>📢 Мэдэгдэл</div>
             {announcement.announcement_image && (
-              <img src={announcement.announcement_image} alt="" style={{ width: "100%", borderRadius: 10, marginBottom: 10, maxHeight: 200, objectFit: "cover" }} />
+              <img src={announcement.announcement_image} alt="" style={{ width: "100%", borderRadius: 12, marginBottom: 14, maxHeight: 260, objectFit: "cover" }} />
             )}
-            <div style={{ fontSize: 14, color: C.txt, lineHeight: 1.7 }}>{announcement.message}</div>
-          </div>
-        )}
-
-        {sent ? (
-          <div style={{ textAlign: "center", marginTop: 60 }}>
-            <div style={{ fontSize: 60, marginBottom: 16 }}>✅</div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: C.txt, marginBottom: 10 }}>Амжилттай илгээлээ!</div>
-            <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.7 }}>Таны мэдээллийг хүлээн авлаа.<br/>Удахгүй админ тань руу залгах болно.</div>
-            <button onClick={onClose} style={{ ...goldBtn, marginTop: 30, borderRadius: 12 }}>Буцах</button>
+            <div style={{ fontSize: 15, color: C.txt, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{announcement.message}</div>
           </div>
         ) : (
-          <>
-            {/* Мэдэгдэл */}
-            <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 14, padding: "16px 18px", marginBottom: 24 }}>
-              <div style={{ fontSize: 22, marginBottom: 8 }}>📞</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.txt, marginBottom: 6 }}>Холбогдох дугаараа үлдээнэ үү</div>
-              <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.7 }}>Мэдээллээ илгээсний дараа удахгүй тань руу <span style={{ color: C.gold, fontWeight: 700 }}>админ залгах</span> болно. Түр хүлээнэ үү.</div>
-            </div>
-
-            {/* Утасны дугаар */}
-            <label style={lbl}>Утасны дугаар</label>
-            <input
-              type="tel"
-              inputMode="numeric"
-              maxLength={8}
-              value={phone}
-              onChange={(e: any) => { setPhone(e.target.value.replace(/\D/g, "").slice(0, 8)); setErr(""); }}
-              placeholder="88123456"
-              
-              style={{ ...inputSt, fontSize: 18, fontWeight: 700, letterSpacing: "0.1em", marginBottom: 16, opacity: 1 }}
-            />
-
-            {/* Асуудал */}
-            <label style={lbl}>Асуудал / Санал хүсэлт</label>
-            <textarea
-              value={issue}
-              onChange={(e: any) => { setIssue(e.target.value); setErr(""); }}
-              placeholder="Асуудлаа дэлгэрэнгүй бичнэ үү..."
-              style={{ ...inputSt, height: 130, resize: "none", lineHeight: 1.6, marginBottom: 16 }}
-            />
-
-            {err && <div style={{ color: C.red, fontSize: 13, marginBottom: 12 }}>{err}</div>}
-
-            <button onClick={send} disabled={sending}
-              style={{ ...goldBtn, borderRadius: 12, opacity: sending ? 0.6 : 1 }}>
-              {sending ? "Илгээж байна..." : "📨 Илгээх"}
-            </button>
-          </>
+          <div style={{ textAlign: "center", marginTop: 80 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+            <div style={{ fontSize: 15, color: C.muted }}>Одоогоор мэдэгдэл байхгүй байна</div>
+          </div>
         )}
       </div>
     </div>
   );
 }
+
 
 function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   const [phone, setPhone] = useState("");
