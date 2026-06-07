@@ -638,9 +638,10 @@ function ContactModal({ onClose, user }: any) {
             <div style={{ fontSize: 15, color: C.txt, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{announcement.message}</div>
           </div>
         ) : (
-          <div style={{ textAlign: "center", marginTop: 80 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
-            <div style={{ fontSize: 15, color: C.muted }}>Одоогоор мэдэгдэл байхгүй байна</div>
+          <div style={{ textAlign: "center", marginTop: 60, padding: "0 10px" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.txt, marginBottom: 12 }}>Манай фэйсбүүк хуудас руу бичээрэй</div>
+            <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>Асуулт, санал хүсэлт байвал манай фэйсбүүк хуудасны чат руу бичнэ үү. Бид аль болох хурдан хариулах болно.</div>
           </div>
         )}
       </div>
