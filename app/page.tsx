@@ -1544,18 +1544,38 @@ function AdminMembersTab() {
           <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: 30, color: C.muted }}>Гишүүн олдсонгүй</div>
-        ) : filtered.map((u: any) => (
+        ) : filtered.map((u: any) => {
+          const uActive = activePayments.filter((p: any) => p.user_id === u.id);
+          return (
           <div key={u.id} onClick={() => { setGrantUser(u); setGrantStep("main"); loadUserPayments(u.id); }}
-            style={{ background: C.card, border: `0.5px solid ${grantUser?.id === u.id ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer" }}>
+            style={{ background: C.card, border: `0.5px solid ${grantUser?.id === u.id ? C.gold : uActive.length > 0 ? "#16a34a" : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
                 <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>ID: {u.user_id} · {new Date(u.created_at || Date.now()).toLocaleDateString("mn-MN")}</div>
+                {uActive.length > 0 && (
+                  <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {uActive.map((p: any) => {
+                      const base = new Date(p.confirmed_at || p.created_at).getTime();
+                      const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
+                      const remaining = Math.ceil((base + dur - Date.now()) / (60*60*1000));
+                      const days = Math.floor(remaining / 24);
+                      const hrs = remaining % 24;
+                      const timeStr = days > 0 ? days + "өдөр " + hrs + "цаг" : remaining + "цаг";
+                      return (
+                        <span key={p.ref_code} style={{ fontSize: 10, background: "#052e16", border: "0.5px solid #16a34a", borderRadius: 6, padding: "2px 6px", color: "#4ade80" }}>
+                          {planLabel(p.plan)} · {timeStr}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               <span style={{ color: C.muted, fontSize: 16 }}>›</span>
             </div>
           </div>
-        ))}
+          );
+        })}
 
         {/* Эрх өгөх панел */}
         {grantUser && (
@@ -1571,6 +1591,40 @@ function AdminMembersTab() {
             {/* Үндсэн — Эрх өгөх / Эрх хасах сонголт */}
             {grantStep === "main" && (
               <div>
+                {/* Идэвхтэй эрхүүд */}
+                {userPayments.filter((p: any) => {
+                  const base = new Date(p.confirmed_at || p.created_at).getTime();
+                  const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
+                  return base + dur > Date.now();
+                }).length > 0 && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>✅ Идэвхтэй эрхүүд:</div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                      {userPayments.filter((p: any) => {
+                        const base = new Date(p.confirmed_at || p.created_at).getTime();
+                        const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
+                        return base + dur > Date.now();
+                      }).map((p: any) => {
+                        const base = new Date(p.confirmed_at || p.created_at).getTime();
+                        const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
+                        const remaining = Math.ceil((base + dur - Date.now()) / (60*60*1000));
+                        const days = Math.floor(remaining / 24);
+                        const hrs = remaining % 24;
+                        const timeStr = days > 0 ? days + "өдөр " + hrs + "цаг үлдсэн" : remaining + "цаг үлдсэн";
+                        return (
+                          <div key={p.ref_code} style={{ background: "#052e16", border: "0.5px solid #16a34a", borderRadius: 8, padding: "8px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: "#4ade80" }}>{planLabel(p.plan)}</div>
+                              <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>⏰ {timeStr}</div>
+                            </div>
+                            <div style={{ fontSize: 10, color: C.muted }}>{new Date(p.confirmed_at || p.created_at).toLocaleDateString("mn-MN")}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Эрх нэмэх:</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                   {[
                     ["all_1month", "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
