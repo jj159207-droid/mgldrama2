@@ -1579,7 +1579,7 @@ function AdminMembersTab() {
 
         {/* Эрх өгөх панел */}
         {grantUser && (
-          <div style={{ background: C.card2, border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "16px 14px", marginTop: 6, marginBottom: 16 }}>
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200, background: C.card2, border: `1.5px solid ${C.gold}`, borderRadius: "14px 14px 0 0", padding: "16px 14px", maxHeight: "80vh", overflowY: "auto", boxShadow: "0 -4px 24px rgba(0,0,0,0.7)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <div>
                 <div style={{ fontSize: 12, color: C.muted }}>Эрх өгөх хэрэглэгч</div>
