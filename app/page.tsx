@@ -1818,15 +1818,21 @@ function AdminContactTab() {
   const saveAnnouncement = async () => {
     if (!annText.trim()) return;
     setAnnSaving(true);
-    // Хуучин зарыг устгах
-    await dbFetch("contact_messages?is_announcement=eq.true", { method: "DELETE" });
-    // Шинэ зар үүсгэх
-    await dbFetch("contact_messages", { method: "POST", body: JSON.stringify({ message: annText.trim(), announcement_image: annImage.trim() || null, is_announcement: true, read: true, phone: "admin" }) });
-    await loadAnnouncement();
-    setAnnText("");
-    setAnnImage("");
+    try {
+      await dbFetch("contact_messages?is_announcement=eq.true", { method: "DELETE" });
+      const res = await dbFetch("contact_messages", { method: "POST", body: JSON.stringify({ message: annText.trim(), announcement_image: annImage.trim() || null, is_announcement: true, read: true, phone: "admin" }) });
+      if (Array.isArray(res) && res.length > 0) {
+        setAnnouncement(res[0]);
+      } else {
+        await loadAnnouncement();
+      }
+      setAnnText("");
+      setAnnImage("");
+      setShowAnnForm(false);
+    } catch(e) {
+      alert("Хадгалахад алдаа гарлаа");
+    }
     setAnnSaving(false);
-    setShowAnnForm(false);
   };
 
   const deleteAnnouncement = async () => {
