@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Кино үзэх самбар",
-  description: "Кино үзэх самбар",
+  title: "21 кино 18 kino — Кино үзэх сайт",
+  description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -22,6 +22,28 @@ export const metadata: Metadata = {
     title: "MGL Drama",
   },
   themeColor: "#0d0d14",
+  openGraph: {
+    title: "21 кино 18 kino — Кино үзэх сайт",
+    description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+    url: "https://mongolz.pro",
+    siteName: "Mongolz.pro",
+    images: [
+      {
+        url: "https://i.ibb.co/9mDWgp40/mongolz-og-banner-v5.jpg",
+        width: 1200,
+        height: 630,
+        alt: "21 кино 18 kino — Кино үзэх сайт",
+      },
+    ],
+    locale: "mn_MN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "21 кино 18 kino — Кино үзэх сайт",
+    description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+    images: ["https://i.ibb.co/9mDWgp40/mongolz-og-banner-v5.jpg"],
+  },
 };
 
 export default function RootLayout({
@@ -47,4 +69,3 @@ export default function RootLayout({
     </html>
   );
 }
-
