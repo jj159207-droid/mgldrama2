@@ -1,36 +1,12 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { Fragment, useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/domain";
 
-async function dbFetch(path: string, opts?: RequestInit) {
-  try {
-    const { headers: extraHeaders, ...restOpts } = opts || {};
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-      ...restOpts,
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "return=representation",
-        ...(extraHeaders as Record<string, string> || {}),
-      },
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      console.error("dbFetch error:", path, err);
-      return err;
-    }
-    return res.json();
-  } catch(e) {
-    console.error("dbFetch catch:", path, e);
-    return null;
-  }
-}
-
-const ADMIN_KEY = "admin2024";
+import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
+import PosterUpload from "@/app/components/PosterUpload";
+import ReadinessCheck from "@/app/components/ReadinessCheck";
 
 // ══════════════════════════════════════════════
 // ДАНСНЫ МЭДЭЭЛЭЛ
@@ -43,16 +19,12 @@ const BANK_ACCOUNT = {
   shortNumber: "MN95000500",
 };
 
-function saveSession(user: any) { const s = { user, expires: Date.now() + 7 * 24 * 60 * 60 * 1000 }; localStorage.setItem("kino_session", JSON.stringify(s)); }
-function loadSession() { try { const s = JSON.parse(localStorage.getItem("kino_session") || "{}"); if (s.user && s.expires > Date.now()) return s.user; localStorage.removeItem("kino_session"); } catch { } return null; }
-function clearSession() { localStorage.removeItem("kino_session"); }
 function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
-
-// Гүйлгээний утга үүсгэх
-function genRef(filmId: number, monthly?: boolean): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+function genRef(): string {
+  const values = new Uint32Array(1);
+  crypto.getRandomValues(values);
+  return String(100000 + values[0] % 900000);
 }
-
 
 // badge дотор cat encode/decode хийх
 function encodeBadgeCat(badge: string, cat: string): string {
@@ -62,28 +34,17 @@ function encodeBadgeCat(badge: string, cat: string): string {
 function decodeBadge(badge: string): string { return (badge || "").split("|")[0] || "Хэлтэй"; }
 function decodeCat(badge: string): string { return (badge || "").split("|")[1] || "Эротик"; }
 
-const BANKS = [
-  { id: "khanbank", name: "Хаан банк", color: "#00a651", icon: "🏦", deep: "khanbank://qpay?amount=" },
-  { id: "golomt", name: "Голомт банк", color: "#e4002b", icon: "🏦", deep: "golomtbank://qpay?amount=" },
-  { id: "tdbbank", name: "ХАС банк", color: "#0033a0", icon: "🏦", deep: "tdb://qpay?amount=" },
-  { id: "statebank", name: "Төрийн банк", color: "#2c5f9e", icon: "🏦", deep: "statebank://qpay?amount=" },
-  { id: "mbank", name: "М банк", color: "#e8281e", icon: "📱", deep: "mbank://qpay?amount=" },
-  { id: "most", name: "MOST", color: "#6c3fa0", icon: "📱", deep: "most://payment?amount=" },
-  { id: "upoint", name: "U-Point", color: "#f97316", icon: "📱", deep: "upoint://pay?amount=" },
-  { id: "socialpay", name: "SocialPay", color: "#0ea5e9", icon: "📱", deep: "socialpay://payment?amount=" },
-];
-
 const C = {
-  bg: "#0d0d14", card: "#13131c", card2: "#1a1a26", bd: "#1e1e2e",
-  txt: "#f0eefa", muted: "#6b6a90",
-  red: "#e8281e", gold: "#e8a020", green: "#16a34a", blue: "#2563eb", amber: "#ca8a04",
+  bg: "#090d13", card: "#111822", card2: "#1a2431", bd: "#2a3543",
+  txt: "#f5f5f3", muted: "#a6b0be",
+  red: "#e8281e", gold: "#efb65b", green: "#16a34a", blue: "#2563eb", amber: "#ca8a04",
 };
 
 const badgeColor = (b: string) => b === "Хадмал" ? C.amber : C.blue;
 
 const inputSt: any = {
-  width: "100%", background: "#0d0d18", border: `0.5px solid #1e1e2e`,
-  borderRadius: 8, padding: "11px 13px", color: "#f0eefa", fontSize: 14,
+  width: "100%", background: C.bg, border: `1px solid ${C.bd}`,
+  borderRadius: 10, padding: "13px 15px", color: C.txt, fontSize: 16,
   outline: "none", boxSizing: "border-box", fontFamily: "inherit",
 };
 const goldBtn: any = {
@@ -91,7 +52,7 @@ const goldBtn: any = {
   padding: 13, borderRadius: 10, fontSize: 15, fontWeight: 700,
   cursor: "pointer", fontFamily: "inherit",
 };
-const lbl: any = { fontSize: 12, color: C.muted, display: "block", marginBottom: 5 };
+const lbl: any = { fontSize: 14, color: C.muted, display: "block", marginBottom: 5 };
 
 // ══════════════════════════════════════════════
 // БАНКНЫ МЭССЭЖ ОРЛУУЛАХ MODAL (Админ)
@@ -114,7 +75,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
   const verify = () => {
     const ref = extractRef(smsText);
     if (!ref) {
-      setErr("Мэссэжнээс гүйлгээний утга олдсонгүй. 'KN' эхэлсэн кодыг шалгана уу.");
+      setErr("Мэссэжнээс гүйлгээний утга олдсонгүй. 6 оронтой гүйлгээний кодыг шалгана уу.");
       return;
     }
     onFound(ref);
@@ -159,14 +120,37 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid, user }: any) {
-  const [step, setStep] = useState<"waiting">("waiting");
-  const [refCode] = useState(() => genRef(film.id, film.monthly));
+  const [paymentError, setPaymentError] = useState("");
+  const [orderReady,setOrderReady]=useState(false);
+  const [orderAmount,setOrderAmount]=useState<number|null>(null);
+  const [refCode,setRefCode] = useState(() => genRef());
+  const refRetries=useRef(0);
   const [copied, setCopied] = useState<string | null>(null);
   const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid" | "timeout">("waiting");
   const [showSms, setShowSms] = useState(false);
   const [manualChecking, setManualChecking] = useState(false);
-  const intervalRef = useRef<any>(null);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const completed = useRef(false);
+  const finishing = useRef(false);
+  const confirmationSeen = useRef(false);
+  const active = useRef(true);
+  const paidCallback = useRef(onPaid);
+  useEffect(() => { paidCallback.current = onPaid; }, [onPaid]);
   const timeoutRef = useRef<any>(null);
+
+  const finishPayment = async (stillActive = () => active.current) => {
+    if (completed.current || finishing.current || !stillActive()) return;
+    finishing.current = true;
+    confirmationSeen.current = true;
+    setPaymentError("");
+    setAutoStatus("paid");
+    try {
+      await paidCallback.current(stillActive);
+      if (stillActive()) completed.current = true;
+    } finally {
+      finishing.current = false;
+    }
+  };
 
   const copyText = (text: string, key: string) => {
     try {
@@ -197,74 +181,63 @@ function BankModal({ film, onClose, onPaid, user }: any) {
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
-  // Төлбөр үүсгэх + автомат polling эхлүүлэх
   useEffect(() => {
-    if (step !== "waiting") return;
-
-    // Supabase-д pending_payments үүсгэх
-    dbFetch("pending_payments", {
-      method: "POST",
-      body: JSON.stringify({
-        ref_code: refCode,
-        film_id: film.id || null,
-        amount: film.price,
-        status: "pending",
-        user_id: user?.id || null,
-        plan: film.plan || (film.monthly ? "monthly" : "single"),
-      }),
-    });
-
-    // Автомат 4 секунд тутамд шалгах
-    intervalRef.current = setInterval(async () => {
-      setAutoStatus("checking");
-      const rows = await dbFetch(
-        `pending_payments?ref_code=eq.${refCode}&status=eq.confirmed&select=id`
-      );
-      if (Array.isArray(rows) && rows.length > 0) {
-        clearInterval(intervalRef.current);
-        clearTimeout(timeoutRef.current);
-        setAutoStatus("paid");
-        setTimeout(() => onPaid(), 1200);
-      } else {
-        setAutoStatus("waiting");
+    let cancelled=false; active.current=true;
+    let stopAt=0;
+    let checking=false;
+    let ready=false;
+    const check=async()=>{
+      if(cancelled||completed.current||checking||!ready)return;
+      if(intervalRef.current)clearTimeout(intervalRef.current);
+      if(document.hidden){intervalRef.current=setTimeout(check,4000);return;}
+      checking=true;
+      try {
+        if(!confirmationSeen.current)setAutoStatus("checking");
+        const rows=await requestJson(`/api/db?path=${encodeURIComponent(`pending_payments?ref_code=eq.${refCode}&select=id,status`)}`,{},true);
+        if(cancelled)return;
+        if(rows?.[0]?.status==='confirmed'){await finishPayment(()=>!cancelled);return;}
+        if(!rows?.length || rows[0].status!=='pending'){
+          ready=false;setOrderReady(false);setAutoStatus("timeout");setPaymentError("Захиалга цуцлагдсан эсвэл олдсонгүй. Төлбөр шилжүүлэхгүй, админтай холбогдоно уу.");return;
+        }
+        if(Date.now()>stopAt){ready=false;setOrderReady(false);setAutoStatus("timeout");return;}
+        setAutoStatus("waiting");setPaymentError("");
+      }catch(err){if(!cancelled){setPaymentError(err instanceof Error?err.message:"Төлбөр шалгахад алдаа гарлаа.");setAutoStatus(confirmationSeen.current?"paid":"waiting");}}
+      finally {
+        checking=false;
+        if(!cancelled&&!completed.current&&ready)intervalRef.current=setTimeout(check,4000);
       }
-    }, 4000);
-
-    // 20 минутын дараа timeout
-    timeoutRef.current = setTimeout(() => {
-      clearInterval(intervalRef.current);
-      setAutoStatus("timeout");
-    }, 20 * 60 * 1000);
-
-    return () => {
-      clearInterval(intervalRef.current);
-      clearTimeout(timeoutRef.current);
     };
-  }, [step]);
+    const start=async()=>{
+      try{
+        const rows=await dbFetch("pending_payments",{method:"POST",body:JSON.stringify({ref_code:refCode,film_id:film.id||null,plan:film.plan||(film.monthly?"monthly":"single")})},true);
+        if(!Array.isArray(rows)||!rows.length)throw new Error("Захиалга үүссэнгүй.");
+        const amount=Number(rows[0].amount),created=Date.parse(rows[0].created_at);
+        if(!Number.isSafeInteger(amount)||amount<=0||!Number.isFinite(created))throw new Error("Захиалгын дүн эсвэл хугацаа буруу байна.");
+        stopAt=created+24*60*60*1000;
+        if(!cancelled){ready=true;setOrderAmount(amount);setOrderReady(true);void check();}
+      }catch(err){if(!cancelled){
+        if(err instanceof RequestError&&err.code==='REF_CONFLICT'&&refRetries.current<5){refRetries.current++;setRefCode(genRef());return;}
+        setPaymentError(err instanceof Error?err.message:"Захиалга үүссэнгүй.");
+      }}
+    };
+    const resume=()=>{if(!document.hidden)void check();};
+    window.addEventListener("focus",resume);window.addEventListener("online",resume);document.addEventListener("visibilitychange",resume);
+    void start();
+    return()=>{window.removeEventListener("focus",resume);window.removeEventListener("online",resume);document.removeEventListener("visibilitychange",resume);cancelled=true;active.current=false;if(intervalRef.current)clearTimeout(intervalRef.current);if(timeoutRef.current)clearTimeout(timeoutRef.current);};
+  },[film.id,film.plan,film.monthly,refCode]);
 
-  // SMS мэссэжнээс ref олсны дараа гараар шалгах
-  const handleSmsFound = async (foundRef: string) => {
-    setShowSms(false);
+  const handleSmsFound=async(foundRef:string)=>{
+    setShowSms(false);setPaymentError("");
+    if(foundRef!==refCode){setPaymentError("Энэ захиалгын гүйлгээний кодыг оруулна уу.");return;}
+    if(completed.current||manualChecking)return;
     setManualChecking(true);
-    const rows = await dbFetch(
-      `pending_payments?ref_code=eq.${foundRef}&select=*`
-    );
-    if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "pending") {
-      await dbFetch(`pending_payments?ref_code=eq.${foundRef}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString() }),
-      });
-      setManualChecking(false);
-      setAutoStatus("paid");
-      setTimeout(() => onPaid(), 1200);
-    } else if (Array.isArray(rows) && rows.length > 0 && rows[0].status === "confirmed") {
-      setManualChecking(false);
-      setAutoStatus("paid");
-      setTimeout(() => onPaid(), 1200);
-    } else {
-      setManualChecking(false);
-      alert(`"${foundRef}" кодтой төлбөр олдсонгүй. Гүйлгээний утгыг зөв бичсэн эсэхийг шалгана уу.`);
-    }
+    try {
+      const rows=await dbFetch(`pending_payments?ref_code=eq.${refCode}&status=eq.confirmed&select=id`);
+      if(!active.current)return;
+      if(rows?.length)await finishPayment();
+      else setPaymentError("Төлбөр хараахан баталгаажаагүй. Админ эсвэл банкны баталгааг хүлээнэ үү.");
+    }catch(err){if(active.current)setPaymentError(err instanceof Error?err.message:"Алдаа гарлаа.");}
+    finally{if(active.current)setManualChecking(false);}
   };
 
   if (autoStatus === "paid") {
@@ -274,94 +247,24 @@ function BankModal({ film, onClose, onPaid, user }: any) {
           <div style={{ fontSize: 72, marginBottom: 12 }}>✅</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>Кино эхэлж байна...</div>
+          {paymentError && <><p role="alert">{paymentError}</p><p>Холболт сэргэхэд дахин оролдоно. Дахин мөнгө шилжүүлэх шаардлагагүй.</p></>}
+          <button className="secondary-button" onClick={onClose}>Кино сан руу буцах</button>
         </div>
       </div>
     );
   }
 
-  return (
-    <>
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.95)", display: "flex", flexDirection: "column", zIndex: 200 }}>
-        <div style={{ background: C.card, flex: 1, display: "flex", flexDirection: "column", overflowY: "auto" }}>
-          <div style={{ padding: "20px 20px 0" }}>
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <span style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>{film.title}</span>
-          </div>
-
-          {/* Үнэ */}
-          <div style={{ textAlign: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 36, fontWeight: 900, color: film.monthly ? "#a855f7" : C.gold }}>{film.price?.toLocaleString()}₮</div>
-            <div style={{ fontSize: 13, color: C.muted, marginTop: 2 }}>{film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн хязгааргүй эрх" : "1 сарын хязгааргүй эрх") : "дараах данс руу шилжүүлнэ үү"}</div>
-          </div>
-
-          {/* Дансны мэдээлэл */}
-          <div style={{ background: "#050d1a", border: `1.5px solid ${C.gold}`, borderRadius: 14, padding: "16px 18px", marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}>🏦 Дансны мэдээлэл</div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: C.muted }}>Банк</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{BANK_ACCOUNT.bank}</span>
-            </div>
-            {/* IBN дугаар */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 13, color: C.muted }}>IBN</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: C.txt, fontFamily: "monospace" }}>{BANK_ACCOUNT.ibn}</span>
-            </div>
-            {/* Дансны дугаар — том, дарахад copy */}
-            <div
-              onClick={() => copyText(BANK_ACCOUNT.number, "account")}
-              style={{ background: copied === "account" ? "#052e16" : "#0a1628", border: `1.5px solid ${copied === "account" ? C.green : C.gold}`, borderRadius: 12, padding: "14px 16px", textAlign: "center", cursor: "pointer", marginBottom: 8, transition: "all 0.2s" }}
-            >
-              <div style={{ fontSize: 11, color: C.muted, marginBottom: 4 }}>Дансны дугаар — дарж хуулна уу</div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: copied === "account" ? C.green : "#fbbf24", fontFamily: "monospace", letterSpacing: "0.1em" }}>
-                {BANK_ACCOUNT.number}
-              </div>
-              <div style={{ fontSize: 12, color: copied === "account" ? C.green : C.muted, marginTop: 4 }}>
-                {copied === "account" ? "✅ Хуулагдлаа!" : "👆 Дарж хуулах"}
-              </div>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 13, color: C.muted }}>Эзэмшигч</span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: C.txt }}>{BANK_ACCOUNT.name}</span>
-            </div>
-          </div>
-
-          {/* Гүйлгээний утга — маш том */}
-          <div onClick={() => copyText(refCode, "ref")} style={{ background: copied === "ref" ? "#052e16" : "#1a0a00", border: `3px solid ${copied === "ref" ? C.green : "#f97316"}`, borderRadius: 16, padding: "20px 16px", marginBottom: 14, textAlign: "center", cursor: "pointer", transition: "all 0.2s", boxShadow: copied === "ref" ? "none" : "0 0 20px #f9731640" }}>
-            <div style={{ fontSize: 13, color: copied === "ref" ? C.green : "#f97316", marginBottom: 10, letterSpacing: "0.05em", textTransform: "uppercase", fontWeight: 800 }}>
-              {copied === "ref" ? "✅ Хуулагдлаа!" : "⚠️ ЗӨВХӨН ЭНЭ КОДЫГ ГҮЙЛГЭЭНИЙ УТГА ДЭЭР БИЧНЭ!"}
-            </div>
-            <div style={{ fontSize: 42, fontWeight: 900, color: copied === "ref" ? C.green : "#fb923c", letterSpacing: "0.25em", fontFamily: "monospace", marginBottom: 12 }}>
-              {refCode}
-            </div>
-            <div style={{ background: copied === "ref" ? "#166534" : "#f97316", borderRadius: 10, padding: "10px 20px", display: "inline-block" }}>
-              <span style={{ fontSize: 14, fontWeight: 800, color: "#fff" }}>
-                {copied === "ref" ? "✓ Хуулагдлаа" : "👆 ДАРЖ ХУУЛАХ"}
-              </span>
-            </div>
-          </div>
-
-          {/* Автомат хүлээж байна */}
-          <div style={{ background: C.card2, borderRadius: 10, padding: "10px 14px", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ fontSize: 20 }}>{autoStatus === "checking" ? "🔄" : "⏳"}</div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.txt }}>
-                {autoStatus === "checking" ? "Шалгаж байна..." : "Төлбөрийг хүлээж байна"}
-              </div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Мөнгө шилжүүлсний дараа автоматаар нээгдэнэ</div>
-            </div>
-          </div>
-
-          </div>
-          {/* Буцах товч — доод тулд */}
-          <div style={{ padding: "12px 20px 40px", marginTop: "auto" }}>
-            <button onClick={onClose} style={{ width: "100%", background: "#1a1a2e", border: "2px solid rgba(255,255,255,0.15)", color: "#fff", padding: "16px", borderRadius: 14, fontSize: 18, fontWeight: 800, cursor: "pointer", letterSpacing: "0.03em" }}>← Буцах</button>
-          </div>
-        </div>
-      </div>
-      {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
-    </>
-  );
+  return <CinemaDialog title="Төлбөр төлөх" onClose={onClose} className="checkout-dialog">
+    <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>
+    {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
+    <div className="checkout-summary"><div><strong>{film.title}</strong><span>{film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "1 сарын үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+    <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{BANK_ACCOUNT.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{BANK_ACCOUNT.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(BANK_ACCOUNT.number,"account")}><span>Дансны дугаар<strong>{BANK_ACCOUNT.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+    <section className="reference-section"><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Кодоо зөв бичсэнээр таны төлбөрийг захиалгатай тулгана." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
+    <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
+    <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
+    <button className="secondary-button checkout-back" onClick={onClose}>Кино сан руу буцах</button>
+    {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
+  </CinemaDialog>;
 }
 
 // ══════════════════════════════════════════════
@@ -451,173 +354,84 @@ function AdminSmsTab() {
 // ══════════════════════════════════════════════
 // Дараах компонентууд өмнөхтэй адил үлдсэн
 // ══════════════════════════════════════════════
-function QRCanvas({ text }: { text: string }) {
-  const ref = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = ref.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d")!;
-    const S = 140, N = 21, sz = Math.floor(S / N);
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, S, S);
-    ctx.fillStyle = "#000";
-    const seed = [...text].reduce((a, ch) => a + ch.charCodeAt(0), 0);
-    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
-      const v = (r * N + c + seed) % 7;
-      const corner = (r < 7 && c < 7) || (r < 7 && c >= N - 7) || (r >= N - 7 && c < 7);
-      if (corner || v < 3) ctx.fillRect(c * sz, r * sz, sz, sz);
-    }
-    ([[0, 0], [0, N - 7], [N - 7, 0]] as number[][]).forEach(([r, c]) => {
-      ctx.strokeStyle = "#000"; ctx.lineWidth = sz;
-      ctx.strokeRect((c + .5) * sz, (r + .5) * sz, 6 * sz, 6 * sz);
-      ctx.fillRect((c + 2) * sz, (r + 2) * sz, 3 * sz, 3 * sz);
-    });
-  }, [text]);
-  return <canvas ref={ref} width={140} height={140} style={{ borderRadius: 6, display: "block" }} />;
+function CinemaDialog({children, title, onClose, className = ""}: {children: React.ReactNode; title: string; onClose: () => void; className?: string}) {
+  const ref=useRef<HTMLDialogElement>(null);
+  useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close();},[]);
+  return <dialog ref={ref} className={`cinema-dialog ${className}`} aria-label={title} onCancel={e=>{e.preventDefault();onClose();}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>{children}</dialog>;
 }
-
 function PreviewModal({ film, onClose, onWatch, expiry }: any) {
-  const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
-  const isPlayerUrl = previewFromUrl && (previewFromUrl.includes("mediadelivery.net") || previewFromUrl.includes("bunny.net"));
-  const iframeSrc = isPlayerUrl && previewFromUrl
-    ? (previewFromUrl.includes("player.mediadelivery.net/play")
-        ? previewFromUrl.replace("player.mediadelivery.net/play", "iframe.mediadelivery.net/embed") + (previewFromUrl.includes("?") ? "&" : "?") + "autoplay=true&muted=true&loop=true"
-        : previewFromUrl + (previewFromUrl.includes("?") ? "&" : "?") + "autoplay=true&muted=true&loop=true")
-    : null;
-  const videoRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (!isPlayerUrl && videoRef.current && previewFromUrl) {
-      videoRef.current.muted = true;
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
-    }
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = ""; };
-  }, []);
-
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 200,
-        background: "#000",
-      }}
-    >
-      <div style={{ position: "relative", width: "100%", height: "56vw", maxHeight: "70vh" }}>
-        {isPlayerUrl && iframeSrc ? (
-          <iframe
-            src={iframeSrc}
-            allow="autoplay; encrypted-media"
-            allowFullScreen
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }}
-          />
-        ) : previewFromUrl ? (
-          <video
-            ref={videoRef}
-            src={previewFromUrl}
-            muted playsInline loop
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        ) : null}
-      </div>
-    </div>
-  );
+  const preview=film.preview_url || film.url?.split("|||")[1] || "";
+  const {type,src}=getVideoEmbed(preview);
+  return <CinemaDialog title={`${film.title} — товч үзэх`} onClose={onClose} className="preview-dialog">
+    <div className="preview-frame">{src && (type === "video" ? <video src={src} autoPlay muted controls playsInline /> : <iframe title={`${film.title} танилцуулга`} src={src} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" />)}</div>
+    <div className="preview-details"><div><span className="eyebrow">{decodeCat(film.badge)} · {decodeBadge(film.badge)}</span><h2>{film.title}</h2>{expiry && <p>{expiry}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Танилцуулга хаах"><UiIcon name="close"/></button></div>
+    <button className="primary-button preview-watch" onClick={onWatch}><UiIcon name="play"/>{film.free || film.locked === false || expiry ? "Кино үзэх" : `${Number(film.price || 0).toLocaleString()}₮ · Үзэх эрх авах`}</button>
+  </CinemaDialog>;
 }
 
+type UiIconName = "play" | "search" | "arrow" | "close" | "user" | "message" | "download" | "film";
+function UiIcon({ name, size = 20 }: { name: UiIconName; size?: number }) {
+  const paths: Record<UiIconName, React.ReactNode> = {
+    play: <path d="m9 5 11 7-11 7Z" />,
+    search: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></>,
+    arrow: <path d="M19 12H5m6-6-6 6 6 6" />,
+    close: <path d="m6 6 12 12M6 18 18 6" />,
+    user: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-2a8 8 0 0 1 16 0v2" /></>,
+    message: <path d="M4 4h16v12H9l-5 4Z" />,
+    download: <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />,
+    film: <><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M7 3v18M17 3v18M3 8h4m-4 8h4m10-8h4m-4 8h4" /></>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
+function Poster({ film }: any) {
+  const [failed, setFailed] = useState(false);
+  return <div className="poster-art">
+    <div className="poster-fallback" aria-hidden="true">
+      <span className="poster-wordmark">КИНО САЙТ</span>
+      <strong>{film.title}</strong>
+      <span>{decodeCat(film.badge)} · {decodeBadge(film.badge)}</span>
+    </div>
+    {film.img && !failed && <img loading="lazy" decoding="async" width="360" height="540" src={film.img} alt="" onError={() => setFailed(true)} />}
+  </div>;
+}
 function FilmCard({ film, onClick, expiry }: any) {
   const [showPreview, setShowPreview] = useState(false);
-  const timerRef = useRef<any>(null);
-  const touchTimer = useRef<any>(null);
-  const previewFromUrl = film.url && film.url.includes("|||") ? film.url.split("|||")[1] : null;
-
-  const startPreview = () => {
-    if (!previewFromUrl) return;
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setShowPreview(true), 150);
-  };
-
-  const stopPreview = () => {
-    clearTimeout(timerRef.current);
-    setShowPreview(false);
-  };
-
-  const handleTouchStart = () => {
-    clearTimeout(touchTimer.current);
-    touchTimer.current = setTimeout(() => setShowPreview(true), 150);
-  };
-
-  const handleTouchEnd = () => {
-    clearTimeout(touchTimer.current);
-    setShowPreview(false);
-  };
-
-  return (
-    <>
-      {showPreview && previewFromUrl && (
-        <PreviewModal
-          film={film}
-          expiry={expiry}
-          onClose={stopPreview}
-          onWatch={() => { stopPreview(); onClick(); }}
-        />
-      )}
-      <div
-        onClick={onClick}
-        onMouseEnter={startPreview}
-        onMouseLeave={stopPreview}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-        style={{ background: C.card, borderRadius: 12, overflow: "hidden", cursor: "pointer", border: `0.5px solid ${expiry ? C.green : C.bd}`, WebkitTapHighlightColor: "transparent" }}
-      >
-        <div style={{ position: "relative", aspectRatio: "16/9", overflow: "hidden" }}>
-          {film.img
-            ? <img src={film.img} alt={film.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-            : <div style={{ width: "100%", height: "100%", background: `linear-gradient(160deg,${film.bg || "#1a0820"} 0%,#000 100%)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 44 }}>🎬</span>
-            </div>
-          }
-          <div style={{ position: "absolute", top: 8, left: 8, background: badgeColor(film.badge), borderRadius: 5, padding: "2px 8px", fontSize: 11, fontWeight: 700, color: "#fff" }}>
-            {decodeBadge(film.badge)}
-          </div>
-          {expiry && (
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "rgba(22,163,74,0.85)", padding: "4px 6px", textAlign: "center" }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: "#fff" }}>{expiry}</span>
-            </div>
-          )}
-          {previewFromUrl && (
-            <div style={{ position: "absolute", bottom: expiry ? 28 : 8, right: 8, background: "rgba(0,0,0,0.6)", borderRadius: 10, padding: "2px 7px", fontSize: 10, color: "#fff" }}>
-              ▶ preview
-            </div>
-          )}
-        </div>
-        <div style={{ padding: "7px 8px 10px" }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: C.txt, lineHeight: 1.3, marginBottom: 5 }}>{film.title}</div>
-          {!film.free && <div style={{ fontSize: 10, color: C.muted, textDecoration: "line-through", marginBottom: 1 }}>{film.op?.toLocaleString()}₮</div>}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: film.free ? C.green : expiry ? C.green : C.gold }}>
-              {film.free ? "Үнэгүй" : expiry ? "Нээлттэй" : `${film.price?.toLocaleString()}₮`}
-            </span>
-            {film.free || expiry
-              ? <button style={{ background: C.green, border: "none", color: "#fff", borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>▶ Үзэх</button>
-              : null
-            }
-          </div>
-        </div>
+  const preview = film.preview_url || (film.url?.includes("|||") ? film.url.split("|||")[1] : "");
+  const available = film.free || film.locked === false || !!expiry;
+  return <article className="movie-card">
+    <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — ${available ? "үзэх" : "эрх авах"}`}>
+      <div className="movie-poster">
+        <Poster key={film.img || "no-image"} film={film} />
+        <span className="movie-badge">{decodeBadge(film.badge)}</span>
+        {film.free && <span className="movie-free">Үнэгүй</span>}
+        <span className="movie-play"><UiIcon name="play" size={25} /></span>
       </div>
-    </>
-  );
+      <div className="movie-info">
+        <span className="movie-category">{decodeCat(film.badge)}</span>
+        <h3>{film.title}</h3>
+        <div className="movie-price"><strong className={available ? "available" : ""}>{film.free ? "Үнэгүй үзэх" : available ? "Үзэх эрхтэй" : `${Number(film.price || 0).toLocaleString()}₮`}</strong>
+          {!available && Number(film.op) > Number(film.price) && <del>{Number(film.op).toLocaleString()}₮</del>}
+        </div>
+        {expiry && <span className="movie-expiry">{expiry}</span>}
+      </div>
+    </button>
+    {preview && <button type="button" className="preview-button" onClick={() => setShowPreview(true)}><UiIcon name="play" size={14} /> Товч үзэх</button>}
+    {showPreview && preview && <PreviewModal film={{...film, url: `|||${preview}`}} expiry={expiry} onClose={() => setShowPreview(false)} onWatch={() => {setShowPreview(false);onClick();}} />}
+  </article>;
 }
 
 function ContactModal({ onClose, user }: any) {
   const [announcement, setAnnouncement] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [messengerUrl,setMessengerUrl]=useState("");
+  useEffect(()=>{requestJson("/api/settings").then(data=>setMessengerUrl(safeUrl(data?.messengerUrl))).catch(()=>{});},[]);
 
   useEffect(() => {
     dbFetch("contact_messages?is_announcement=eq.true&order=created_at.desc&limit=1&select=*")
       .then((data: any) => {
         if (Array.isArray(data) && data.length > 0) setAnnouncement(data[0]);
         setLoading(false);
-      });
+      }).catch(()=>{}).finally(()=>setLoading(false));
   }, []);
 
   return (
@@ -627,6 +441,7 @@ function ContactModal({ onClose, user }: any) {
         <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Мэссэж</div>
       </div>
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px" }}>
+        {messengerUrl && <a href={messengerUrl} target="_blank" rel="noopener noreferrer" style={{...goldBtn,display:"block",textAlign:"center",textDecoration:"none",marginBottom:16}}>Messenger нээх</a>}
         {loading ? (
           <div style={{ textAlign: "center", padding: 60, color: C.muted }}>Ачааллаж байна...</div>
         ) : announcement ? (
@@ -654,344 +469,78 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
-  const [isNew, setIsNew] = useState(false);
-  const [step, setStep] = useState<"phone"|"pin"|"reset">("phone");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [showReset, setShowReset] = useState(false);
-  const phoneRef = useRef<any>(null);
-  const pinRef = useRef<any>(null);
-  const pin2Ref = useRef<any>(null);
-
-  // Утасны дугаар 8 орон бүрэн болмогц автоматаар PIN руу шилжих
-  const handlePhoneChange = async (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 8);
-    setPhone(digits);
-    setErr("");
-    if (digits.length === 8) {
-      setLoading(true);
-      const ex = await dbFetch(`users?phone=eq.${digits}&select=id`);
-      setIsNew(!(Array.isArray(ex) && ex.length > 0));
-      setLoading(false);
-      setPin(""); setPin2("");
-      setStep("pin");
-      setTimeout(() => pinRef.current?.focus(), 100);
-    }
-  };
-
-  const handlePinChange = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 4);
-    setPin(digits);
-    setErr("");
-    if (digits.length === 4 && !isNew) {
-      submitPin(digits);
-    }
-    if (digits.length === 4 && isNew) {
-      submitRegisterWithPin(digits);
-    }
-  };
-
-  const submitRegisterWithPin = async (pinVal: string) => {
-    setLoading(true); setErr("");
+  const [register, setRegister] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const pending = useRef(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); if (pending.current) return;
+    if (register && pin !== pin2) { setError("PIN давталт таарахгүй байна."); return; }
+    pending.current = true; setBusy(true); setError("");
     try {
-      const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin: pinVal, user_id: "tmp", failed_attempts: 0 }) });
-      if (data?.[0]?.id) {
-        const uid = genUserId(data[0].id);
-        await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
-        saveSession({ ...data[0], user_id: uid });
-        onLogin({ ...data[0], user_id: uid });
-      } else { setErr("Бүртгэл амжилтгүй. Дахин оролдоно уу"); }
-    } catch(e) {
-      setErr("Холболтын алдаа. Дахин оролдоно уу");
-    } finally {
-      setLoading(false);
-    }
+      const data = await requestJson("/api/auth", { method: "POST", body: JSON.stringify({action:register?"register":"login",phone,pin}) });
+      if (!data?.user) throw new Error("Бүртгэлийг баталгаажуулж чадсангүй.");
+      onLogin(data.user);
+    } catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа."); }
+    finally { pending.current = false; setBusy(false); }
   };
-
-  const handlePin2Change = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 4);
-    setPin2(digits);
-    setErr("");
-  };
-
-  const submitPin = async (pinVal: string) => {
-    setLoading(true); setErr("");
-    let data: any;
-    try {
-      data = await dbFetch(`users?phone=eq.${phone}&select=*`);
-    } catch(e) {
-      setErr("Холболтын алдаа. Дахин оролдоно уу");
-      setLoading(false); return;
-    }
-    if (!Array.isArray(data) || !data.length) { setErr("Бүртгэлгүй дугаар"); setLoading(false); return; }
-    const u = data[0];
-    if (u.locked_until && new Date(u.locked_until) > new Date()) { setErr("15 минут хүлээнэ үү"); setLoading(false); return; }
-    if (u.pin !== pinVal) {
-      const att = (u.failed_attempts || 0) + 1;
-      const lk = att >= 3 ? { locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString() } : {};
-      await dbFetch(`users?id=eq.${u.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: att, ...lk }) });
-      setErr(att >= 3 ? "3 удаа буруу. 15 минут хүлээнэ үү" : `PIN буруу (${3 - att} оролдлого)`);
-      setPin("");
-      setShowReset(true);
-      setTimeout(() => pinRef.current?.focus(), 100);
-      setLoading(false); return;
-    }
-    await dbFetch(`users?id=eq.${u.id}`, { method: "PATCH", body: JSON.stringify({ failed_attempts: 0, locked_until: null }) });
-    saveSession(u); onLogin(u);
-    setLoading(false);
-  };
-
-  const resetPin = async () => {
-    if (pin.length !== 4) { setErr("Шинэ 4 оронтой PIN оруулна уу"); return; }
-    if (pin !== pin2) { setErr("PIN таарахгүй байна"); return; }
-    setLoading(true); setErr("");
-    const data = await dbFetch(`users?phone=eq.${phone}&select=id`);
-    if (!Array.isArray(data) || !data.length) { setErr("Дугаар олдсонгүй"); setLoading(false); return; }
-    await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ pin, failed_attempts: 0, locked_until: null }) });
-    setLoading(false);
-    setStep("pin"); setShowReset(false); setPin(""); setPin2(""); setErr("");
-    setTimeout(() => pinRef.current?.focus(), 100);
-  };
-
-  const submitRegister = async () => {
-    if (pin.length !== 4) { setErr("4 оронтой PIN оруулна уу"); return; }
-    setLoading(true); setErr("");
-    const data = await dbFetch("users", { method: "POST", body: JSON.stringify({ phone, pin, user_id: "tmp", failed_attempts: 0 }) });
-    if (data?.[0]?.id) {
-      const uid = genUserId(data[0].id);
-      await dbFetch(`users?id=eq.${data[0].id}`, { method: "PATCH", body: JSON.stringify({ user_id: uid }) });
-      saveSession({ ...data[0], user_id: uid });
-      onLogin({ ...data[0], user_id: uid });
-    } else { setErr("Бүртгэл амжилтгүй"); }
-    setLoading(false);
-  };
-
-  // PIN dots харуулах
-  // Тоон товчлуур дарахад pin state шинэчлэх
-  const handleKeyPress = (num: string, currentPin: string, setter: (v: string) => void, onComplete?: (v: string) => void) => {
-    if (currentPin.length >= 4) return;
-    const next = currentPin + num;
-    setter(next);
-    setErr("");
-    if (next.length === 4 && onComplete) onComplete(next);
-  };
-  const handleKeyDelete = (currentPin: string, setter: (v: string) => void) => {
-    setter(currentPin.slice(0, -1));
-    setErr("");
-  };
-
-  const PinDots = ({ val }: { val: string }) => (
-    <div style={{ display: "flex", gap: 14, justifyContent: "center", margin: "16px 0" }}>
-      {[0,1,2,3].map(i => (
-        <div key={i} style={{
-          width: 62, height: 62, borderRadius: 14,
-          background: val[i] ? "#1e2d4a" : "#0d0d1a",
-          border: `2.5px solid ${err ? C.red : val[i] ? "#60a5fa" : "#2a2a40"}`,
-          boxShadow: val[i] ? "0 0 12px rgba(96,165,250,0.3)" : "none",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 30, color: "#60a5fa", transition: "all 0.15s",
-        }}>
-          {val[i] ? "●" : ""}
-        </div>
-      ))}
-    </div>
-  );
-
-  const NumPad = ({ currentPin, setter, onComplete }: { currentPin: string; setter: (v: string) => void; onComplete?: (v: string) => void }) => (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, margin: "8px 0 4px" }}>
-      {["1","2","3","4","5","6","7","8","9","","0","⌫"].map((k, i) => (
-        <button key={i} onClick={() => {
-          if (k === "⌫") handleKeyDelete(currentPin, setter);
-          else if (k !== "") handleKeyPress(k, currentPin, setter, onComplete);
-        }}
-          disabled={k === ""}
-          style={{
-            height: 58, borderRadius: 12, border: "none", fontSize: k === "⌫" ? 22 : 20,
-            fontWeight: 700, cursor: k === "" ? "default" : "pointer",
-            background: k === "" ? "transparent" : k === "⌫" ? "#1a1a2e" : "#13131c",
-            color: k === "⌫" ? C.muted : C.txt,
-            transition: "background 0.1s",
-          }}>
-          {k}
-        </button>
-      ))}
-    </div>
-  );
-
-  if (step === "phone") return (
-    <div>
-      <input
-        ref={phoneRef}
-        autoFocus
-        type="tel"
-        inputMode="numeric"
-        maxLength={8}
-        value={phone}
-        onChange={(e: any) => handlePhoneChange(e.target.value)}
-        placeholder="88123456"
-        disabled={loading}
-        style={{
-          ...inputSt, fontSize: 26, fontWeight: 800, textAlign: "center",
-          letterSpacing: "0.2em", padding: 16, borderRadius: 12,
-          border: `2px solid #3b82f6`, background: "#08080f",
-          opacity: loading ? 0.6 : 1,
-        }}
-      />
-      {loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Шалгаж байна...</div>}
-      {err && <div style={{ color: C.red, fontSize: 12, marginTop: 6, textAlign: "center" }}>{err}</div>}
-    </div>
-  );
-
-  return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.gold, letterSpacing: "0.1em" }}>{phone}</div>
-        <button onClick={() => { setStep("phone"); setPin(""); setPin2(""); setErr(""); }}
-          style={{ background: "none", border: "none", color: "#3b82f6", fontSize: 12, cursor: "pointer", fontWeight: 600 }}>← Өөрчлөх</button>
-      </div>
-      <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>
-        {isNew ? "Шинэ PIN тохируулна уу" : "PIN код"}
-      </label>
-      {/* PIN dots + NumPad */}
-      <PinDots val={pin} />
-      <NumPad currentPin={pin} setter={setPin} onComplete={(v) => {
-        setErr("");
-        if (!isNew) submitPin(v);
-        else submitRegisterWithPin(v);
-      }} />
-      {isNew && err && <div style={{ color: C.red, fontSize: 12, marginTop: 8, textAlign: "center" }}>{err}</div>}
-      {isNew && loading && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Бүртгэж байна...</div>}
-      {!isNew && err && (
-        <div style={{ marginTop: 8 }}>
-          <div style={{ color: C.red, fontSize: 12, textAlign: "center", marginBottom: 10 }}>{err}</div>
-          {showReset && (
-            <button onClick={() => { setStep("reset"); setPin(""); setPin2(""); setErr(""); setShowReset(false); }}
-              style={{ width:"100%", background:"none", border:`1px solid ${C.bd}`, color:"#3b82f6", borderRadius:10, padding:"10px", fontSize:13, cursor:"pointer", fontWeight:600 }}>
-              🔑 PIN код солих
-            </button>
-          )}
-        </div>
-      )}
-      {loading && !isNew && <div style={{ textAlign: "center", color: C.muted, fontSize: 13, marginTop: 8 }}>Нэвтэрч байна...</div>}
-
-      {step === "reset" && (
-        <div style={{ marginTop: 4 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 12, textAlign:"center" }}>🔑 Шинэ PIN тохируулах</div>
-          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block" }}>Шинэ PIN</label>
-          <PinDots val={pin} />
-          {pin.length < 4 && <NumPad currentPin={pin} setter={setPin} />}
-          <label style={{ ...lbl, fontSize: 12, marginBottom: 4, textAlign: "center", display: "block", marginTop: 8 }}>PIN давтах</label>
-          <PinDots val={pin2} />
-          {pin.length === 4 && <NumPad currentPin={pin2} setter={setPin2} />}
-          {err && <div style={{ color: C.red, fontSize: 12, marginBottom: 8, textAlign: "center" }}>{err}</div>}
-          <button onClick={resetPin} disabled={loading || pin.length !== 4 || pin2.length !== 4}
-            style={{ ...goldBtn, borderRadius: 12, fontSize: 15, padding: 14, opacity: loading || pin.length !== 4 || pin2.length !== 4 ? 0.5 : 1, marginTop: 4 }}>
-            {loading ? "Хадгалж байна..." : "✅ PIN солих"}
-          </button>
-          <button onClick={() => { setStep("pin"); setPin(""); setPin2(""); setErr(""); setTimeout(()=>pinRef.current?.focus(),100); }}
-            style={{ width:"100%", background:"none", border:"none", color: C.muted, fontSize:13, cursor:"pointer", marginTop:8 }}>
-            Буцах
-          </button>
-        </div>
-      )}
-    </div>
-  );
+  return <form onSubmit={submit}>
+    <label style={lbl} htmlFor="user-phone">Утасны дугаар</label>
+    <input id="user-phone" type="tel" inputMode="numeric" autoComplete="username" required pattern="[0-9]{8}" maxLength={8} value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,""))} style={inputSt}/>
+    <label style={{...lbl,marginTop:12}} htmlFor="user-pin">4 оронтой PIN</label>
+    <input id="user-pin" type="password" inputMode="numeric" autoComplete={register?"new-password":"current-password"} required pattern="[0-9]{4}" maxLength={4} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} style={inputSt}/>
+    {register && <><label style={{...lbl,marginTop:12}} htmlFor="user-pin2">PIN дахин оруулна уу</label><input id="user-pin2" type="password" inputMode="numeric" autoComplete="new-password" required pattern="[0-9]{4}" maxLength={4} value={pin2} onChange={e=>setPin2(e.target.value.replace(/\D/g,""))} style={inputSt}/></>}
+    {error && <p role="alert" style={{color:C.red,marginTop:10}}>{error}</p>}
+    <button type="submit" disabled={busy} style={{...goldBtn,marginTop:16}}>{busy?"Түр хүлээнэ үү...":register?"Бүртгүүлэх":"Нэвтрэх"}</button>
+    <button type="button" disabled={busy} onClick={()=>{setRegister(v=>!v);setPin("");setPin2("");setError("");}} style={{...goldBtn,background:C.card2,color:C.txt,marginTop:8}}>{register?"Бүртгэлтэй бол нэвтрэх":"Шинээр бүртгүүлэх"}</button>
+    <p style={{fontSize:12,color:C.muted,marginTop:12}}>PIN мартсан бол Мессэж хэсгээр админтай холбогдоно уу.</p>
+  </form>;
 }
 
-
-// ══════════════════════════════════════════════
-// БАГЦ АВАХ MODAL
-// ══════════════════════════════════════════════
-function PlanModal({ onSelect, autoOpen, onAutoClose, user, onOpenLogin }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; onOpenLogin?: () => void }) {
+function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsReady = true }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; films?: any[]; countsReady?: boolean }) {
   const [open, setOpen] = useState(false);
+  const [category, setCategory] = useState("gadaad");
+  const [duration, setDuration] = useState("3day");
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const categories = [{key:"gadaad",label:"Гадаад"},{key:"hyatad",label:"Хятад"},{key:"erotic",label:"Эротик"},{key:"all",label:"Бүх ангилал"}];
+  const countFor = (key: string) => films.filter(f => key === "all" ? ["Гадаад","Хятад","Эротик"].includes(decodeCat(f.badge)) : decodeCat(f.badge) === categories.find(c => c.key === key)?.label).length;
+  const plan = category === "all" ? "all_1month" : `${category}_${duration}`;
+  const price = PLAN_PRICES[plan];
+  const selectedCount = countFor(category);
   useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
-  const handleClose = () => { setOpen(false); if (onAutoClose) onAutoClose(); };
   useEffect(() => {
-    if (!open) return;
-    const handlePop = () => { setOpen(false); };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
+    if (open) dialogRef.current?.showModal(); else dialogRef.current?.close();
   }, [open]);
-  const cats = [
-    { key: "erotic", label: "🔞 ЭРОТИК", color: "#a855f7", border: "#7c3aed", bg: "#1a0a1a", sub: "#c4b5fd" },
-    { key: "gadaad", label: "🌍 ГАДААД", color: "#38bdf8", border: "#0ea5e9", bg: "#0a1220", sub: "#7dd3fc" },
-    { key: "hyatad", label: "🇨🇳 ХЯТАД",  color: "#f59e0b", border: "#b45309", bg: "#1a1000", sub: "#fcd34d" },
-  ];
-  return (
-    <>
-      <div style={{ padding: "8px 12px" }}>
-        <div onClick={() => { if (!user && onOpenLogin) { onOpenLogin(); return; } setOpen(true); }} className="plan-glow" style={{ background: "linear-gradient(135deg, #2d1060 0%, #0f1f3d 100%)", border: "2px solid #8b5cf6", borderRadius: 18, padding: "20px 22px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", boxShadow: "0 0 28px rgba(139,92,246,0.45), inset 0 0 20px rgba(139,92,246,0.08)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ fontSize: 32 }}>🎬</span>
-            <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", letterSpacing: "-0.3px" }}>Багц авах</div>
-              <div style={{ fontSize: 13, color: "#ddd6fe", marginTop: 3, fontWeight: 600 }}>Хязгааргүй үзэх эрх</div>
-            </div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: "#c4b5fd", letterSpacing: "-0.5px" }}>8,000₮</div>
-            <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700, marginTop: 2 }}>-аас эхлэн</div>
-          </div>
-        </div>
-      </div>
-
-      {open && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", display: "flex", alignItems: "flex-end", zIndex: 300 }} onClick={handleClose}>
-          <div style={{ background: "#0d0d18", borderRadius: "20px 20px 0 0", padding: "20px 16px 40px", width: "100%", maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 36, height: 4, background: "#2a2a40", borderRadius: 2, margin: "0 auto 18px" }} />
-            <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", marginBottom: 16, textAlign: "center" }}>Багц сонгох</div>
-
-            {cats.map(c => (
-              <div key={c.key} style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 12, color: c.color, fontWeight: 700, letterSpacing: "0.06em", textAlign: "center", marginBottom: 8 }}>{c.label}</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  <div onClick={() => { handleClose(); onSelect(`${c.key}_3day`); }}
-                    style={{ background: c.bg, border: `0.5px solid ${c.border}`, borderRadius: 12, padding: 12, textAlign: "center", cursor: "pointer" }}>
-                    <div style={{ fontSize: 11, color: c.sub, marginBottom: 4 }}>3 хоног</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>8,000₮</div>
-                  </div>
-                  <div onClick={() => { handleClose(); onSelect(`${c.key}_1month`); }}
-                    style={{ background: c.bg, border: `1.5px solid ${c.color}`, borderRadius: 12, padding: 12, textAlign: "center", cursor: "pointer" }}>
-                    <div style={{ fontSize: 11, color: c.sub, marginBottom: 4 }}>1 сар</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: "#fff" }}>12,500₮</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-
-            <div onClick={() => { handleClose(); onSelect("all_1month"); }}
-              style={{ background: "#0f1a0f", border: "1.5px solid #4ade80", borderRadius: 12, padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", marginTop: 4 }}>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#4ade80" }}>🌟 Бүх багц</div>
-                <div style={{ fontSize: 11, color: "#86efac", marginTop: 2 }}>Эротик + Гадаад + Хятад · 1 сар</div>
-              </div>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>20,000₮</div>
-              </div>
-            </div>
-
-            <button onClick={handleClose} style={{ width: "100%", marginTop: 16, background: "#1a1a2e", border: "2px solid rgba(255,255,255,0.15)", color: "#fff", padding: "16px", borderRadius: 14, fontSize: 18, fontWeight: 800, cursor: "pointer" }}>← Буцах</button>
-          </div>
-        </div>
-      )}
-    </>
-  );
+  const close = () => {setOpen(false);onAutoClose?.();};
+  useEffect(() => {if (!open) return; window.addEventListener("popstate", close);return () => window.removeEventListener("popstate", close);}, [open]);
+  const select = () => {if(countsReady && selectedCount === 0)return;close();onSelect(plan);};
+  return <dialog ref={dialogRef} className="plan-dialog package-dialog" aria-labelledby="package-dialog-title" onCancel={close} onClick={e => {if(e.target === e.currentTarget)close();}}>
+      <div className="dialog-heading"><div><span className="eyebrow">ҮЗЭХ ЭРХ</span><h2 id="package-dialog-title">Багцаа сонгоорой</h2></div><button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button></div>
+      <fieldset className="package-fieldset"><legend>1. Ямар кино үзэх вэ?</legend><div className="package-choices">
+        {categories.map(c => <label key={c.key} className={`package-choice ${category === c.key ? "selected" : ""}`}>
+          <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);if(c.key === "all")setDuration("1month");}} />
+          <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">18+</span>}</strong><span>{countsReady ? `${countFor(c.key)} кино` : "Киноны тоог шалгаж байна…"}</span></span>
+        </label>)}
+      </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, эротик — гурван ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
+      <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
+        {(category === "all" ? ["1month"] : ["3day","1month"]).map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
+          <input type="radio" name="package-duration" value={d} checked={duration === d} onChange={() => setDuration(d)} />
+          <span><strong>{d === "3day" ? "3 хоног" : "1 сар"}</strong><span>{PLAN_PRICES[category === "all" ? "all_1month" : `${category}_${d}`].toLocaleString()}₮</span></span>
+        </label>)}
+      </div><p className="package-hint">Төлбөр баталгаажсан үеэс үзэх хугацаа эхэлнэ.</p></fieldset>
+      <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>{countsReady ? `${selectedCount} кино үзэх эрх` : "Сонгосон ангиллын кинонууд"}</span></span><strong>{price.toLocaleString()}₮</strong></div>
+      {countsReady && selectedCount === 0 && <p className="package-hint" role="status">Одоогоор энэ ангилалд кино байхгүй байна. Өөр ангилал сонгоорой.</p>}
+      <button type="button" className="primary-button package-continue" disabled={countsReady && selectedCount === 0} onClick={select}>{user ? "Төлбөр төлөх" : "Нэвтрээд үргэлжлүүлэх"}</button>
+    </dialog>;
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin, showPlan, onPlanClose }: any) {
+function HomePage({ films, onFilm, onSearch, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin, showPlan, onPlanClose }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
-  const [activeCat, setActiveCat] = useState("Эротик");
+  const [activeCat, setActiveCat] = useState("Бүгд");
+  const [visibleCount, setVisibleCount] = useState(24);
   const CATS = ["Бүгд", "Эротик", "Гадаад", "Хятад"];
   const filteredFilms = activeCat === "Бүгд" ? films : films.filter((f: any) => decodeCat(f.badge) === activeCat);
-  const tapRef = useRef<{ count: number; timer: any }>({ count: 0, timer: null });
-  const handleLogoTap = () => {
-    tapRef.current.count += 1;
-    if (tapRef.current.timer) clearTimeout(tapRef.current.timer);
-    if (tapRef.current.count >= 4) { tapRef.current.count = 0; onAdmin(); }
-    else { tapRef.current.timer = setTimeout(() => { tapRef.current.count = 0; }, 3000); }
-  };
-
   const getExpiry = (filmId: number, category?: string): string | null => {
     if (!user) return null;
     const now = Date.now();
@@ -1013,113 +562,62 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, user, onLogin, on
   };
 
   const openLogin = () => onOpenLogin();
-  const handleLoginDone = (u: any) => { onLogin(u); };
 
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 20 }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        {/* ── STICKY NAVBAR ONLY ── */}
-        <div style={{ position: "sticky", top: 0, zIndex: 10, background: C.bg, borderBottom: `0.5px solid ${C.bd}` }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px" }}>
-            <button onClick={onOpenLogin && !user ? onOpenLogin : onContact} style={{ background: "none", border: `0.5px solid #1877f2`, borderRadius: 16, padding: "5px 10px", fontSize: 11, fontWeight: 700, color: "#1877f2", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
-              💬 Мессеж
-            </button>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button onClick={onSearch} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>🔍</button>
-              {user
-                ? <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 12, color: C.gold, fontWeight: 700 }}>{user.phone}</span>
-                    <button onClick={onLogout} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 11, borderRadius: 8, padding: "5px 8px" }}>Гарах</button>
-                  </div>
-                : null
-              }
-
-              <button onClick={handleLogoTap} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, color: C.muted, cursor: "pointer", fontSize: 12, borderRadius: 8, padding: "6px 10px" }}>⚙️</button>
-              <button onClick={onInstall} style={{ background: "linear-gradient(135deg,#1a1a2e,#0d0d18)", border: `1.5px solid #e8a020`, color: "#e8a020", cursor: "pointer", fontSize: 12, borderRadius: 10, padding: "6px 12px", fontWeight: 700, display: "flex", alignItems: "center", gap: 5 }}>
-                📲 <span>Апп татах</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ── КАТЕГОРИ ШҮҮЛТҮҮР ── */}
-        <div style={{ display: "flex", gap: 8, padding: "10px 12px 4px", overflowX: "auto" }}>
-          {["Бүгд", "🔞 Эротик", "🌍 Гадаад", "🇨🇳 Хятад"].map((cat, i) => {
-            const key = ["Бүгд", "Эротик", "Гадаад", "Хятад"][i];
-            return (
-              <button key={key} onClick={() => setActiveCat(key)}
-                style={{ background: activeCat === key ? "#6366f1" : C.card2, border: `1.5px solid ${activeCat === key ? "#6366f1" : C.bd}`, borderRadius: 20, padding: "6px 14px", whiteSpace: "nowrap", cursor: "pointer", fontSize: 12, fontWeight: activeCat === key ? 700 : 400, color: activeCat === key ? "#fff" : C.muted, flexShrink: 0 }}>
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ── БАГЦ АВАХ ТОВЧ ── */}
-        <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => { setPlanAutoOpen(false); if (onPlanClose) onPlanClose(); }} user={user} onOpenLogin={onOpenLogin} />
-        {loading
-          ? <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-          : (() => {
-              const items: any[] = [];
-              filteredFilms.forEach((f: any, i: number) => {
-                items.push(<FilmCard key={f.id} film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />);
-                if ((i + 1) % 6 === 0 && i + 1 < filteredFilms.length) {
-                  items.push(<div key={`b${i}`} style={{ gridColumn: "1/-1", margin: "4px 0" }}>
-                    <div onClick={() => { if (!user && onOpenLogin) { onOpenLogin(); return; } onMonthly("show_plan"); }} className="plan-glow" style={{ background: "linear-gradient(135deg,#2d1060,#0f1f3d)", border: "2px solid #8b5cf6", borderRadius: 16, padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{ fontSize: 28 }}>🎬</span>
-                        <div>
-                          <div style={{ fontSize: 16, fontWeight: 900, color: "#fff" }}>Багц авах</div>
-                          <div style={{ fontSize: 12, color: "#ddd6fe", marginTop: 2 }}>Хязгааргүй үзэх эрх</div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 24, fontWeight: 900, color: "#c4b5fd" }}>8,000₮</div>
-                        <div style={{ fontSize: 11, color: "#a78bfa", fontWeight: 700 }}>-аас эхлэн</div>
-                      </div>
-                    </div>
-                  </div>);
-                }
-              });
-              return <div className="film-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>{items}</div>;
-            })()
-        }
+  const openPlans = () => setPlanAutoOpen(true);
+  return <div className="cinema-site">
+    <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
+    <header className="site-header"><div className="header-inner">
+      <a href="#catalog" className="brand" aria-label="Кино сайт нүүр"><span className="brand-symbol"><UiIcon name="play" /></span><span>Кино<span className="brand-light">сайт</span></span></a>
+      <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>Үзэх багц</button><button onClick={onContact}>Холбогдох</button></nav>
+      <div className="header-actions"><button className="icon-button" aria-label="Кино хайх" onClick={onSearch}><UiIcon name="search" /></button>
+      {user ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></> : <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button>}
       </div>
-
-
-
-    </div>
-  );
+    </div></header>
+    <main className="catalog-shell">
+      <section className="package-banner" aria-labelledby="package-banner-title">
+        <img src="/cinema-cover.webp" className="package-banner-art" alt="" fetchPriority="high" />
+        <div className="package-banner-copy"><span className="package-banner-label"><UiIcon name="film" size={18} /> КИНО БАГЦ</span><h1 id="package-banner-title">Олон киног нэг багцаар</h1><p>Гадаад · Хятад · Эротик 18+</p><span className="package-banner-detail">Нэг ангиллын бүх кино · 3 хоног</span></div>
+        <div className="package-banner-action"><div className="package-banner-price"><strong>{PLAN_PRICES.gadaad_3day.toLocaleString()}₮</strong><span>-өөс эхлэн</span></div><button type="button" className="primary-button" onClick={openPlans}>Багц сонгох<UiIcon name="arrow" size={18} /></button></div>
+      </section>
+      <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />
+      <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
+        <div className="category-tabs" role="group" aria-label="Киноны ангилал">{CATS.map(cat => <button key={cat} aria-pressed={activeCat === cat} className={activeCat === cat ? "active" : ""} onClick={() => {setActiveCat(cat);setVisibleCount(24);}}>{cat}{cat === "Эротик" && <span className="age-label">18+</span>}</button>)}</div>
+        {loading ? <div role="status" aria-label="Кино ачааллаж байна" className="film-grid">{[0,1,2,3,4].map(n => <div key={n} className="movie-skeleton"><div/><span/><span/></div>)}</div>
+        : loadError ? <div className="empty-state" role="alert"><h3>Кино санг ачаалж чадсангүй</h3><p>{loadError}</p><button className="secondary-button" onClick={onRetry}>Дахин оролдох</button></div>
+        : filteredFilms.length ? <><div className="film-grid">{filteredFilms.slice(0,visibleCount).map((f: any, index: number) => <Fragment key={f.id}><FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id,decodeCat(f.badge))} />{(index+1)%6===0 && <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>}</Fragment>)}</div>{visibleCount<filteredFilms.length && <button className="secondary-button load-more" onClick={()=>setVisibleCount(n=>n+24)}>Дараагийн кинонууд ({filteredFilms.length-visibleCount})</button>}</>
+        : <div className="empty-state"><UiIcon name="film" size={34} /><h3>Одоогоор кино байхгүй байна</h3><p>Өөр ангилал сонгож үзээрэй.</p><button className="secondary-button" onClick={() => setActiveCat("Бүгд")}>Бүх кино</button></div>}
+      </section>
+      <footer className="site-footer"><div><span className="footer-brand">КИНО САЙТ</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох</button><button onClick={onInstall}><UiIcon name="download" size={16} />Апп суулгах</button><button onClick={onAdmin}>Удирдах</button></div></footer>
+    </main>
+  </div>;
 }
 
-function getVideoEmbed(url: string): { type: "iframe" | "video" | "youtube"; src: string } {
-  if (!url) return { type: "iframe", src: "" };
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
-  if (ytMatch) return { type: "youtube", src: `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&rel=0&modestbranding=1&playsinline=1` };
-  if (url.match(/\.(mp4|webm|ogg|mov)(\?|$)/i)) return { type: "video", src: url };
-  const gdMatch = url.match(/drive\.google\.com\/file\/d\/([^/]+)/);
-  if (gdMatch) return { type: "iframe", src: `https://drive.google.com/file/d/${gdMatch[1]}/preview` };
-  return { type: "iframe", src: url };
+
+function getVideoEmbed(value: string): { type: "iframe" | "video" | "youtube"; src: string } {
+  const safe=safeUrl(value);if(!safe)return {type:"iframe",src:""};
+  const url=new URL(safe);let id:string|null=null;
+  if(url.hostname==="youtu.be")id=url.pathname.slice(1);
+  if(["youtube.com","www.youtube.com","m.youtube.com","www.youtube-nocookie.com"].includes(url.hostname))id=url.pathname==="/watch"?url.searchParams.get("v"):/^\/(?:embed|shorts|live)\/([^/]+)$/.exec(url.pathname)?.[1]||null;
+  if(id&&/^[a-zA-Z0-9_-]{11}$/.test(id))return {type:"youtube",src:`https://www.youtube-nocookie.com/embed/${id}?playsinline=1`};
+  if(/\.(mp4|webm|ogg)(?:$)/i.test(url.pathname))return {type:"video",src:safe};
+  const drive=url.hostname==="drive.google.com"?/^\/file\/d\/([a-zA-Z0-9_-]+)/.exec(url.pathname)?.[1]:null;
+  return {type:"iframe",src:drive?`https://drive.google.com/file/d/${drive}/preview`:safe};
 }
 
 function VideoPage({ film, onBack }: any) {
-  const [showControls, setShowControls] = useState(true);
+  const [videoError,setVideoError]=useState(false);
   const mainUrl = film.url ? film.url.split("|||")[0] : "";
   const { type, src } = getVideoEmbed(mainUrl);
-  useEffect(() => {
-    const t = setTimeout(() => setShowControls(false), 4000);
-    return () => { clearTimeout(t); };
-  }, []);
   return (
-    <div onClick={() => setShowControls(v => !v)} style={{ background: "#000", position: "fixed", inset: 0, zIndex: 50 }}>
-      {src ? (
+    <div style={{ background: "#000", position: "fixed", inset: 0, zIndex: 50 }}>
+      {videoError ? <div role="alert" className="video-error"><p>Бичлэг ачаалсангүй. Видео холбоос эсвэл холболтыг шалгана уу.</p><button className="secondary-button" onClick={onBack}>Кино сан руу буцах</button></div> : src ? (
         type === "video"
-          ? <video src={src} autoPlay controls playsInline style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
-          : <iframe src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allowFullScreen allow="autoplay; fullscreen; picture-in-picture" />
+          ? <video src={src} autoPlay controls playsInline preload="metadata" onError={()=>setVideoError(true)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
+          : <iframe title={film.title} referrerPolicy="strict-origin-when-cross-origin" src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen; picture-in-picture" />
       ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Видео холбоос байхгүй байна</div>
       )}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)", padding: "16px", transition: "opacity 0.3s", opacity: showControls ? 1 : 0, pointerEvents: showControls ? "auto" : "none" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)", padding: "16px", transition: "opacity 0.3s", opacity: 1, pointerEvents: "auto" }}>
         <button onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>←</button>
       </div>
     </div>
@@ -1128,47 +626,27 @@ function VideoPage({ film, onBack }: any) {
 
 function SearchPage({ films, onFilm, onBack }: any) {
   const [q, setQ] = useState("");
-  const res = q ? films.filter((f: any) => f.title.toLowerCase().includes(q.toLowerCase())) : films;
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh" }}>
-      <div style={{ background: C.card, padding: "12px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: `0.5px solid ${C.bd}` }}>
-        <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-        <input autoFocus value={q} onChange={(e: any) => setQ(e.target.value)} placeholder="Кино хайх..." style={{ ...inputSt, flex: 1 }} />
-      </div>
-      <div style={{ padding: "12px 14px" }}>
-        {q && res.length === 0 && <p style={{ color: C.muted, textAlign: "center", marginTop: 40 }}>Олдсонгүй</p>}
-        {res.map((f: any) => (
-          <div key={f.id} onClick={() => onFilm(f)} style={{ display: "flex", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: `0.5px solid ${C.bd}`, cursor: "pointer" }}>
-            <div style={{ width: 44, height: 60, borderRadius: 6, background: f.bg || "#1a0820", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {f.img ? <img src={f.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 20 }}>🎬</span>}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: C.txt }}>{f.title}</div>
-              <div style={{ fontSize: 12, color: f.free ? C.green : C.gold, marginTop: 3 }}>{f.free ? "Үнэгүй" : `${f.price?.toLocaleString()}₮`}</div>
-            </div>
-            {!f.free && f.locked && <span style={{ fontSize: 16 }}>🔒</span>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  const [visibleCount,setVisibleCount]=useState(24);
+  const term=q.trim().toLocaleLowerCase();
+  const res=term ? films.filter((f:any)=>String(f.title).toLocaleLowerCase().includes(term)) : films;
+  return <main className="search-page catalog-shell"><div className="search-top"><button className="icon-button" onClick={onBack} aria-label="Нүүр рүү буцах"><UiIcon name="arrow" /></button><span className="footer-brand">КИНО САЙТ</span></div><span className="eyebrow">КИНО САН</span><h1>Юу үзмээр байна?</h1><div className="search-field"><UiIcon name="search" size={24}/><input aria-label="Киноны нэр" autoFocus value={q} onChange={e=>{setQ(e.target.value);setVisibleCount(24);}} placeholder="Киноны нэрээр хайх…"/>{q && <button className="icon-button" onClick={()=>setQ("")} aria-label="Хайлтыг цэвэрлэх"><UiIcon name="close"/></button>}</div><p className="search-count" role="status">{res.length} кино {term ? "олдлоо" : "байна"}</p>{res.length ? <div className="film-grid">{res.slice(0,visibleCount).map((f:any)=><FilmCard key={f.id} film={f} onClick={()=>onFilm(f)}/>)}</div> : <div className="empty-state"><UiIcon name="search" size={34}/><h2>Хайлттай тохирох кино олдсонгүй</h2><p>Киноны нэрийг шалгаад дахин хайгаарай.</p></div>}{res.length>visibleCount && <button className="secondary-button load-more" onClick={()=>setVisibleCount(n=>n+24)}>Дараагийн кинонууд</button>}</main>;
 }
 
 function AdminLogin({ onEnter, onBack }: any) {
-  const [key, setKey] = useState(""); const [err, setErr] = useState(false);
-  const go = () => { if (key === ADMIN_KEY) { onEnter(); } else { setErr(true); } };
-  return (
-    <div style={{ background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-      <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: C.txt, marginBottom: 20 }}>Админ нэвтрэх</div>
-      <div style={{ width: "100%", maxWidth: 320 }}>
-        <input type="password" value={key} onChange={(e: any) => setKey(e.target.value)} placeholder="Нууц код" style={inputSt} onKeyDown={(e: any) => e.key === "Enter" && go()} />
-        {err && <p style={{ color: "#f05555", fontSize: 12, marginTop: 6 }}>Нууц код буруу байна</p>}
-        <button onClick={go} style={{ ...goldBtn, marginTop: 12 }}>Нэвтрэх</button>
-        <button onClick={onBack} style={{ width: "100%", background: "none", border: `0.5px solid ${C.bd}`, color: C.muted, padding: 12, borderRadius: 10, fontSize: 14, cursor: "pointer", marginTop: 8 }}>Буцах</button>
-      </div>
-    </div>
-  );
+  const [key,setKey]=useState(""); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
+  const pending=useRef(false);
+  const go=async(e:React.FormEvent)=>{e.preventDefault();if(pending.current)return;pending.current=true;setBusy(true);setError("");
+    try{await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"admin",password:key})});onEnter();}
+    catch(err){setError(err instanceof Error?err.message:"Нэвтэрч чадсангүй.");}
+    finally{pending.current=false;setBusy(false);}
+  };
+  return <div style={{minHeight:"100vh",display:"grid",placeItems:"center",background:C.bg,padding:24}}><form onSubmit={go} style={{width:"100%",maxWidth:340}}>
+    <h1 style={{fontSize:20,color:C.txt,marginBottom:16}}>Админ нэвтрэх</h1>
+    <input aria-label="Админы нууц үг" type="password" autoComplete="current-password" required value={key} onChange={e=>setKey(e.target.value)} style={inputSt}/>
+    {error&&<p role="alert" style={{color:C.red,marginTop:10}}>{error}</p>}
+    <button disabled={busy} style={{...goldBtn,marginTop:12}}>{busy?"Түр хүлээнэ үү...":"Нэвтрэх"}</button>
+    <button type="button" disabled={busy} onClick={onBack} style={{...goldBtn,marginTop:8,background:C.card2,color:C.txt}}>Буцах</button>
+  </form></div>;
 }
 
 function AdminOrdersTab() {
@@ -1181,12 +659,13 @@ function AdminOrdersTab() {
   const [search, setSearch] = useState("");
 
   const load = async () => {
+    try {
     setLoading(true);
     try {
       const [pend, fl, us] = await Promise.all([
-        dbFetch("pending_payments?order=created_at.desc&limit=100&select=*"),
-        dbFetch("films?select=id,title"),
-        dbFetch("users?select=id,phone,user_id&order=id.desc&limit=2000"),
+        dbAll("pending_payments?select=*"),
+        dbAll("films?select=id,title"),
+        dbAll("users?select=id,phone,user_id"),
       ]);
       setOrders(Array.isArray(pend) ? pend : []);
       setFilms(Array.isArray(fl) ? fl : []);
@@ -1196,6 +675,8 @@ function AdminOrdersTab() {
     } finally {
       setLoading(false);
     }
+  
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -1216,7 +697,7 @@ function AdminOrdersTab() {
   };
 
   const revokeOrder = async (ref_code: string) => {
-    if (!window.confirm("Эрхийг хасах уу?")) return;
+    if (!window.confirm("Зөвхөн энэ захиалгын эрхийг хасах уу?")) return;
     await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
       method: "PATCH",
       body: JSON.stringify({ status: "revoked" }),
@@ -1224,11 +705,6 @@ function AdminOrdersTab() {
     await load();
   };
 
-  const deleteOrder = async (id: number) => {
-    if (!window.confirm("Захиалгыг бүрмөсөн устгах уу?")) return;
-    await dbFetch(`pending_payments?id=eq.${id}`, { method: "DELETE" });
-    setOrders(os => os.filter(o => o.id !== id));
-  };
 
   const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
   const getPhone = (uid: number, order?: any) => {
@@ -1240,7 +716,7 @@ function AdminOrdersTab() {
 
   const filtered = orders.filter((o: any) => {
     if (filter === "all") { }
-    else if (filter === "monthly") { if (o.plan !== "monthly") return false; }
+    else if (filter === "monthly") { if (!o.plan || o.plan === "single") return false; }
     else { if (o.status !== filter) return false; }
     if (search.trim()) {
       const s = search.trim().toLowerCase();
@@ -1251,10 +727,10 @@ function AdminOrdersTab() {
     return true;
   });
 
-  const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + (o.amount || 0), 0);
+  const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + Number(o.amount || 0), 0);
   const pendingCount = orders.filter(o => o.status === "pending").length;
   const confirmedCount = orders.filter(o => o.status === "confirmed").length;
-  const monthlyCount = orders.filter(o => o.plan === "monthly" && o.status === "confirmed").length;
+  const monthlyCount = orders.filter(o => o.plan && o.plan !== "single" && o.status === "confirmed").length;
 
   const filters: { key: typeof filter; label: string }[] = [
     { key: "all", label: `Бүгд ${orders.length}` },
@@ -1269,7 +745,7 @@ function AdminOrdersTab() {
       {/* Статистик */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
         <div style={{ background: "#052e16", border: `0.5px solid ${C.green}`, borderRadius: 10, padding: "10px 12px" }}>
-          <div style={{ fontSize: 11, color: C.muted }}>Нийт орлого</div>
+          <div style={{ fontSize: 11, color: C.muted }}>Сүүлийн 100 захиалгын орлого</div>
           <div style={{ fontSize: 18, fontWeight: 800, color: C.green }}>{totalRevenue.toLocaleString()}₮</div>
         </div>
         <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px" }}>
@@ -1307,9 +783,9 @@ function AdminOrdersTab() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 15, fontWeight: 800, color: "#fb923c", fontFamily: "monospace" }}>{o.ref_code}</div>
-                <div style={{ fontSize: 12, color: C.txt, marginTop: 2 }}>{getFilmTitle(o.film_id)}</div>
+                <div style={{ fontSize: 12, color: C.txt, marginTop: 2 }}>{o.plan && o.plan !== "single" ? planLabel(o.plan) : getFilmTitle(o.film_id)}</div>
                 <div style={{ fontSize: 12, color: C.gold, marginTop: 2 }}>📞 {getPhone(o.user_id, o)}</div>
-                {o.plan === "monthly" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Сарын багц</div>}
+                {o.plan && o.plan !== "single" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Үзэх багц</div>}
               </div>
               <div style={{ textAlign: "right" }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{o.amount?.toLocaleString()}₮</div>
@@ -1335,10 +811,6 @@ function AdminOrdersTab() {
               {o.status === "revoked" && (
                 <div style={{ flex: 1, fontSize: 12, color: C.red, textAlign: "center", padding: "8px" }}>🚫 Хасагдсан</div>
               )}
-              <button onClick={() => deleteOrder(o.id)}
-                style={{ background: "#1a0a0a", border: `0.5px solid #333`, borderRadius: 8, padding: "8px 12px", color: "#555", fontSize: 14, cursor: "pointer" }}>
-                🗑️
-              </button>
             </div>
           </div>
         ))
@@ -1361,6 +833,14 @@ function AdminMembersTab() {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // Эрх өгөх
+  const [grantUser, setGrantUser] = useState<any>(null);
+  const [granting, setGranting] = useState(false);
+  const [grantFilmId, setGrantFilmId] = useState<number | null>(null);
+  const [grantStep, setGrantStep] = useState<"main"|"month_cat"|"3day_cat"|"film"|"revoke">("main");
+  const [userPayments, setUserPayments] = useState<any[]>([]);
+  const [loadingUserPayments, setLoadingUserPayments] = useState(false);
+
   useEffect(() => {
     const handleBack = () => {
       if (showAllUsers) {
@@ -1374,21 +854,15 @@ function AdminMembersTab() {
     window.addEventListener("adminBackPress", handleBack);
     return () => window.removeEventListener("adminBackPress", handleBack);
   }, [showAllUsers]);
-  // Эрх өгөх
-  const [grantUser, setGrantUser] = useState<any>(null);
-  const [granting, setGranting] = useState(false);
-  const [grantFilmId, setGrantFilmId] = useState<number | null>(null);
-  const [grantStep, setGrantStep] = useState<"main"|"month_cat"|"3day_cat"|"film"|"revoke">("main");
-  const [userPayments, setUserPayments] = useState<any[]>([]);
-  const [loadingUserPayments, setLoadingUserPayments] = useState(false);
 
   const load = async () => {
+    try {
     setLoading(true);
     try {
       const [us, fl, pay] = await Promise.all([
-        dbFetch("users?order=id.desc&select=*"),
-        dbFetch("films?select=id,title&order=id.desc&limit=50"),
-        dbFetch("pending_payments?status=eq.confirmed&select=user_id,film_id,plan,amount,created_at,confirmed_at,ref_code,phone"),
+        dbAll("users?select=*"),
+        dbAll("films?select=id,title"),
+        dbAll("pending_payments?status=eq.confirmed&select=id,user_id,film_id,plan,amount,created_at,confirmed_at,ref_code,phone"),
       ]);
       setUsers(Array.isArray(us) ? us : []);
       setFilms(Array.isArray(fl) ? fl : []);
@@ -1398,6 +872,8 @@ function AdminMembersTab() {
     } finally {
       setLoading(false);
     }
+  
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -1409,53 +885,47 @@ function AdminMembersTab() {
 
   // Хугацаа дуусаагүй эрхүүдийг шүүх
   const now = Date.now();
-  const isActive = (p: any) => {
-    // confirmed_at байхгүй бол идэвхтэй гэж үзнэ
-    if (!p.confirmed_at && !p.created_at) return true;
-    const base = new Date(p.confirmed_at || p.created_at).getTime();
-    const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
-    return base + dur > now;
-  };
+  const isActive = (p: any) => paymentExpiry({...p,status:"confirmed"}) > now;
   const activePayments = allPayments.filter(isActive);
 
-  const paymentsAllBag = activePayments.filter(p => p.plan === "all_1month");
+  const paymentsAllBag = activePayments.filter(p => ["all_1month","monthly","1month","3day","1year"].includes(p.plan));
   const paymentsMonthly = activePayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
   const payments3Day = activePayments.filter(p => p.plan && p.plan.endsWith("_3day"));
-  const paymentsFilm = activePayments.filter(p => p.plan === "single" || (!p.plan?.includes("month") && !p.plan?.includes("3day") && !p.plan?.includes("all")));
+  const paymentsFilm = activePayments.filter(p => !p.plan || p.plan === "single");
   const totalWithAccess = new Set(activePayments.map(p => p.user_id)).size;
 
   const currentPayments = filterTab === "allbag" ? paymentsAllBag : filterTab === "monthly" ? paymentsMonthly : filterTab === "3day" ? payments3Day : paymentsFilm;
   const filteredPayments = currentPayments.filter(p => !search.trim() || getPhone(p.user_id).includes(search.trim()));
 
-  const planLabel = (plan: string) => {
-    if (plan === "all_1month") return "🌟 Бүх багц";
-    if (plan?.endsWith("_1month")) return "👑 1 сарын эрх";
-    if (plan?.endsWith("_3day")) return "⏱ 3 хоногийн эрх";
-    return "🎬 Кино эрх";
-  };
-
   const revokePayment = async (ref_code: string) => {
-    if (!window.confirm("Энэ эрхийг хасах уу?")) return;
+    try {
+    if (!window.confirm("Зөвхөн сонгосон кино эсвэл багцын эрхийг хасах уу?")) return;
     setRevoking(ref_code);
     await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, { method: "PATCH", body: JSON.stringify({ status: "revoked" }) });
     setUserPayments(ps => ps.filter(p => p.ref_code !== ref_code));
     await load();
     setRevoking(null);
+  
+    } finally { setRevoking(null); }
   };
 
   // Гишүүний эрхүүдийг татах
   const loadUserPayments = async (userId: number) => {
+    try {
     setLoadingUserPayments(true);
     const data = await dbFetch(`pending_payments?user_id=eq.${userId}&status=eq.confirmed&select=*&order=created_at.desc`);
     setUserPayments(Array.isArray(data) ? data : []);
     setLoadingUserPayments(false);
+  
+    } finally { setLoadingUserPayments(false); }
   };
 
   // Эрх өгөх функц
   const grantAccess = async (plan: string, filmId?: number) => {
+    try {
     if (!grantUser) return;
     setGranting(true);
-    const ref_code = String(Math.floor(100000 + Math.random() * 900000));
+    const ref_code = genRef();
     const is3day = plan.endsWith("_3day");
     const isSingle = plan === "single";
     const prices: any = { "all_1month": 20000, "erotic_1month": 12500, "gadaad_1month": 12500, "hyatad_1month": 12500, "erotic_3day": 8000, "gadaad_3day": 8000, "hyatad_3day": 8000, "single": 0 };
@@ -1463,8 +933,8 @@ function AdminMembersTab() {
       method: "POST",
       body: JSON.stringify({
         ref_code,
-        film_id: isSingle ? (filmId || 0) : 0,
-        amount: prices[plan] || 0,
+        film_id: isSingle ? filmId : null,
+        amount: 0,
         status: "confirmed",
         user_id: grantUser.id,
         phone: grantUser.phone || null,
@@ -1478,6 +948,10 @@ function AdminMembersTab() {
     setGrantFilmId(null);
     setGrantStep("main");
     alert("✅ Эрх амжилттай олгогдлоо!");
+  
+    } catch(error) {
+      alert(error instanceof Error ? error.message : "Эрх олгож чадсангүй. Дахин шалгана уу.");
+    } finally { setGranting(false); }
   };
 
   const tabLabel = filterTab === "allbag" ? "🌟 Бүх багц авсан гишүүд" : filterTab === "monthly" ? "👑 1 сарын эрхтэй гишүүд" : filterTab === "3day" ? "⏱ 3 хоногийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
@@ -1501,7 +975,7 @@ function AdminMembersTab() {
               setAllSearch(val);
               if (val.trim().length >= 3) {
                 setSearching(true);
-                const res = await dbFetch(`users?phone=like.*${val.trim()}*&select=*&limit=50`);
+                const res = await dbFetch(`users?phone=like.*${val.replace(/\D/g,"").slice(0,8)}*&select=*&limit=50`);
                 setSearchResults(Array.isArray(res) ? res : []);
                 setSearching(false);
               } else {
@@ -1528,9 +1002,8 @@ function AdminMembersTab() {
                 {uActive.length > 0 && (
                   <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 4 }}>
                     {uActive.map((p: any) => {
-                      const base = new Date(p.confirmed_at || p.created_at).getTime();
-                      const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
-                      const remaining = Math.ceil((base + dur - Date.now()) / (60*60*1000));
+                      const expiry = paymentExpiry({...p,status:"confirmed"});
+                      const remaining = Math.ceil((expiry - now) / (60*60*1000));
                       const days = Math.floor(remaining / 24);
                       const hrs = remaining % 24;
                       const timeStr = days > 0 ? days + "өдөр " + hrs + "цаг" : remaining + "цаг";
@@ -1565,21 +1038,18 @@ function AdminMembersTab() {
               <div>
                 {/* Идэвхтэй эрхүүд */}
                 {userPayments.filter((p: any) => {
-                  const base = new Date(p.confirmed_at || p.created_at).getTime();
-                  const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
-                  return base + dur > Date.now();
+                  const expiry = paymentExpiry({...p,status:"confirmed"});
+                  return expiry > now;
                 }).length > 0 && (
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>✅ Идэвхтэй эрхүүд:</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {userPayments.filter((p: any) => {
-                        const base = new Date(p.confirmed_at || p.created_at).getTime();
-                        const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
-                        return base + dur > Date.now();
+                        const expiry = paymentExpiry({...p,status:"confirmed"});
+                        return expiry > now;
                       }).map((p: any) => {
-                        const base = new Date(p.confirmed_at || p.created_at).getTime();
-                        const dur = p.plan?.endsWith("_3day") ? 3*24*60*60*1000 : p.plan === "single" ? 72*60*60*1000 : 30*24*60*60*1000;
-                        const remaining = Math.ceil((base + dur - Date.now()) / (60*60*1000));
+                        const expiry = paymentExpiry({...p,status:"confirmed"});
+                        const remaining = Math.ceil((expiry - now) / (60*60*1000));
                         const days = Math.floor(remaining / 24);
                         const hrs = remaining % 24;
                         const timeStr = days > 0 ? days + "өдөр " + hrs + "цаг үлдсэн" : remaining + "цаг үлдсэн";
@@ -1820,8 +1290,7 @@ function AdminContactTab() {
     if (!annText.trim()) return;
     setAnnSaving(true);
     try {
-      await dbFetch("contact_messages?is_announcement=eq.true", { method: "DELETE" });
-      const res = await dbFetch("contact_messages", { method: "POST", body: JSON.stringify({ message: annText.trim(), announcement_image: annImage.trim() || null, is_announcement: true, read: true, phone: "admin" }) });
+      const res = await dbFetch(announcement?.id ? `contact_messages?id=eq.${announcement.id}` : "contact_messages", { method: announcement?.id ? "PATCH" : "POST", body: JSON.stringify({ message: annText.trim(), announcement_image: annImage.trim() || null, is_announcement: true, read: true, phone: "admin" }) });
       if (Array.isArray(res) && res.length > 0) {
         setAnnouncement(res[0]);
       } else {
@@ -1837,16 +1306,20 @@ function AdminContactTab() {
   };
 
   const deleteAnnouncement = async () => {
-    await dbFetch("contact_messages?is_announcement=eq.true", { method: "DELETE" });
-    setAnnouncement(null);
+    if(!announcement?.id || !window.confirm("Энэ зарыг устгах уу?"))return;
+    await dbFetch(`contact_messages?id=eq.${announcement.id}`, { method: "DELETE" });
+    await loadAnnouncement();
   };
 
   const load = async () => {
+    try {
     setLoading(true);
-    loadAnnouncement();
+    await loadAnnouncement();
     const data = await dbFetch("contact_messages?is_announcement=neq.true&order=created_at.asc&limit=200&select=*");
     setMsgs(Array.isArray(data) ? data : []);
     setLoading(false);
+  
+    } finally { setLoading(false); }
   };
 
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
@@ -1857,6 +1330,7 @@ function AdminContactTab() {
   };
 
   const sendReply = async (id: number) => {
+    try {
     if (!replyText.trim()) return;
     setSending(true);
     await dbFetch(`contact_messages?id=eq.${id}`, {
@@ -1867,12 +1341,14 @@ function AdminContactTab() {
     setReplyId(null);
     setReplyText("");
     setSending(false);
+  
+    } finally { setSending(false); }
   };
 
   const deleteAll = async () => {
-    if (!window.confirm("Бүх чатыг устгах уу?")) return;
-    await dbFetch("contact_messages?id=gt.0", { method: "DELETE" });
-    setMsgs([]); setSelectedUser(null);
+    if (!window.confirm(`Одоо жагсаалтад байгаа ${msgs.length} мессежийг устгах уу?`)) return;
+    for(const msg of msgs) await dbFetch(`contact_messages?id=eq.${msg.id}`, { method: "DELETE" });
+    setSelectedUser(null);await load();
   };
 
   const deleteOne = async (id: number) => {
@@ -2041,31 +1517,35 @@ function AdminContactTab() {
 
 function EditFilmPanel({ f, onDone }: any) {
   const mainUrl = f.url ? f.url.split("|||")[0] : "";
-  const existingPreview = f.url && f.url.includes("|||") ? f.url.split("|||")[1] : "";
+  const existingPreview = f.preview_url || (f.url && f.url.includes("|||") ? f.url.split("|||")[1] : "");
   const [title, setTitle] = useState(f.title);
-  const [price, setPrice] = useState(String(f.price || 5000));
-  const [op, setOp] = useState(String(f.op || 6000));
+  const [price, setPrice] = useState(String(f.price ?? 5000));
+  const [op, setOp] = useState(String(f.op ?? 6000));
   const [url, setUrl] = useState(mainUrl);
   const [img, setImg] = useState(f.img || "");
   const [previewUrl, setPreviewUrl] = useState(existingPreview);
-  const [badge, setBadge] = useState(f.badge || "Хэлтэй");
+  const [badge, setBadge] = useState(decodeBadge(f.badge));
   const [category, setCategory] = useState(decodeCat(f.badge));
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const savingRef = useRef(false);
 
   const save = async () => {
+    if (savingRef.current || uploading) return;
     if (!title.trim()) { alert("Гарчиг оруулна уу"); return; }
-    setSaving(true);
+    savingRef.current=true;setSaving(true);
     try {
       const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
-      const payload: any = { title: title.trim(), price: parseInt(price) || 0, op: parseInt(op) || 0, url: combinedUrl, badge: encodeBadgeCat(badge, category) };
-      if (img) payload.img = img;
+      const payload: any = { title: title.trim(), price: Number(price), op: Number(op), url: combinedUrl, badge: encodeBadgeCat(badge, category) };
+      payload.img = img.trim();
+      payload.preview_url = previewUrl.trim();
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
-      if (res && res.code) { alert("Алдаа: " + (res.message || JSON.stringify(res))); return; }
+      if (!Array.isArray(res) || res.length === 0) { alert("Алдаа: " + (res?.message || "Өөрчлөлт баталгаажаагүй.")); return; }
       onDone();
     } catch(e: any) {
       alert("Алдаа: " + (e?.message || "Дахин оролдоно уу"));
     } finally {
-      setSaving(false);
+      savingRef.current=false;setSaving(false);
     }
   };
 
@@ -2076,11 +1556,11 @@ function EditFilmPanel({ f, onDone }: any) {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
         <div>
           <label style={lbl}>Зарах үнэ ₮</label>
-          <input style={inputSt} value={price} onChange={(e: any) => setPrice(e.target.value)} type="number" />
+          <input style={inputSt} value={price} onChange={(e: any) => setPrice(e.target.value)} type="number" min="0" step="1" />
         </div>
         <div>
           <label style={lbl}>Хуучин үнэ ₮</label>
-          <input style={inputSt} value={op} onChange={(e: any) => setOp(e.target.value)} type="number" />
+          <input style={inputSt} value={op} onChange={(e: any) => setOp(e.target.value)} type="number" min="0" step="1" />
         </div>
         <div>
           <label style={lbl}>Badge</label>
@@ -2092,7 +1572,7 @@ function EditFilmPanel({ f, onDone }: any) {
         <div>
           <label style={lbl}>Категори</label>
           <select style={inputSt} value={category} onChange={(e: any) => setCategory(e.target.value)}>
-            <option>Бүгд</option>
+            
             <option>Эротик</option>
             <option>Гадаад</option>
             <option>Хятад</option>
@@ -2103,17 +1583,9 @@ function EditFilmPanel({ f, onDone }: any) {
       <input style={inputSt} value={url} onChange={(e: any) => setUrl(e.target.value)} placeholder="https://iframe.mediadelivery.net/..." />
       <label style={{ ...lbl, marginTop: 8 }}>🎬 Preview URL (Bunny.net MP4)</label>
       <input style={inputSt} value={previewUrl} onChange={(e: any) => setPreviewUrl(e.target.value)} placeholder="https://your.b-cdn.net/preview.mp4" />
-      <label style={{ ...lbl, marginTop: 8 }}>Зургийн URL эсвэл файл</label>
-      <input style={inputSt} value={img} onChange={(e: any) => setImg(e.target.value)} placeholder="https://..." />
-      <input type="file" accept="image/*" onChange={(e: any) => {
-        const file = e.target.files?.[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev: any) => setImg(ev.target.result as string);
-        reader.readAsDataURL(file);
-      }} style={{ marginTop: 4, fontSize: 12, color: C.muted, width: "100%" }} />
-      {img && <img src={img} alt="" style={{ width: "100%", maxHeight: 120, objectFit: "cover", borderRadius: 8, marginTop: 6 }} />}
+      <PosterUpload value={img} onChange={setImg} onBusyChange={setUploading} disabled={saving || uploading} />
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={save} disabled={saving} style={{ flex: 1, background: C.gold, border: "none", borderRadius: 8, padding: "10px", fontWeight: 700, cursor: "pointer", color: "#000", opacity: saving ? 0.6 : 1 }}>
+        <button onClick={save} disabled={saving || uploading} style={{ flex: 1, background: C.gold, border: "none", borderRadius: 8, padding: "10px", fontWeight: 700, cursor: "pointer", color: "#000", opacity: saving ? 0.6 : 1 }}>
           {saving ? "..." : "✅ Хадгалах"}
         </button>
         <button onClick={onDone} style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px", color: C.muted, fontSize: 13, cursor: "pointer" }}>Болих</button>
@@ -2126,40 +1598,31 @@ function EditFilmPanel({ f, onDone }: any) {
 // ADMIN ТОХИРГОО — Messenger URL
 // ══════════════════════════════════════════════
 function AdminSettingsTab() {
-  const SETTINGS_KEY = "site_settings";
-  const [messengerUrl, setMessengerUrl] = useState("https://m.me/61590383810997");
+  const [messengerUrl, setMessengerUrl] = useState("");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
-
+  const [saving, setSaving] = useState(false);
+  const saveBusy = useRef(false);
   useEffect(() => {
-    const fetchSettings = async () => {
-      const data = await dbFetch(`sms_logs?key=eq.${SETTINGS_KEY}&select=value&limit=1`);
-      if (Array.isArray(data) && data.length > 0) {
-        try { const s = JSON.parse(data[0].value); if (s.messengerUrl) setMessengerUrl(s.messengerUrl); } catch {}
-      }
-      setLoading(false);
-    };
-    fetchSettings();
+    let active=true;
+    requestJson("/api/settings").then(data=>{if(active)setMessengerUrl(data.messengerUrl || "");}).catch(()=>{}).finally(()=>{if(active)setLoading(false);});
+    return()=>{active=false;};
   }, []);
-
   const saveSettings = async () => {
-    const val = JSON.stringify({ messengerUrl });
-    const existing = await dbFetch(`sms_logs?key=eq.${SETTINGS_KEY}&select=id&limit=1`);
-    if (Array.isArray(existing) && existing.length > 0) {
-      await dbFetch(`sms_logs?key=eq.${SETTINGS_KEY}`, { method: "PATCH", body: JSON.stringify({ value: val }) });
-    } else {
-      await dbFetch("sms_logs", { method: "POST", body: JSON.stringify({ key: SETTINGS_KEY, value: val, text: "settings" }) });
-    }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-    // localStorage-д хадгалах
-    localStorage.setItem("messenger_url", messengerUrl);
+    if(saveBusy.current)return;
+    if (!safeUrl(messengerUrl)) { alert("Зөв HTTPS Messenger холбоос оруулна уу."); return; }
+    saveBusy.current=true;setSaving(true);setSaved(false);
+    try {
+      await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl})});
+      setSaved(true);window.dispatchEvent(new Event("kinoSettingsChanged"));
+    } catch {} finally {saveBusy.current=false;setSaving(false);}
   };
 
   if (loading) return <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>;
 
   return (
     <div style={{ padding: "0 14px" }}>
+      <ReadinessCheck />
       <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 16 }}>⚙️ Сайтын тохиргоо</div>
         <label style={lbl}>💬 Messenger холбоос</label>
@@ -2173,10 +1636,10 @@ function AdminSettingsTab() {
           style={{ ...inputSt, marginBottom: 12 }}
         />
         <button
-          onClick={saveSettings}
+          onClick={saveSettings} disabled={saving}
           style={{ ...goldBtn, borderRadius: 10 }}
         >
-          {saved ? "✅ Хадгалагдлаа!" : "💾 Хадгалах"}
+          {saving ? "Хадгалж байна…" : saved ? "✅ Хадгалагдлаа!" : "💾 Хадгалах"}
         </button>
       </div>
       <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 14px" }}>
@@ -2195,6 +1658,8 @@ function AdminPage({ films, onBack, onRefresh }: any) {
   const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "settings">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const savingRef = useRef(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
 
@@ -2208,30 +1673,31 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     const t = setInterval(fetchUnread, 30000);
     return () => clearInterval(t);
   }, [tab]);
-  const empty = { title: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Бүгд" };
+  const empty = { title: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
   const save = async () => {
+    if (savingRef.current || uploading) return;
     if (!form.title.trim()) { alert("Гарчиг оруулна уу"); return; }
-    setSaving(true);
+    savingRef.current=true;setSaving(true);
     try {
       const payload: any = {
         title: form.title.trim(),
-        views: parseInt(form.views) || 0,
-        op: parseInt(form.op) || 6000,
-        price: parseInt(form.price) || 0,
+        views: Number(form.views),
+        op: Number(form.op),
+        price: Number(form.price),
         badge: encodeBadgeCat(form.badge || "Хэлтэй", form.cat || "Эротик"),
         free: !!form.free,
-        locked: form.locked !== false,
+        locked: form.free ? false : form.locked !== false,
         url: form.url || "",
         img: form.img || "",
         bg: form.bg || "#1a0820",
       };
       if (form.preview_url) payload.preview_url = form.preview_url;
       const res = await dbFetch("films", { method: "POST", body: JSON.stringify(payload) });
-      if (res && res.code) {
-        alert("Алдаа: " + (res.message || JSON.stringify(res)));
+      if (!Array.isArray(res) || res.length === 0) {
+        alert("Алдаа: " + (res?.message || "Өөрчлөлт баталгаажаагүй."));
         return;
       }
 
@@ -2239,7 +1705,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     } catch(e: any) {
       alert("Алдаа гарлаа: " + (e?.message || "Дахин оролдоно уу"));
     } finally {
-      setSaving(false);
+      savingRef.current=false;setSaving(false);
     }
   };
   const deletFilm = async (id: number) => {
@@ -2253,7 +1719,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
   const updateUrl = async (id: number, url: string) => { await dbFetch(`films?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ url }) }); setEditId(null); onRefresh(); };
 
   return (
-    <div style={{ background: C.bg, minHeight: "100vh", paddingBottom: 30 }}>
+    <div className="admin-surface" style={{ background: C.bg, minHeight: "100vh", paddingBottom: 30 }}>
       <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button onClick={onBack} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
@@ -2261,7 +1727,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         </div>
         <span style={{ fontSize: 12, color: C.muted }}>{films.length} кино</span>
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", padding: "10px 14px", gap: 6 }}>
+      <div className="admin-tabs" style={{ display: "flex", flexWrap: "wrap", padding: "10px 14px", gap: 6 }}>
         <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📋 Жагсаалт</button>
         <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🧾 Захиалга</button>
         <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>👥 Гишүүд</button>
@@ -2286,20 +1752,19 @@ function AdminPage({ films, onBack, onRefresh }: any) {
             <label style={lbl}>Гарчиг *</label>
             <input style={inputSt} value={form.title} onChange={set("title")} placeholder="Кино нэр" />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
-              <div><label style={lbl}>Үзсэн тоо</label><input style={inputSt} value={form.views} onChange={set("views")} type="number" /></div>
+              <div><label style={lbl}>Үзсэн тоо</label><input style={inputSt} value={form.views} onChange={set("views")} type="number" min="0" step="1" /></div>
               <div><label style={lbl}>Badge</label>
                 <select style={inputSt} value={form.badge} onChange={set("badge")}><option>Хэлтэй</option><option>Хадмал</option></select>
               </div>
               <div><label style={lbl}>Категори</label>
-                <select style={inputSt} value={form.cat || "Бүгд"} onChange={set("cat")}>
-                  <option>Бүгд</option>
+                <select style={inputSt} value={form.cat || "Гадаад"} onChange={set("cat")}>
                   <option>Эротик</option>
                   <option>Гадаад</option>
                   <option>Хятад</option>
                 </select>
               </div>
-              <div><label style={lbl}>Хуучин үнэ ₮</label><input style={inputSt} value={form.op} onChange={set("op")} type="number" /></div>
-              <div><label style={lbl}>Зарах үнэ ₮</label><input style={inputSt} value={form.price} onChange={set("price")} type="number" /></div>
+              <div><label style={lbl}>Хуучин үнэ ₮</label><input style={inputSt} value={form.op} onChange={set("op")} type="number" min="0" step="1" /></div>
+              <div><label style={lbl}>Зарах үнэ ₮</label><input style={inputSt} value={form.price} onChange={set("price")} type="number" min="0" step="1" /></div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, padding: "10px", background: C.card2, borderRadius: 8 }}>
               <input type="checkbox" id="cb-free" checked={form.free} onChange={setChk("free")} style={{ width: 18, height: 18 }} />
@@ -2309,15 +1774,8 @@ function AdminPage({ films, onBack, onRefresh }: any) {
             <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/... эсвэл .mp4 холбоос" />
             <label style={{ ...lbl, marginTop: 10 }}>🎬 Preview URL (Bunny.net MP4)</label>
             <input style={inputSt} value={form.preview_url || ""} onChange={set("preview_url")} placeholder="https://your.b-cdn.net/preview.mp4" />
-            <label style={{ ...lbl, marginTop: 10 }}>Зургийн URL эсвэл файл</label>
-            <input style={inputSt} value={form.img} onChange={set("img")} placeholder="https://..." />
-            <input type="file" accept="image/*" onChange={(e: any) => {
-              const file = e.target.files?.[0]; if (!file) return;
-              const reader = new FileReader();
-              reader.onload = (ev: any) => setForm((f: any) => ({ ...f, img: ev.target.result }));
-              reader.readAsDataURL(file);
-            }} style={{ marginTop: 6, fontSize: 12, color: C.muted, width: "100%" }} />
-            <button onClick={save} disabled={saving} style={{ ...goldBtn, marginTop: 16, opacity: saving ? 0.6 : 1 }}>
+            <PosterUpload value={form.img || ""} onChange={img=>setForm((current:any)=>({...current,img}))} onBusyChange={setUploading} disabled={saving || uploading} />
+            <button onClick={save} disabled={saving || uploading} style={{ ...goldBtn, marginTop: 16, opacity: saving ? 0.6 : 1 }}>
               {saving ? "Хадгалж байна..." : "✅ Хадгалах"}
             </button>
           </div>
@@ -2330,7 +1788,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
             <div key={f.id} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 12, marginBottom: 10 }}>
               <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 10 }}>
                 <div style={{ width: 44, height: 60, borderRadius: 6, background: f.bg || "#1a0820", flexShrink: 0, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {f.img ? <img src={f.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 20 }}>🎬</span>}
+                  {f.img ? <img loading="lazy" decoding="async" src={f.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <span style={{ fontSize: 20 }}>🎬</span>}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: C.txt, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.title}</div>
@@ -2357,12 +1815,22 @@ function AdminPage({ films, onBack, onRefresh }: any) {
 }
 
 export default function Home() {
+  const [appError,setAppError]=useState("");
+  useEffect(()=>{
+    const show=(event:Event)=>setAppError(String((event as CustomEvent).detail||"Алдаа гарлаа."));
+    const rejection=(event:PromiseRejectionEvent)=>{setAppError(event.reason instanceof Error?event.reason.message:"Үйлдэл амжилтгүй.");event.preventDefault();};
+    window.addEventListener("kinoError",show);window.addEventListener("unhandledrejection",rejection);
+    return()=>{window.removeEventListener("kinoError",show);window.removeEventListener("unhandledrejection",rejection);};
+  },[]);
   const [page, setPage] = useState("home");
   const [films, setFilms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [payFilm, setPayFilm] = useState<any>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
   const [adminAuth, setAdminAuth] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const filmLoadRequest=useRef(0);
+  const playRequest = useRef(0);
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -2372,6 +1840,13 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
+  const accessOwner = useRef<number | null>(null);
+
+  // DB-с confirmed төлбөрүүдийг татаж access олгох
+  const syncAccessFromDB = async (userId: number) => {
+    const data=await requestJson("/api/access",{},true);
+    if(accessOwner.current===userId)setAccessMap(data.access || {});
+  };
 
   // PWA install prompt барих
   useEffect(() => {
@@ -2397,66 +1872,31 @@ export default function Home() {
   };
 
   useEffect(() => {
-    const s = loadSession(); if (s) { setUser(s); syncAccessFromDB(s.id); }
-    // localStorage-с access map уншина
-    try { const a = JSON.parse(localStorage.getItem("kino_access") || "{}"); setAccessMap(a); } catch {}
+    let active=true;
+    try { localStorage.removeItem("kino_session");localStorage.removeItem("kino_access"); } catch {}
+    requestJson("/api/auth").then(data=>{
+      if(!active)return;
+      if(data?.admin){setAdminAuth(true);setPage("admin");}
+      else if(data?.user){accessOwner.current=data.user.id;setUser(data.user);void syncAccessFromDB(data.user.id).catch(()=>{});}
+    }).catch(()=>{});
+    return()=>{active=false;};
   }, []);
 
-  // Хэрэглэгч нэвтэрсэн бол 30 секунд тутамд DB-с access шинэчлэх
-  // (SMS хоцорсон ч, modal хаасан ч эрх автоматаар нээгдэнэ)
+  // Refresh on return from a banking app; do not poll hidden tabs.
   useEffect(() => {
     if (!user?.id) return;
-    const timer = setInterval(() => {
-      syncAccessFromDB(user.id);
-    }, 30000);
-    return () => clearInterval(timer);
-  }, [user?.id]);
-
-  // DB-с confirmed төлбөрүүдийг татаж access олгох
-  const syncAccessFromDB = async (userId: number) => {
-    // Бүх захиалгыг татах (confirmed + revoked)
-    const payments = await dbFetch(
-      `pending_payments?user_id=eq.${userId}&select=film_id,plan,created_at,confirmed_at,status`
-    );
-    if (!Array.isArray(payments)) return;
-    const now = Date.now();
-    const newAccess: Record<string, number> = {};
-
-    payments.forEach((p: any) => {
-      if (p.status !== "confirmed") return; // revoked болон pending-г орхино
-      const is3day = p.plan?.endsWith("_3day");
-      const dur = is3day ? 3*24*60*60*1000 : 30*24*60*60*1000;
-      const base = new Date(p.confirmed_at || p.created_at).getTime();
-      const exp = base + dur;
-      if (p.plan === "monthly" || p.plan === "1month" || p.plan === "3day" || p.plan === "1year") {
-        if (exp > now) newAccess["monthly"] = Math.max(newAccess["monthly"] || 0, exp);
-      } else if (p.plan === "all_1month") {
-        if (exp > now) { newAccess["cat_erotic"] = exp; newAccess["cat_gadaad"] = exp; newAccess["cat_hyatad"] = exp; }
-      } else if (p.plan?.startsWith("erotic")) {
-        if (exp > now) newAccess["cat_erotic"] = Math.max(newAccess["cat_erotic"] || 0, exp);
-      } else if (p.plan?.startsWith("gadaad")) {
-        if (exp > now) newAccess["cat_gadaad"] = Math.max(newAccess["cat_gadaad"] || 0, exp);
-      } else if (p.plan?.startsWith("hyatad")) {
-        if (exp > now) newAccess["cat_hyatad"] = Math.max(newAccess["cat_hyatad"] || 0, exp);
-      }
-      if (p.film_id && p.film_id > 0 && (p.plan === "single" || !p.plan?.includes("month") && !p.plan?.includes("day") && !p.plan?.includes("all"))) {
-        const filmExp = new Date(p.confirmed_at || p.created_at).getTime() + 72 * 60 * 60 * 1000;
-        if (filmExp > now) newAccess[`film_${p.film_id}`] = Math.max(newAccess[`film_${p.film_id}`] || 0, filmExp);
-      }
-    });
-
-    // localStorage-г бүрэн солих — revoked эрхүүд автоматаар арилна
-    localStorage.setItem("kino_access", JSON.stringify(newAccess));
-    setAccessMap(newAccess);
-  };
-
-  const saveAccess = (key: string, ms: number) => {
-    setAccessMap(prev => {
-      const next = { ...prev, [key]: ms };
-      localStorage.setItem("kino_access", JSON.stringify(next));
-      return next;
-    });
-  };
+    let busy=false, cancelled=false;
+    const refresh=async()=>{
+      if(busy || cancelled || document.hidden)return;
+      busy=true;
+      try { await syncAccessFromDB(user.id); } catch {} finally {busy=false;}
+    };
+    window.addEventListener("focus",refresh);
+    window.addEventListener("online",refresh);
+    document.addEventListener("visibilitychange",refresh);
+    const timer=setInterval(refresh,30000);
+    return()=>{cancelled=true;clearInterval(timer);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);document.removeEventListener("visibilitychange",refresh);};
+  },[user?.id]);
 
   const hasAccess = (filmId: number, category?: string): boolean => {
     if (!user) return false;
@@ -2469,20 +1909,24 @@ export default function Home() {
   };
 
   const loadFilms = async () => {
-    setLoading(true);
+    const request=++filmLoadRequest.current;
+    setLoading(true);setLoadError("");
     try {
-      const data = await dbFetch("films?order=created_at.desc&select=*");
+      const data = await dbAll("films?select=*");
+      if(request!==filmLoadRequest.current)return;
       setFilms(Array.isArray(data) ? data : []);
     } catch(e) {
-      setFilms([]);
+      if(request!==filmLoadRequest.current)return;
+      setLoadError(e instanceof Error ? e.message : "Холболтоо шалгаад дахин оролдоно уу.");
     } finally {
-      setLoading(false);
+      if(request===filmLoadRequest.current)setLoading(false);
     }
   };
   useEffect(() => { loadFilms(); }, []);
 
   // ── Навигацийн helper ──
   const navigateTo = (newPage: string) => {
+    playRequest.current++;
     window.history.pushState({ page: newPage }, "");
     setPage(newPage);
   };
@@ -2494,6 +1938,7 @@ export default function Home() {
 
   useEffect(() => {
     const handlePop = () => {
+      playRequest.current++;
       const cur = pageRef.current;
       const adminBack = new CustomEvent("adminBackPress");
       window.dispatchEvent(adminBack);
@@ -2502,107 +1947,91 @@ export default function Home() {
       if (cur === "video" || cur === "search" || cur === "payment") {
         setPage("home"); setCurFilm(null); setPayFilm(null); return;
       }
-      setShowContact(false); setShowLoginModal(false); setShowInstall(false); setShowPlanModal(false);
+      pendingPlanRef.current=null;setShowContact(false); setShowLoginModal(false); setShowInstall(false); setShowPlanModal(false);
     };
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
-  const handleFilm = (f: any) => {
-    if (f.free) { setCurFilm({ ...f, locked: false }); navigateTo("video"); return; }
-    if (!f.locked) { 
-      if (!user) { setShowLoginModal(true); return; }
-      setCurFilm({ ...f, locked: false }); navigateTo("video"); return;
-    }
-    if (!user) { setShowLoginModal(true); return; }
-    if (hasAccess(f.id, decodeCat(f.badge))) { setCurFilm({ ...f, locked: false }); navigateTo("video"); }
-    else { setPayFilm(f); navigateTo("payment"); }
+  const playFilm = async (f: any, stillActive = () => true) => {
+    const intent=++playRequest.current;
+    let current;
+    try { current=await requestJson(`/api/playback?id=${encodeURIComponent(f.id)}`,{},true); }
+    catch(e){if(intent!==playRequest.current||!stillActive())return;throw e;}
+    if(intent!==playRequest.current||!stillActive())return;
+    setCurFilm(current);navigateTo("video");
   };
-
-  const handlePaid = () => {
-    if (payFilm.monthly) {
-      const is3day = payFilm.plan?.endsWith("_3day");
-      const ms = is3day ? 3 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
-      const exp = Date.now() + ms;
-      if (payFilm.plan === "all_1month") {
-        saveAccess("cat_erotic", exp);
-        saveAccess("cat_gadaad", exp);
-        saveAccess("cat_hyatad", exp);
-      } else if (payFilm.plan?.startsWith("erotic")) {
-        saveAccess("cat_erotic", exp);
-      } else if (payFilm.plan?.startsWith("gadaad")) {
-        saveAccess("cat_gadaad", exp);
-      } else if (payFilm.plan?.startsWith("hyatad")) {
-        saveAccess("cat_hyatad", exp);
-      }
-      setPayFilm(null);
-      setPage("home");
-      setTimeout(() => { if (user?.id) syncAccessFromDB(user.id); }, 3000);
-    } else {
-      // 72 цагийн эрх
-      const expires = Date.now() + 72 * 60 * 60 * 1000;
-      saveAccess(`film_${payFilm.id}`, expires);
-      setCurFilm({ ...payFilm, locked: false });
-      setPayFilm(null);
-      navigateTo("video");
+  const handleFilm = async (f: any) => {
+    const owner=accessOwner.current;
+    try { await playFilm(f); }
+    catch(error){
+      if(owner!==accessOwner.current)return;
+      if(error instanceof RequestError && error.status===403){
+        if(!user){setShowLoginModal(true);return;}
+        void syncAccessFromDB(user.id).catch(()=>{});
+        setPayFilm(f);navigateTo("payment");
+      } else setAppError(error instanceof Error?error.message:"Кино нээхэд алдаа гарлаа.");
     }
   };
+  const handlePaid = async (stillActive = () => true) => {
+    if(!payFilm || !user || !stillActive())return;
+    const owner=user.id;
+    const current=()=>stillActive()&&accessOwner.current===owner;
+    await syncAccessFromDB(owner);
+    if(!current())return;
+    if(payFilm.monthly){setPayFilm(null);setPage("home");}
+    else{await playFilm(payFilm,current);if(current())setPayFilm(null);}
+  };
 
-  const handleLogin = (u: any) => {
-    setUser(u);
-    syncAccessFromDB(u.id);
-    setShowLoginModal(false);
-    if (pendingPlanRef.current) {
-      pendingPlanRef.current = null;
+  const openPlanCheckout = (plan: string) => {
+    if (plan === "show_plan") {
       window.history.pushState({ page: "planmodal" }, "");
       setShowPlanModal(true);
       return;
     }
+    if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan)) return;
+    setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true});
+    navigateTo("payment");
+  };
+
+  const handlePlanSelect = (plan: string) => {
+    if (!user) {pendingPlanRef.current=plan;setShowLoginModal(true);return;}
+    openPlanCheckout(plan);
+  };
+
+  const handleLogin = (u: any) => {
+    playRequest.current++;setAdminAuth(false);
+    accessOwner.current=u.id;
+    setUser(u);
+    void syncAccessFromDB(u.id).catch(()=>{});
+    setShowLoginModal(false);
+    if (pendingPlanRef.current) {
+      const plan=pendingPlanRef.current;
+      pendingPlanRef.current = null;
+      openPlanCheckout(plan);
+      return;
+    }
     setPage("home");
   };
-  const handleLogout = () => { clearSession(); setUser(null); };
+  const handleLogout = async () => {
+    playRequest.current++;
+    try {
+      await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"logout"})});
+      accessOwner.current=null;setUser(null);setAdminAuth(false);setAccessMap({});setCurFilm(null);setPayFilm(null);setPage("home");void loadFilms();
+    } catch {} // Keep the signed-in state visible if server-side logout failed.
+  };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
-      <style>{`
-        *{box-sizing:border-box;margin:0;padding:0}
-        @keyframes planGlow{0%,100%{box-shadow:0 0 28px rgba(139,92,246,0.45),inset 0 0 20px rgba(139,92,246,0.08);border-color:#8b5cf6}50%{box-shadow:0 0 45px rgba(167,139,250,0.85),0 0 80px rgba(139,92,246,0.4),inset 0 0 30px rgba(139,92,246,0.15);border-color:#c4b5fd}}
-        .plan-glow{animation:planGlow 2s ease-in-out infinite}
-        html,body{background:#0d0d14;overflow-x:hidden}
-        input,select,button,textarea{font-family:inherit}
-        input:focus,select:focus,textarea:focus{outline:none;border-color:#e8a020!important}
-        ::-webkit-scrollbar{width:4px}
-        ::-webkit-scrollbar-track{background:#0d0d14}
-        ::-webkit-scrollbar-thumb{background:#1e1e2e;border-radius:4px}
-        .film-grid{grid-template-columns:repeat(3,1fr)!important}
-        @media(min-width:1100px){.film-grid{grid-template-columns:repeat(5,1fr)!important}}
-        @media(max-width:600px){.film-grid{grid-template-columns:1fr 1fr!important}}
-      `}</style>
+    <div className="app-shell" style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
+      {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
-      {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo("adminlogin")} loading={loading} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={(plan: string) => {
-          const PLANS: any = {
-            "erotic_3day":  { title: "🔞 Эротик · 3 хоног",  price: 8000,  plan: "erotic_3day" },
-            "erotic_1month":{ title: "🔞 Эротик · 1 сар",    price: 12500, plan: "erotic_1month" },
-            "gadaad_3day":  { title: "🌍 Гадаад · 3 хоног",  price: 8000,  plan: "gadaad_3day" },
-            "gadaad_1month":{ title: "🌍 Гадаад · 1 сар",    price: 12500, plan: "gadaad_1month" },
-            "hyatad_3day":  { title: "🇨🇳 Хятад · 3 хоног",  price: 8000,  plan: "hyatad_3day" },
-            "hyatad_1month":{ title: "🇨🇳 Хятад · 1 сар",    price: 12500, plan: "hyatad_1month" },
-            "all_1month":   { title: "🌟 Бүх багц · 1 сар",  price: 20000, plan: "all_1month" },
-          };
-          if (!user) { pendingPlanRef.current = plan; setShowLoginModal(true); return; }
-          if (plan === "show_plan") {
-            window.history.pushState({ page: "planmodal" }, "");
-            setShowPlanModal(true);
-            return;
-          }
-          const p = PLANS[plan] || PLANS["all_1month"];
-          setPayFilm({ id: 0, title: p.title, price: p.price, monthly: true, plan: p.plan, locked: true }); navigateTo("payment");
-        }} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} />}
+
+      {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} />}
       {page === "video" && curFilm && <VideoPage film={curFilm} onBack={() => setPage("home")} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => setPage("home")} />}
-      {page === "adminlogin" && <AdminLogin onEnter={() => { setAdminAuth(true); navigateTo("admin"); }} onBack={() => setPage("home")} />}
-      {page === "admin" && adminAuth && <AdminPage films={films} onBack={() => setPage("home")} onRefresh={loadFilms} />}
+      {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({}); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}
+      {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} />}
       {payFilm && page === "payment" && <BankModal film={payFilm} onClose={() => { setPayFilm(null); setPage("home"); }} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
 
@@ -2617,8 +2046,8 @@ export default function Home() {
               <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 10 }}>🤖 Android (Chrome)</div>
               <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
                 1. Chrome цэс <span style={{ color: C.gold, fontWeight: 700 }}>⋮</span> дарна<br/>
-                2. <span style={{ color: C.gold, fontWeight: 700 }}>"Нүүр дэлгэцэнд нэмэх"</span> дарна<br/>
-                3. <span style={{ color: C.gold, fontWeight: 700 }}>"Суулгах"</span> дарна
+                2. <span style={{ color: C.gold, fontWeight: 700 }}>&quot;Нүүр дэлгэцэнд нэмэх&quot;</span> дарна<br/>
+                3. <span style={{ color: C.gold, fontWeight: 700 }}>&quot;Суулгах&quot;</span> дарна
               </div>
             </div>
             <div style={{ background: C.card2, borderRadius: 12, padding: 16 }}>
@@ -2626,7 +2055,7 @@ export default function Home() {
               <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
                 1. Safari дээр нээнэ<br/>
                 2. Share товч <span style={{ color: C.blue, fontWeight: 700 }}>□↑</span> дарна<br/>
-                3. <span style={{ color: C.blue, fontWeight: 700 }}>"Add to Home Screen"</span> дарна
+                3. <span style={{ color: C.blue, fontWeight: 700 }}>&quot;Add to Home Screen&quot;</span> дарна
               </div>
             </div>
           </div>
@@ -2635,19 +2064,11 @@ export default function Home() {
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
       {showLoginModal && !user && mounted && createPortal(
-        <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", zIndex:9999, width:"calc(100% - 24px)", maxWidth:500, pointerEvents:"none" }}>
-          <div style={{
-              pointerEvents:"all",
-              background:"#0d0d18",
-              borderRadius:20, padding:"22px 20px 28px",
-              border:"1px solid #1e2d4a",
-              boxShadow:"0 10px 50px rgba(0,40,255,0.2)",
-            }}>
-              <button onClick={() => setShowLoginModal(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"#6b6a90", fontSize:22, cursor:"pointer" }}>✕</button>
-              <div style={{ fontSize:15, fontWeight:700, color:C.txt, marginBottom:14, textAlign:"center", letterSpacing:"0.02em" }}>Утасны дугаараа оруулна уу</div>
-              <LoginModal onLogin={(u:any) => { handleLogin(u); setShowLoginModal(false); }} />
-            </div>
-        </div>,
+        <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingPlanRef.current=null;setShowLoginModal(false);}} className="login-dialog">
+          <div className="dialog-heading"><div><span className="eyebrow">КИНО САЙТ</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingPlanRef.current=null;setShowLoginModal(false);}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
+          <p className="login-note">Утасны дугаар, PIN кодоороо нэвтэрнэ үү.</p>
+          <LoginModal onLogin={(u:any)=>{handleLogin(u);setShowLoginModal(false);}}/>
+        </CinemaDialog>,
         document.body
       )}
     </div>

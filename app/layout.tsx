@@ -1,38 +1,28 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "cyrillic"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin", "cyrillic"],
-});
+export const viewport: Viewport = { themeColor: "#0d0d14" };
 
 export const metadata: Metadata = {
-  title: "21 кино 18 kino — Кино үзэх сайт",
+  title: "Кино сайт",
   description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "MGL Drama",
+    title: "Кино сайт",
   },
-  themeColor: "#0d0d14",
   openGraph: {
-    title: "21 кино 18 kino — Кино үзэх сайт",
+    title: "Кино сайт",
     description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
-    url: "https://mongolz.pro",
-    siteName: "Mongolz.pro",
+    ...(process.env.SITE_URL ? {url:process.env.SITE_URL} : {}),
+    siteName: "Кино сайт",
     images: [
       {
-        url: "https://i.ibb.co/9mDWgp40/mongolz-og-banner-v5.jpg",
+        url: "/cinema-cover.webp",
         width: 1200,
         height: 630,
-        alt: "21 кино 18 kino — Кино үзэх сайт",
+        alt: "Кино сайт",
       },
     ],
     locale: "mn_MN",
@@ -40,10 +30,11 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "21 кино 18 kino — Кино үзэх сайт",
+    title: "Кино сайт",
     description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
-    images: ["https://i.ibb.co/9mDWgp40/mongolz-og-banner-v5.jpg"],
+    images: ["/cinema-cover.webp"],
   },
+  ...(process.env.SITE_URL ? {metadataBase:new URL(process.env.SITE_URL)} : {}),
 };
 
 export default function RootLayout({
@@ -54,14 +45,23 @@ export default function RootLayout({
   return (
     <html
       lang="mn"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
         {children}
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
-              navigator.serviceWorker.register('/sw.js').catch(function(){});
+              if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                navigator.serviceWorker.getRegistrations().then(function(regs) {
+                  regs.forEach(function(reg) { reg.unregister(); });
+                });
+                caches.keys().then(function(keys) {
+                  keys.filter(function(key) { return key.startsWith('mgldrama-'); }).forEach(function(key) { caches.delete(key); });
+                });
+              } else {
+                navigator.serviceWorker.register('/sw.js').catch(function(){});
+              }
             });
           }
         `}} />
