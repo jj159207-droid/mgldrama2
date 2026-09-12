@@ -1,0 +1,30 @@
+services:
+  web:
+    build:
+      context: .
+      args:
+        SITE_URL: ${SITE_URL:?Set the public HTTPS origin}
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+    init: true
+  proxy:
+    image: caddy:2
+    environment:
+      SITE_URL: ${SITE_URL:?Set the public HTTPS origin}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  caddy_data:
+  caddy_config:

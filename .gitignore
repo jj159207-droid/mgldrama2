@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/poster-backups/
 
 # next.js
 /.next/

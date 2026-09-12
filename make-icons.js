@@ -1,1 +1,9 @@
-﻿const{createCanvas}=require("canvas");const fs=require("fs");function makeIcon(size){const c=createCanvas(size,size);const ctx=c.getContext("2d");ctx.fillStyle="#0d0d14";ctx.fillRect(0,0,size,size);ctx.fillStyle="#e8a020";ctx.font="bold "+Math.floor(size*0.55)+"px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText("K",size/2,size/2);fs.writeFileSync("public/icon-"+size+".png",c.toBuffer("image/png"));console.log("icon-"+size+".png done");}makeIcon(192);makeIcon(512);
+// Optional: existing PNG icons are included. No native Cairo dependency.
+async function main(){
+  const {default:sharp}=await import('sharp');
+  for(const size of [192,512]){
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100"><rect width="100" height="100" rx="20" fill="#0d0d14"/><path d="M30 25h10v23l23-23h14L50 52l28 23H62L40 55v20H30z" fill="#e8a020"/></svg>`;
+    await sharp(Buffer.from(svg)).png().toFile(`public/icon-${size}.png`);
+  }
+}
+main().catch(error=>{console.error(error.message);process.exitCode=1;});
