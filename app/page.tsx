@@ -1696,9 +1696,10 @@ export default function Home() {
     };
     window.addEventListener("focus",refresh);
     window.addEventListener("online",refresh);
+    window.addEventListener("kinoAccessChanged",refresh);
     document.addEventListener("visibilitychange",refresh);
     const timer=setInterval(refresh,30000);
-    return()=>{cancelled=true;clearInterval(timer);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);document.removeEventListener("visibilitychange",refresh);};
+    return()=>{cancelled=true;clearInterval(timer);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);window.removeEventListener("kinoAccessChanged",refresh);document.removeEventListener("visibilitychange",refresh);};
   },[user?.id]);
 
   const hasAccess = (filmId: number, category?: string): boolean => {

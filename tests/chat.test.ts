@@ -7,6 +7,9 @@ import sharp from 'sharp';
 import {NextRequest} from 'next/server';
 import * as chat from '../app/api/chat/route';
 import * as imageRoute from '../app/api/chat/image/route';
+import * as accessRoute from '../app/api/chat/access/route';
+import * as activityRoute from '../app/api/chat/activity/route';
+import {canWatch,accessFromPayments,type Row} from '../lib/domain';
 import * as generic from '../app/api/db/route';
 import {chatImage} from '../lib/chat';
 
@@ -25,9 +28,11 @@ before(async () => {
   await pg.exec(await readFile(new URL('../supabase/migrations/20260915183329_private_support_chat.sql', import.meta.url), 'utf8'));
   assert.deepEqual((await pg.query('select sender,message from support_messages order by id')).rows, [{sender:'user',message:'Legacy question'},{sender:'admin',message:'Legacy reply'}]);
   assert.equal((await pg.query<{n:number}>('select count(*)::int n from contact_messages')).rows[0].n, 2);
+  await pg.exec(await readFile(new URL('../supabase/migrations/20260915200520_chat_access_actions.sql', import.meta.url), 'utf8'));
+  await pg.exec("insert into films(id,title,badge,price,free,locked) values(33,'Film A','Хэлтэй|Гадаад',5000,false,true),(34,'Film B','Хэлтэй|Хятад',5000,false,true)");
 });
 beforeEach(async () => {
-  await pg.exec('reset role;truncate support_threads cascade;');
+  await pg.exec('reset role;truncate support_threads cascade;delete from pending_payments;');
   // A tiny PostgREST adapter executes the REAL SQL on isolated Postgres. No
   // production credentials, customer chats, or live network are used in tests.
   global.fetch = async (input, init) => {
@@ -42,17 +47,18 @@ beforeEach(async () => {
     try {
       let result;
       if (table.startsWith('rpc/')) {
-        const fn = table.slice(4); assert.ok(['kino_chat_send','kino_chat_inbox','kino_chat_unread'].includes(fn));
+        const fn = table.slice(4); assert.ok(['kino_chat_send','kino_chat_inbox','kino_chat_unread','kino_chat_view','kino_chat_activity','kino_chat_grant','kino_chat_clear'].includes(fn));
         result = await pg.query(`select * from ${fn}(${Object.keys(body).map((k,i) => `${k} => $${i+1}`).join(',')})`, Object.values(body));
       } else {
-        assert.ok(['support_messages','support_images'].includes(table), `Unexpected table ${table}`);
+        assert.ok(['support_messages','support_images','pending_payments','films'].includes(table), `Unexpected table ${table}`);
         const params:unknown[] = [], clauses:string[] = [];
         for (const [column, filter] of u.searchParams) {
           if (['select','order','limit'].includes(column)) continue;
+          if (column==='or') continue; // All payment fixtures are created now.
           assert.match(column,/^[a-z_]+$/);
           if (filter === 'is.null') {clauses.push(`${column} is null`);continue;}
-          const [op,...rest] = filter.split('.'); assert.ok(['eq','lte'].includes(op));
-          params.push(rest.join('.')); clauses.push(`${column} ${op === 'eq' ? '=' : '<='} $${params.length}`);
+          const [op,...rest] = filter.split('.'); assert.ok(['eq','lte','gt'].includes(op));
+          params.push(rest.join('.')); clauses.push(`${column} ${op === 'eq' ? '=' : op==='gt'?'>':'<='} $${params.length}`);
         }
         const where = clauses.length ? `where ${clauses.join(' and ')}` : '';
         if (method === 'PATCH') {
@@ -66,6 +72,81 @@ beforeEach(async () => {
       return Response.json(result.rows.map(value => {const row=value as Record<string,unknown>;return {...row,...(row.data instanceof Uint8Array ? {data:'\\x'+Buffer.from(row.data).toString('hex')} : {})};}));
     } catch (e) {return Response.json({code:(e as {code:string}).code}, {status:400});}
   };
+});
+
+test('chat grants are admin-only, owner-bound, atomic with a receipt, and retry-safe after chat deletion',async()=>{
+  const request_id=randomUUID(), payload={user:1,plan:'single',film_id:33,request_id};
+  for (const actor of [null,'user','other'] as const) {
+    assert.ok([401,403].includes((await accessRoute.POST(req('/api/chat/access','POST',payload,actor))).status));
+    assert.ok([401,403].includes((await accessRoute.GET(req('/api/chat/access?user=1','GET',undefined,actor))).status));
+  }
+  assert.equal((await accessRoute.POST(req('/api/chat/access','POST',payload,'admin',{origin:'https://evil.test'}))).status,403);
+  for (const invalid of [{plan:'1year'},{film_id:null},{user:999},{plan:'gadaad_3day',film_id:33},{sender:'user'}]) {
+    assert.ok((await accessRoute.POST(req('/api/chat/access','POST',{...payload,...invalid},'admin'))).status>=400);
+  }
+  const replies=await Promise.all(Array.from({length:3},()=>accessRoute.POST(req('/api/chat/access','POST',payload,'admin'))));
+  for(const r of replies) assert.equal(r.status,200,await r.clone().text());
+  const grants=await Promise.all(replies.map(r=>r.json()));assert.equal(new Set(grants.map(r=>r.grant.payment_id)).size,1);
+  const payments=(await pg.query<Row>('select * from pending_payments where user_id=1')).rows;
+  assert.equal(payments.length,1);assert.equal(Number(payments[0].amount),0);
+  assert.equal(canWatch({id:33,locked:true,free:false},payments),true);
+  assert.equal(canWatch({id:34,locked:true,free:false},payments),false);
+  let messages=(await (await chat.GET(req())).json()).messages;
+  assert.equal(messages.length,1);assert.ok(messages[0].grant_payment_id);assert.match(messages[0].message,/Film A/);
+  const before=grants[0].grant.expires_at;
+  await chat.DELETE(req('/api/chat','DELETE',{user:1,through:messages[0].id},'admin'));
+  const retry=await (await accessRoute.POST(req('/api/chat/access','POST',payload,'admin'))).json();
+  assert.equal(retry.grant.expires_at,before);
+  messages=(await (await chat.GET(req())).json()).messages;assert.equal(messages.length,0);
+  assert.equal((await accessRoute.POST(req('/api/chat/access','POST',{...payload,film_id:34},'admin'))).status,409);
+  const summary=await (await accessRoute.GET(req('/api/chat/access?user=1','GET',undefined,'admin'))).json();
+  assert.ok(summary.access.film_33);assert.equal(summary.films.length,2);
+});
+
+test('category, three-day and monthly grants confer only the selected scope and duration',async()=>{
+  for(const plan of ['gadaad_3day','hyatad_1month','erotic_3day','all_1month','3day']){
+    await pg.exec('delete from support_messages;delete from pending_payments;');
+    const response=await accessRoute.POST(req('/api/chat/access','POST',{user:1,plan,request_id:randomUUID()},'admin'));
+    assert.equal(response.status,200,await response.clone().text());
+    const rows=(await pg.query<Row>('select * from pending_payments')).rows;
+    const access=accessFromPayments(rows),keys=Object.keys(access);
+    assert.deepEqual(keys.sort(),plan==='all_1month'?['cat_erotic','cat_gadaad','cat_hyatad']:plan==='3day'?['monthly']:[`cat_${plan.split('_')[0]}`]);
+    assert.equal(Object.values(access)[0]-Date.parse(String(rows[0].confirmed_at)),(plan.endsWith('3day')?3:30)*86400000);
+    assert.deepEqual(accessFromPayments(rows,Date.now()+31*86400000),{});
+  }
+  await pg.exec('update support_threads set rate_start=now(),rate_count=60;');
+  const n=(await pg.query<{n:number}>('select count(*)::int n from pending_payments')).rows[0].n;
+  assert.equal((await accessRoute.POST(req('/api/chat/access','POST',{user:1,plan:'all_1month',request_id:randomUUID()},'admin'))).status,429);
+  assert.equal((await pg.query<{n:number}>('select count(*)::int n from pending_payments')).rows[0].n,n,'failed receipt must roll back the grant');
+});
+
+test('clearing a chat deletes only confirmed history and images, preserving new arrivals, other users and grants',async()=>{
+  const png=await sharp({create:{width:2,height:2,channels:3,background:'blue'}}).png().toBuffer();
+  const old=await send('user',{image:`data:image/png;base64,${png.toString('base64')}`});
+  const recent=await send('user',{message:'Arrived after the delete prompt'});await send('other');
+  const payload={user:1,through:old.id};
+  assert.equal((await chat.DELETE(req('/api/chat','DELETE',payload))).status,403);
+  assert.equal((await chat.DELETE(req('/api/chat','DELETE',payload,'admin',{origin:'https://evil.test'}))).status,403);
+  assert.equal((await chat.DELETE(req('/api/chat','DELETE',{user:1},'admin'))).status,400);
+  assert.equal((await chat.DELETE(req('/api/chat','DELETE',payload,'admin'))).status,200);
+  assert.equal((await imageRoute.GET(req(old.image_url))).status,404);
+  assert.deepEqual((await (await chat.GET(req())).json()).messages.map((m:{id:number})=>m.id),[recent.id]);
+  assert.equal((await (await chat.GET(req('/api/chat','GET',undefined,'other'))).json()).messages.length,1);
+});
+
+test('presence is scoped to the chat, typing expires, and public roles cannot call management RPCs',async()=>{
+  assert.equal((await activityRoute.POST(req('/api/chat/activity','POST',{active:true,typing:true,user:2}))).status,403);
+  assert.equal((await activityRoute.POST(req('/api/chat/activity','POST',{active:true,typing:true,draft:'private'}))).status,400);
+  assert.equal((await activityRoute.POST(req('/api/chat/activity','POST',{active:true,typing:true}))).status,200);
+  const get=async()=>await (await chat.GET(req('/api/chat?user=1','GET',undefined,'admin'))).json();
+  assert.equal((await get()).peer_typing,true);assert.equal((await get()).peer_online,true);
+  await pg.exec("update support_threads set user_typing_at=now()-interval '7 seconds'");assert.equal((await get()).peer_typing,false);
+  await activityRoute.POST(req('/api/chat/activity','POST',{active:false,typing:false}));assert.equal((await get()).peer_online,false);
+  for(const role of ['anon','authenticated']){
+    await pg.exec(`set role ${role}`);
+    for(const sql of ["select * from kino_chat_activity(1,false,true,true)","select * from kino_chat_view(1,true)","select * from kino_chat_clear(1,999)",`select * from kino_chat_grant(1,'3day',null,'${randomUUID()}')`])await assert.rejects(pg.query(sql),/permission denied/);
+    await pg.exec('reset role');
+  }
 });
 after(async () => {global.fetch = originalFetch;await pg.close();});
 function req(path='/api/chat', method='GET', body?:unknown, actor:keyof typeof tokens|null='user', headers:Record<string,string>={}) {

@@ -5,7 +5,12 @@ import type { Row } from './domain';
 
 export const CHAT_INPUT_LIMIT = 3000000;
 export const CHAT_IMAGE_LIMIT = 350000;
-export const CHAT_SELECT = 'id,user_id,sender,message,has_image,client_id,created_at,read_at';
+export const CHAT_SELECT = 'id,user_id,sender,message,has_image,client_id,created_at,read_at,grant_payment_id';
+
+export function chatRequestId(value: unknown): string {
+  if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new ApiError(400, 'Хүсэлтийн дугаар буруу.');
+  return value;
+}
 
 export function chatId(value: unknown): number {
   if (!/^[1-9]\d{0,14}$/.test(String(value))) throw new ApiError(400, 'Харилцан ярианы дугаар буруу.');
@@ -31,6 +36,7 @@ export function chatMessage(row: Row) {
   return {
     id: row.id, sender: row.sender, message: row.message, client_id: row.client_id,
     created_at: row.created_at, read_at: row.read_at,
+    grant_payment_id: row.grant_payment_id || null,
     image_url: row.has_image ? `/api/chat/image?id=${row.id}` : null,
   };
 }
