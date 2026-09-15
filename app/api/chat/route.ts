@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ApiError, bodyJson, db, fail, json, originCheck } from '@/lib/server';
-import { CHAT_INPUT_LIMIT, CHAT_SELECT, chatId, chatImage, chatMessage, chatOwner, chatSession } from '@/lib/chat';
+import { CHAT_INPUT_LIMIT, chatId, chatImage, chatMessage, chatOwner, chatSession } from '@/lib/chat';
+import type { Row } from '@/lib/domain';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
@@ -19,8 +20,20 @@ export async function GET(req: NextRequest) {
       return json({threads: rows.slice(0, 50), more: rows.length > 50});
     }
     const owner = chatOwner(s, q.get('user'));
-    const rows = await db(`support_messages?user_id=eq.${owner}&order=id.asc&limit=100&select=${CHAT_SELECT}`);
-    return json({messages: rows.map(chatMessage)});
+    const [view] = await db('rpc/kino_chat_view', 'POST', {p_user: owner, p_admin: s.admin});
+    return json({messages: (view.messages as Row[]).map(chatMessage), peer_online: view.peer_online, peer_typing: view.peer_typing});
+  } catch (error) { return fail(error); }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    originCheck(req);
+    const s = await chatSession(req);
+    if (!s.admin) throw new ApiError(403, 'Админы эрх шаардлагатай.');
+    const b = await bodyJson(req, 1000);
+    if (Object.keys(b).some(k => !['user', 'through'].includes(k))) throw new ApiError(400, 'Устгах хүсэлтийн талбар буруу.');
+    const [result] = await db('rpc/kino_chat_clear', 'POST', {p_user: chatOwner(s, b.user), p_through: chatId(b.through)});
+    return json({ok: true, deleted: Number(result.deleted)});
   } catch (error) { return fail(error); }
 }
 

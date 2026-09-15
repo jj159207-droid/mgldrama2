@@ -1,7 +1,8 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { requestJson } from '@/lib/client';
-import { prepareChatImage, type ChatMessage, type ChatThread } from '@/lib/chat-client';
+import { CHAT_WELCOME, prepareChatImage, type ChatMessage, type ChatThread } from '@/lib/chat-client';
+import { ChatAdminActions } from './ChatAdminActions';
 
 // Each visible view has one request in flight. Hidden tabs pause; reopening and
 // reconnection refresh immediately. Errors retain the last usable conversation.
@@ -19,9 +20,9 @@ function useChatPoll(load: (signal: AbortSignal) => Promise<void>, delay: number
       finally { running = false; if (!stopped) timer = setTimeout(tick, delay); }
     };
     void tick();
-    document.addEventListener('visibilitychange', tick); window.addEventListener('online', tick);
+    document.addEventListener('visibilitychange', tick); window.addEventListener('online', tick); window.addEventListener('focus',tick);
     window.addEventListener('kinoChatChanged', tick);
-    return () => { stopped = true; controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', tick); window.removeEventListener('online', tick); window.removeEventListener('kinoChatChanged', tick); };
+    return () => { stopped = true; controller.abort(); clearTimeout(timer); document.removeEventListener('visibilitychange', tick); window.removeEventListener('online', tick); window.removeEventListener('focus',tick); window.removeEventListener('kinoChatChanged', tick); };
   }, [load, delay, enabled]);
 }
 
@@ -31,8 +32,32 @@ export function useChatUnread(owner: string | number | null) {
     const result = await requestJson('/api/chat?summary=1', {signal}, true);
     if (!signal.aborted) setBadge({owner, count: Number(result.unread)});
   }, [owner]);
-  useChatPoll(load, 15000, owner !== null);
+  useChatPoll(load, 5000, owner !== null);
   return owner !== null && badge.owner === owner ? badge.count : 0;
+}
+
+function useChatActivity(admin: boolean, userId?: number) {
+  const lastTyped = useRef(0), lastSent = useRef(0), running = useRef(false);
+  const idle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const activity = useCallback(async (force = false, closing = false) => {
+    if (running.current || (!force && Date.now()-lastSent.current<3000)) return;
+    const active = !closing && document.visibilityState !== 'hidden' && document.hasFocus();
+    running.current=true;lastSent.current=Date.now();
+    try {await requestJson('/api/chat/activity',{method:'POST',keepalive:closing,body:JSON.stringify({...(admin?{user:userId}:{}),active,typing:active && Date.now()-lastTyped.current<5000})},true);}
+    catch { /* Presence is best effort and automatically expires on the server. */ }
+    finally {running.current=false;}
+  },[admin,userId]);
+  useEffect(()=>{
+    const update=()=>{void activity(true);};
+    update();const timer=setInterval(update,15000);
+    window.addEventListener('focus',update);window.addEventListener('blur',update);document.addEventListener('visibilitychange',update);
+    return()=>{clearInterval(timer);clearTimeout(idle.current);window.removeEventListener('focus',update);window.removeEventListener('blur',update);document.removeEventListener('visibilitychange',update);void activity(true,true);};
+  },[activity]);
+  return (typing: boolean) => {
+    lastTyped.current=typing?Date.now():0;
+    clearTimeout(idle.current);void activity(!typing);
+    if (typing) idle.current=setTimeout(()=>{lastTyped.current=0;void activity(true);},5000);
+  };
 }
 
 export function ChatBadge({count}: {count: number}) {
@@ -58,10 +83,13 @@ export function ChatPanel({admin = false, userId, title = 'Админтай ча
   const [preparing, setPreparing] = useState(false), [sending, setSending] = useState(false);
   const [failed, setFailed] = useState<PendingMessage | null>(null), [sendError, setSendError] = useState('');
   const [viewImage, setViewImage] = useState<string | null>(null), [atEnd, setAtEnd] = useState(true);
+  const [peer,setPeer] = useState({online:false,typing:false}), [outgoing,setOutgoing] = useState<PendingMessage|null>(null);
   const list = useRef<HTMLDivElement>(null), fileInput = useRef<HTMLInputElement>(null), input = useRef<HTMLTextAreaElement>(null);
   const sendLock = useRef(false), prepareLock = useRef(false), scrollEnd = useRef(true), alive = useRef(true), readLock = useRef(false);
   const readThrough = useRef(0), messagesRef = useRef<ChatMessage[]>([]), initialized = useRef(false);
   const loadVersion = useRef(0);
+  const grantSeen = useRef(0);
+  const typing = useChatActivity(admin,userId);
   const mySender = admin ? 'admin' : 'user', owner = admin ? {user: userId} : {};
   const endpoint = admin ? `/api/chat?user=${userId}` : '/api/chat';
   useEffect(() => { alive.current = true; return () => {alive.current = false;}; }, []);
@@ -71,12 +99,15 @@ export function ChatPanel({admin = false, userId, title = 'Админтай ча
       const data = await requestJson(endpoint, {signal}, true);
       if (!signal?.aborted && alive.current && version === loadVersion.current) {
         setMessages(data.messages); messagesRef.current = data.messages; setError('');
+        setPeer({online:data.peer_online===true,typing:data.peer_typing===true});
+        const latestGrant = Math.max(0,...data.messages.filter((m:ChatMessage)=>m.grant_payment_id).map((m:ChatMessage)=>m.id));
+        if (!admin && latestGrant>grantSeen.current) {grantSeen.current=latestGrant;window.dispatchEvent(new Event('kinoAccessChanged'));}
         setFailed(prev => prev && data.messages.some((m: ChatMessage) => m.client_id === prev.client_id && m.sender === (admin ? 'admin' : 'user')) ? null : prev);
       }
     } catch (e) { if (!signal?.aborted && alive.current && version === loadVersion.current) setError(e instanceof Error ? e.message : 'Чат ачаалсангүй.'); }
     finally { if (!signal?.aborted && alive.current && version === loadVersion.current) setLoading(false); }
   }, [endpoint, admin]);
-  useChatPoll(load, 4000);
+  useChatPoll(load, 1500);
 
   const acknowledge = useCallback(async () => {
     if (readLock.current || !scrollEnd.current || document.visibilityState === 'hidden' || !document.hasFocus()) return;
@@ -97,7 +128,7 @@ export function ChatPanel({admin = false, userId, title = 'Админтай ча
       element.scrollTop = element.scrollHeight; scrollEnd.current = true; initialized.current = true;
     }
     void acknowledge();
-  }, [messages, acknowledge]);
+  }, [messages, outgoing, acknowledge]);
   useEffect(() => {
     const visible = () => {void acknowledge();};
     document.addEventListener('visibilitychange', visible); window.addEventListener('focus', visible);
@@ -114,7 +145,7 @@ export function ChatPanel({admin = false, userId, title = 'Админтай ча
   const send = async (retry?: PendingMessage) => {
     if (sendLock.current || prepareLock.current || (!retry && !text.trim() && !image)) return;
     const payload = retry || {message: text.trim(), image, client_id: crypto.randomUUID()};
-    sendLock.current = true; setSending(true); setSendError('');
+    sendLock.current = true; setSending(true); setSendError('');setOutgoing(payload);typing(false);scrollEnd.current=true;setAtEnd(true);
     if (!retry) {setText(''); setImage(null);}
     try {
       const result = await requestJson('/api/chat', {method: 'POST', body: JSON.stringify({...owner, ...payload})}, true);
@@ -125,15 +156,17 @@ export function ChatPanel({admin = false, userId, title = 'Админтай ча
       window.dispatchEvent(new Event('kinoChatChanged')); void load(); input.current?.focus();
     } catch (e) {
       if (alive.current) {setFailed(payload); setSendError(e instanceof Error ? e.message : 'Илгээсэнгүй. Дахин оролдоно уу.');}
-    } finally {sendLock.current = false; if (alive.current) setSending(false);}
+    } finally {sendLock.current = false; if (alive.current) {setSending(false);setOutgoing(null);}}
   };
   return <section className="support-chat" aria-label={title}>
     <header className="chat-heading">
       {onBack && <button type="button" className="chat-icon" onClick={onBack} aria-label="Чатаас буцах">←</button>}
       <div className="chat-avatar" aria-hidden="true">{admin ? 'Х' : 'А'}</div>
-      <div><h2>{title}</h2><p>{admin ? 'Хэрэглэгчтэй хувийн харилцан яриа' : 'Асуух зүйлээ бичээрэй. Бид энд хариулна.'}</p></div>
+      <div><h2>{title}</h2><p className={peer.online&&!error?'chat-online':''}>{error?'Холболтыг дахин шалгаж байна…':peer.online?'● Чат нээлттэй байна':admin?'Хэрэглэгч чатанд одоогоор идэвхгүй':'Мессежээ үлдээгээрэй. Админ чатанд ороод хариулна.'}</p></div>
     </header>
+    {admin && userId && <ChatAdminActions userId={userId} phone={title} lastId={messages.at(-1)?.id||0} onChanged={()=>{void load();window.dispatchEvent(new Event('kinoChatChanged'));}} />}
     {children}
+    {!admin && <aside className="chat-welcome"><strong>Админы автомат заавар</strong><p>{CHAT_WELCOME}</p></aside>}
     <div className="chat-history" ref={list} role="log" aria-label="Мессежүүд" aria-live="polite" aria-relevant="additions text" onScroll={() => {
       const el = list.current!; const bottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
       scrollEnd.current = bottom; setAtEnd(bottom); if (bottom) void acknowledge();
@@ -151,7 +184,9 @@ export function ChatPanel({admin = false, userId, title = 'Админтай ча
           </div>
         </article>
       </div>)}
+      {outgoing && <article className="chat-message chat-mine chat-pending"><div className="chat-bubble">{outgoing.image&&<img className="chat-pending-image" src={outgoing.image} alt="Илгээж буй зураг" />}<p>{outgoing.message}</p><div className="chat-meta" role="status">Илгээж байна…</div></div></article>}
     </div>
+    {peer.typing&&!error && <div className="chat-typing" role="status"><span aria-hidden="true">● ● ●</span> {admin?'Хэрэглэгч':'Админ'} бичиж байна…</div>}
     {!atEnd && <button type="button" className="chat-jump" onClick={scrollToEnd}>Сүүлийн мессеж ↓</button>}
     {error && <div className="chat-error" role="alert">{error} <button type="button" onClick={() => void load()}>Дахин ачаалах</button></div>}
     {sendError && <div className="chat-error" role="alert">{sendError}</div>}
@@ -163,7 +198,7 @@ export function ChatPanel({admin = false, userId, title = 'Админтай ча
       <div className="chat-compose-row">
         <input ref={fileInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif" aria-label="Чатанд зураг сонгох" onChange={e => void chooseImage(e.target.files?.[0])} />
         <button type="button" className="chat-icon chat-attach" disabled={preparing || sending || !!failed} onClick={() => fileInput.current?.click()} aria-label="Зураг хавсаргах">＋<span>Зураг</span></button>
-        <textarea ref={input} value={text} rows={2} maxLength={2000} aria-label="Мессеж бичих" placeholder={preparing ? 'Зураг бэлтгэж байна…' : 'Мессеж бичих…'} disabled={sending || !!failed} onChange={e => setText(e.target.value)} onKeyDown={e => {
+        <textarea ref={input} value={text} rows={2} maxLength={2000} aria-label="Мессеж бичих" placeholder={preparing ? 'Зураг бэлтгэж байна…' : 'Мессеж бичих…'} disabled={sending || !!failed} onChange={e => {setText(e.target.value);typing(!!e.target.value.trim());}} onKeyDown={e => {
           if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia?.('(pointer: fine)').matches) {e.preventDefault(); if (!failed) void send();}
         }} />
         <button type="submit" className="chat-send" disabled={sending || preparing || !!failed || (!text.trim() && !image)} aria-label="Мессеж илгээх">{sending ? '…' : '↑'}</button>
@@ -186,7 +221,7 @@ export function AdminChatInbox({announcements}: {announcements?: ReactNode}) {
     } catch (e) {if (!signal?.aborted) setError(e instanceof Error ? e.message : 'Чат ачаалсангүй.');}
     finally {if (!signal?.aborted) setLoading(false);}
   }, [query, offset]);
-  useChatPoll(load, 10000);
+  useChatPoll(load, 3000);
   useEffect(() => {const back = () => setSelected(null); window.addEventListener('adminBackPress', back); return () => window.removeEventListener('adminBackPress', back);}, []);
   return <div className={`admin-chat-layout ${selected ? 'chat-selected' : ''}`}>
     <aside className="chat-inbox"><h2>Хэрэглэгчдийн чат</h2><p>Хариу өгөх харилцан яриагаа сонгоно уу.</p>
