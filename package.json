@@ -10,7 +10,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "typecheck": "tsc --noEmit",
     "preflight": "node scripts/preflight.mjs",
-    "posters:migrate": "tsx scripts/migrate-posters.ts"
+    "posters:migrate": "tsx scripts/migrate-posters.ts",
+    "test:ui": "node --test tests/ui/*.test.cjs"
   },
   "dependencies": {
     "next": "16.3.4",
@@ -24,8 +25,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "jsdom": "30.0.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"

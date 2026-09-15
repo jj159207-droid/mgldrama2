@@ -12,6 +12,7 @@ import ConnectionStatus from "@/app/components/ConnectionStatus";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import { INITIAL_CATALOG, type CatalogState } from "@/lib/catalog";
+import { filmPlans, getVideoEmbed, type FilmDetails } from "@/lib/film-details";
 import { filmNavigationUrl, readFilmDestination, type FilmDestination } from "@/lib/film-link";
 
 // ══════════════════════════════════════════════
@@ -125,7 +126,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ══════════════════════════════════════════════
 // ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
-function BankModal({ film, onClose, onPaid, user }: any) {
+function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const [paymentError, setPaymentError] = useState("");
   const [orderReady,setOrderReady]=useState(false);
   const [orderAmount,setOrderAmount]=useState<number|null>(null);
@@ -241,29 +242,30 @@ function BankModal({ film, onClose, onPaid, user }: any) {
 
   if (autoStatus === "paid") {
     return (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.97)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
+      <div className={inline ? "checkout-inline checkout-complete" : ""} style={inline ? undefined : { position: "fixed", inset: 0, background: "rgba(0,0,0,0.97)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300 }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 72, marginBottom: 12 }}>✅</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
-          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>Кино эхэлж байна...</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>Үзэх эрх нээгдэж байна...</div>
           {paymentError && <><p role="alert">{paymentError}</p><p>Холболт сэргэхэд дахин оролдоно. Дахин мөнгө шилжүүлэх шаардлагагүй.</p></>}
-          <button className="secondary-button" onClick={onClose}>{film.monthly ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
+          <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
         </div>
       </div>
     );
   }
 
-  return <CinemaDialog title="Төлбөр төлөх" onClose={onClose} className="checkout-dialog">
+  const checkout = <>
     <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>
     {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
-    <div className="checkout-summary"><div><strong>{film.title}</strong><span>{film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "1 сарын үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+    <div className="checkout-summary"><div><strong>{film.title}</strong><span>{film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
     <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{BANK_ACCOUNT.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{BANK_ACCOUNT.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(BANK_ACCOUNT.number,"account")}><span>Дансны дугаар<strong>{BANK_ACCOUNT.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
     <section className="reference-section"><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Кодоо зөв бичсэнээр таны төлбөрийг захиалгатай тулгана." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
     <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
     <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
-    <button className="secondary-button checkout-back" onClick={onClose}>{film.monthly ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
+    <button className="secondary-button checkout-back" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
     {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
-  </CinemaDialog>;
+  </>;
+  return inline ? <div className="checkout-inline">{checkout}</div> : <CinemaDialog title="Төлбөр төлөх" onClose={onClose} className="checkout-dialog">{checkout}</CinemaDialog>;
 }
 
 // ══════════════════════════════════════════════
@@ -358,16 +360,6 @@ function CinemaDialog({children, title, onClose, className = ""}: {children: Rea
   useEffect(()=>{const dialog=ref.current;dialog?.showModal();return()=>dialog?.close();},[]);
   return <dialog ref={ref} className={`cinema-dialog ${className}`} aria-label={title} onCancel={e=>{e.preventDefault();onClose();}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>{children}</dialog>;
 }
-function PreviewModal({ film, onClose, onWatch, expiry }: any) {
-  const preview=film.preview_url || film.url?.split("|||")[1] || "";
-  const {type,src}=getVideoEmbed(preview);
-  return <CinemaDialog title={`${film.title} — товч үзэх`} onClose={onClose} className="preview-dialog">
-    <div className="preview-frame">{src && (type === "video" ? <video src={src} autoPlay muted controls playsInline /> : <iframe title={`${film.title} танилцуулга`} src={src} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" />)}</div>
-    <div className="preview-details"><div><span className="eyebrow">{decodeCat(film.badge)} · {decodeBadge(film.badge)}</span><h2>{film.title}</h2>{expiry && <p>{expiry}</p>}</div><button className="icon-button" onClick={onClose} aria-label="Танилцуулга хаах"><UiIcon name="close"/></button></div>
-    <button className="primary-button preview-watch" onClick={onWatch}><UiIcon name="play"/>{film.free || film.locked === false || expiry ? "Кино үзэх" : `${Number(film.price || 0).toLocaleString()}₮ · Үзэх эрх авах`}</button>
-  </CinemaDialog>;
-}
-
 type UiIconName = "play" | "search" | "arrow" | "close" | "user" | "message" | "download" | "film";
 function UiIcon({ name, size = 20 }: { name: UiIconName; size?: number }) {
   const paths: Record<UiIconName, React.ReactNode> = {
@@ -394,11 +386,9 @@ function Poster({ film }: any) {
   </div>;
 }
 function FilmCard({ film, onClick, expiry }: any) {
-  const [showPreview, setShowPreview] = useState(false);
-  const preview = film.preview_url || (film.url?.includes("|||") ? film.url.split("|||")[1] : "");
   const available = film.free || film.locked === false || !!expiry;
   return <article className="movie-card">
-    <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — ${available ? "үзэх" : "эрх авах"}`}>
+    <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — дэлгэрэнгүй үзэх`}>
       <div className="movie-poster">
         <Poster key={film.img || "no-image"} film={film} />
         <span className="movie-badge">{decodeBadge(film.badge)}</span>
@@ -414,8 +404,7 @@ function FilmCard({ film, onClick, expiry }: any) {
         {expiry && <span className="movie-expiry">{expiry}</span>}
       </div>
     </button>
-    {preview && <button type="button" className="preview-button" onClick={() => setShowPreview(true)}><UiIcon name="play" size={14} /> Товч үзэх</button>}
-    {showPreview && preview && <PreviewModal film={{...film, url: `|||${preview}`}} expiry={expiry} onClose={() => setShowPreview(false)} onWatch={() => {setShowPreview(false);onClick();}} />}
+    <span className="movie-detail-hint">Трейлер · Дэлгэрэнгүй</span>
   </article>;
 }
 
@@ -586,24 +575,13 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, loadError, onRetr
 }
 
 
-function getVideoEmbed(value: string): { type: "iframe" | "video" | "youtube"; src: string } {
-  const safe=safeUrl(value);if(!safe)return {type:"iframe",src:""};
-  const url=new URL(safe);let id:string|null=null;
-  if(url.hostname==="youtu.be")id=url.pathname.slice(1);
-  if(["youtube.com","www.youtube.com","m.youtube.com","www.youtube-nocookie.com"].includes(url.hostname))id=url.pathname==="/watch"?url.searchParams.get("v"):/^\/(?:embed|shorts|live)\/([^/]+)$/.exec(url.pathname)?.[1]||null;
-  if(id&&/^[a-zA-Z0-9_-]{11}$/.test(id))return {type:"youtube",src:`https://www.youtube-nocookie.com/embed/${id}?playsinline=1`};
-  if(/\.(mp4|webm|ogg)(?:$)/i.test(url.pathname))return {type:"video",src:safe};
-  const drive=url.hostname==="drive.google.com"?/^\/file\/d\/([a-zA-Z0-9_-]+)/.exec(url.pathname)?.[1]:null;
-  return {type:"iframe",src:drive?`https://drive.google.com/file/d/${drive}/preview`:safe};
-}
-
 function VideoPage({ film, onBack }: any) {
   const [videoError,setVideoError]=useState(false);
   const mainUrl = film.url ? film.url.split("|||")[0] : "";
   const { type, src } = getVideoEmbed(mainUrl);
   return (
-    <div style={{ background: "#000", position: "fixed", inset: 0, zIndex: 50 }}>
-      {videoError ? <div role="alert" className="video-error"><p>Бичлэг ачаалсангүй. Видео холбоос эсвэл холболтыг шалгана уу.</p><button className="secondary-button" onClick={onBack}>Кино сан руу буцах</button></div> : src ? (
+    <div className="full-player" style={{ background: "#000", position: "fixed", inset: 0, zIndex: 50 }}>
+      {videoError ? <div role="alert" className="video-error"><p>Бичлэг ачаалсангүй. Видео холбоос эсвэл холболтыг шалгана уу.</p><button className="secondary-button" onClick={onBack}>Киноны мэдээлэл рүү буцах</button></div> : src ? (
         type === "video"
           ? <video src={src} autoPlay controls playsInline preload="metadata" onError={()=>setVideoError(true)} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
           : <iframe title={film.title} referrerPolicy="strict-origin-when-cross-origin" src={src} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: "none" }} allow="autoplay; fullscreen; picture-in-picture" />
@@ -611,7 +589,7 @@ function VideoPage({ film, onBack }: any) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Видео холбоос байхгүй байна</div>
       )}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)", padding: "16px", transition: "opacity 0.3s", opacity: 1, pointerEvents: "auto" }}>
-        <button aria-label="Бүх кино руу буцах" onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>←</button>
+        <button aria-label="Киноны мэдээлэл рүү буцах" onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>←</button>
       </div>
     </div>
   );
@@ -1512,6 +1490,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const mainUrl = f.url ? f.url.split("|||")[0] : "";
   const existingPreview = f.preview_url || (f.url && f.url.includes("|||") ? f.url.split("|||")[1] : "");
   const [title, setTitle] = useState(f.title);
+  const [description, setDescription] = useState(f.description || "");
   const [price, setPrice] = useState(String(f.price ?? 5000));
   const [op, setOp] = useState(String(f.op ?? 6000));
   const [url, setUrl] = useState(mainUrl);
@@ -1532,6 +1511,7 @@ function EditFilmPanel({ f, onDone }: any) {
       const payload: any = { title: title.trim(), price: Number(price), op: Number(op), url: combinedUrl, badge: encodeBadgeCat(badge, category) };
       payload.img = img.trim();
       payload.preview_url = previewUrl.trim();
+      if(description.trim() || typeof f.description === "string")payload.description=description.trim();
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       if (!Array.isArray(res) || res.length === 0) { alert("Алдаа: " + (res?.message || "Өөрчлөлт баталгаажаагүй.")); return; }
       onDone();
@@ -1546,6 +1526,8 @@ function EditFilmPanel({ f, onDone }: any) {
     <div style={{ marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
       <label style={lbl}>Гарчиг</label>
       <input style={inputSt} value={title} onChange={(e: any) => setTitle(e.target.value)} />
+      <label style={{...lbl,marginTop:10}} htmlFor={`film-description-${f.id}`}>Киноны тайлбар</label>
+      <textarea id={`film-description-${f.id}`} style={inputSt} rows={5} maxLength={4000} value={description} onChange={e=>setDescription(e.target.value)} placeholder="Киноны үйл явдлыг товч танилцуулаарай." />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
         <div>
           <label style={lbl}>Зарах үнэ ₮</label>
@@ -1574,7 +1556,7 @@ function EditFilmPanel({ f, onDone }: any) {
       </div>
       <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
       <input style={inputSt} value={url} onChange={(e: any) => setUrl(e.target.value)} placeholder="https://iframe.mediadelivery.net/..." />
-      <label style={{ ...lbl, marginTop: 8 }}>🎬 Preview URL (Bunny.net MP4)</label>
+      <label style={{ ...lbl, marginTop: 8 }}>Трейлерийн холбоос (богино хэсэг)</label>
       <input style={inputSt} value={previewUrl} onChange={(e: any) => setPreviewUrl(e.target.value)} placeholder="https://your.b-cdn.net/preview.mp4" />
       <PosterUpload value={img} onChange={setImg} onBusyChange={setUploading} disabled={saving || uploading} />
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -1666,7 +1648,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
     const t = setInterval(fetchUnread, 30000);
     return () => clearInterval(t);
   }, [tab]);
-  const empty = { title: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
+  const empty = { title: "", description: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
@@ -1688,6 +1670,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         bg: form.bg || "#1a0820",
       };
       if (form.preview_url) payload.preview_url = form.preview_url;
+      if (form.description?.trim()) payload.description = form.description.trim();
       const res = await dbFetch("films", { method: "POST", body: JSON.stringify(payload) });
       if (!Array.isArray(res) || res.length === 0) {
         alert("Алдаа: " + (res?.message || "Өөрчлөлт баталгаажаагүй."));
@@ -1744,6 +1727,8 @@ function AdminPage({ films, onBack, onRefresh }: any) {
           <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16 }}>
             <label style={lbl}>Гарчиг *</label>
             <input style={inputSt} value={form.title} onChange={set("title")} placeholder="Кино нэр" />
+            <label style={{...lbl,marginTop:10}} htmlFor="new-film-description">Киноны тайлбар</label>
+            <textarea id="new-film-description" style={inputSt} rows={5} maxLength={4000} value={form.description} onChange={set("description")} placeholder="Киноны үйл явдлыг товч танилцуулаарай." />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
               <div><label style={lbl}>Үзсэн тоо</label><input style={inputSt} value={form.views} onChange={set("views")} type="number" min="0" step="1" /></div>
               <div><label style={lbl}>Badge</label>
@@ -1765,7 +1750,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
             </div>
             <label style={{ ...lbl, marginTop: 12 }}>Видео URL (YouTube / MP4 / Google Drive)</label>
             <input style={inputSt} value={form.url} onChange={set("url")} placeholder="https://youtu.be/... эсвэл .mp4 холбоос" />
-            <label style={{ ...lbl, marginTop: 10 }}>🎬 Preview URL (Bunny.net MP4)</label>
+            <label style={{ ...lbl, marginTop: 10 }}>Трейлерийн холбоос (богино хэсэг)</label>
             <input style={inputSt} value={form.preview_url || ""} onChange={set("preview_url")} placeholder="https://your.b-cdn.net/preview.mp4" />
             <PosterUpload value={form.img || ""} onChange={img=>setForm((current:any)=>({...current,img}))} onBusyChange={setUploading} disabled={saving || uploading} />
             <button onClick={save} disabled={saving || uploading} style={{ ...goldBtn, marginTop: 16, opacity: saving ? 0.6 : 1 }}>
@@ -1832,7 +1817,9 @@ export default function Home() {
   const [filmOpening, setFilmOpening] = useState(false);
   const [filmError, setFilmError] = useState("");
   const [authReady, setAuthReady] = useState(false);
-  const pendingFilmRef = useRef<number | null>(null);
+  const [watching, setWatching] = useState(false);
+  const [watchError, setWatchError] = useState("");
+  const pendingActionRef = useRef<{kind:"watch";film:FilmDetails} | {kind:"plan";plan:string;film:FilmDetails|null} | null>(null);
   const [showContact, setShowContact] = useState(false);
   const [showInstall, setShowInstall] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
@@ -1937,7 +1924,7 @@ export default function Home() {
   // ── Навигацийн helper ──
   const navigateTo = (newPage: string) => {
     playRequest.current++;
-    pendingFilmRef.current=null;
+    pendingActionRef.current=null;setWatching(false);setWatchError("");
     setFilmTarget({kind:"none"});setSelectedFilm(null);setCurFilm(null);setPayFilm(null);
     window.history.pushState({ page: newPage }, "", filmNavigationUrl(window.location.href, null));
     setPage(newPage);
@@ -1946,12 +1933,11 @@ export default function Home() {
   // ── Браузерийн буцах товч ──
   const pageRef = useRef("home");
   useEffect(() => { pageRef.current = page; }, [page]);
-  const pendingPlanRef = useRef<string | null>(null);
 
   useEffect(() => {
     const readLocation = (event?: PopStateEvent) => {
       playRequest.current++;
-      pendingPlanRef.current=null;pendingFilmRef.current=null;
+      pendingActionRef.current=null;setWatching(false);setWatchError("");
       setShowContact(false);setShowLoginModal(false);setShowInstall(false);setShowPlanModal(false);
       setCurFilm(null);setPayFilm(null);setSelectedFilm(null);setFilmError("");
       const target=readFilmDestination(window.location.search);
@@ -1965,15 +1951,13 @@ export default function Home() {
     return () => {playRequest.current++;window.removeEventListener("popstate", readLocation);};
   }, []);
 
-  // The URL owns the movie selection across reloads, login and bank-app returns.
-  // Read only this film; a failed or paginated catalog cannot change the destination.
+  // Visiting a movie link loads public details only. Playback always needs a click.
   useEffect(() => {
     if(filmTarget.kind==="none")return;
     setPage("film");setFilmError("");setFilmOpening(true);
     if(filmTarget.kind==="invalid"){
       setSelectedFilm(null);setFilmError("Киноны холбоос буруу байна. Бүх кино хэсгээс киногоо сонгоно уу.");setFilmOpening(false);return;
     }
-    if(!authReady)return;
     const controller=new AbortController();
     const intent=++playRequest.current;
     const current=()=>!controller.signal.aborted && intent===playRequest.current;
@@ -1984,46 +1968,49 @@ export default function Home() {
         const film=Array.isArray(rows)?rows.find(row=>Number(row.id)===filmTarget.id):null;
         if(!film)throw new RequestError("Кино олдсонгүй. Холбоос хуучирсан эсвэл кино хасагдсан байж болно.",404);
         setSelectedFilm(film);
-        try {
-          const playback=await requestJson(`/api/playback?id=${filmTarget.id}`,{signal:controller.signal},true);
-          if(!current())return;
-          pendingFilmRef.current=null;setCurFilm(playback);setPage("video");
-        } catch(error) {
-          if(!current())return;
-          if(!(error instanceof RequestError) || error.status!==403)throw error;
-          if(user?.id && pendingFilmRef.current===filmTarget.id){
-            pendingFilmRef.current=null;window.history.pushState({page:"payment"},"");setPayFilm(film);setPage("payment");
-          }
-        }
       } catch(error) {
         if(current())setFilmError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
       } finally {if(current())setFilmOpening(false);}
     };
     void open();
     return()=>controller.abort();
-  },[filmTarget,authReady,user?.id,adminAuth]);
+  },[filmTarget]);
 
-  const playFilm = async (f: any, stillActive = () => true) => {
+  const playFilm = async (f: FilmDetails, stillActive = () => true) => {
     const intent=++playRequest.current;
     let current;
     try { current=await requestJson(`/api/playback?id=${encodeURIComponent(f.id)}`,{},true); }
-    catch(e){if(intent!==playRequest.current||!stillActive())return;throw e;}
-    if(intent!==playRequest.current||!stillActive())return;
-    setCurFilm(current);setPage("video");
+    catch(e){if(intent!==playRequest.current||!stillActive())return false;throw e;}
+    if(intent!==playRequest.current||!stillActive())return false;
+    window.history.pushState({page:"video"},"");
+    setCurFilm(current);setPage("video");return true;
   };
-  const handleFilm = (f: any) => {
+  const handleFilm = (f: FilmDetails) => {
     playRequest.current++;
-    pendingPlanRef.current=null;pendingFilmRef.current=null;
+    pendingActionRef.current=null;setWatching(false);setWatchError("");
     setSelectedFilm(null);setCurFilm(null);setPayFilm(null);setFilmError("");setFilmOpening(true);
     window.history.pushState({page:"film"},"",filmNavigationUrl(window.location.href,Number(f.id)));
     setFilmTarget({kind:"film",id:Number(f.id)});setPage("film");
+    window.scrollTo?.({top:0,behavior:"instant"});
+  };
+  const watchFilm = async (film: FilmDetails, viewerId: number | null) => {
+    const intent=playRequest.current+1;
+    const current=()=>intent===playRequest.current && accessOwner.current===viewerId;
+    setWatching(true);setWatchError("");
+    try {
+      if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
+    } catch(error) {
+      if(!current())return;
+      if(error instanceof RequestError && error.status===403){
+        if(!viewerId){pendingActionRef.current={kind:"watch",film};setShowLoginModal(true);return;}
+        if(!payFilm)window.history.pushState({page:"payment"},"");
+        setPayFilm({...film,returnFilm:film});setPage("film");
+      } else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
+    } finally {if(current())setWatching(false);}
   };
   const continueFilm = () => {
-    if(filmTarget.kind!=="film" || !selectedFilm || filmOpening || filmError)return;
-    pendingFilmRef.current=filmTarget.id;
-    if(!user){setShowLoginModal(true);return;}
-    // Recheck entitlement before creating an order, including a bank-app return.
-    setFilmTarget({...filmTarget});
+    if(!selectedFilm || filmOpening || watching || !authReady)return;
+    void watchFilm(selectedFilm,user?.id || null);
   };
   const handlePaid = async (stillActive = () => true) => {
     if(!payFilm || !user || !stillActive())return;
@@ -2031,40 +2018,42 @@ export default function Home() {
     const current=()=>stillActive()&&accessOwner.current===owner;
     await syncAccessFromDB(owner);
     if(!current())return;
-    if(payFilm.monthly){setPayFilm(null);setPage("home");}
-    else{await playFilm(payFilm,current);if(current())setPayFilm(null);}
+    const film=payFilm.returnFilm || (payFilm.monthly?null:payFilm);
+    if(film){await playFilm(film,current);if(current())setPayFilm(null);}
+    else{setPayFilm(null);setPage("home");}
   };
 
-  const openPlanCheckout = (plan: string) => {
+  const openPlanCheckout = (plan: string, sourceFilm: FilmDetails | null = null) => {
     if (plan === "show_plan") {
-      window.history.pushState({ page: "planmodal" }, "");
-      setShowPlanModal(true);
-      return;
+      window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
     }
     if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan)) return;
-    navigateTo("payment");
-    setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true});
+    if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
+    if(sourceFilm){window.history.pushState({page:"payment"},"");setPage("film");}
+    else navigateTo("payment");
+    setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true,returnFilm:sourceFilm});
   };
-
-  const handlePlanSelect = (plan: string) => {
-    if (!user) {pendingPlanRef.current=plan;setShowLoginModal(true);return;}
-    openPlanCheckout(plan);
+  const handlePlanSelect = (plan: string, sourceFilm: FilmDetails | null = null) => {
+    if (!user) {pendingActionRef.current={kind:"plan",plan,film:sourceFilm};setShowLoginModal(true);return;}
+    openPlanCheckout(plan,sourceFilm);
   };
+  const closeCheckout = () => {
+    playRequest.current++;pendingActionRef.current=null;setWatching(false);setPayFilm(null);
+    setPage(filmTarget.kind==="film"?"film":"home");
+  };
+  useEffect(()=>{
+    if(payFilm && filmTarget.kind==="film")document.getElementById("film-payment")?.scrollIntoView?.({block:"start",behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth"});
+  },[payFilm,filmTarget.kind]);
 
   const handleLogin = (u: any) => {
-    playRequest.current++;setAdminAuth(false);
-    accessOwner.current=u.id;
-    setUser(u);
-    void syncAccessFromDB(u.id).catch(()=>{});
-    setShowLoginModal(false);
-    if (pendingFilmRef.current !== null) return;
-    if (pendingPlanRef.current) {
-      const plan=pendingPlanRef.current;
-      pendingPlanRef.current = null;
-      openPlanCheckout(plan);
-      return;
-    }
-    setPage("home");
+    setAdminAuth(false);
+    accessOwner.current=u.id;setUser(u);
+    void syncAccessFromDB(u.id).catch(()=>{});setShowLoginModal(false);
+    const action=pendingActionRef.current;pendingActionRef.current=null;
+    if(action?.kind==="watch"){void watchFilm(action.film,u.id);return;}
+    if(action?.kind==="plan"){openPlanCheckout(action.plan,action.film);return;}
+    // A completed login may arrive after its dialog was closed. Preserve the
+    // current destination unless the user still has an explicit pending action.
   };
   const handleLogout = async () => {
     playRequest.current++;
@@ -2082,12 +2071,12 @@ export default function Home() {
 
 
       {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
-      {page === "film" && <FilmLanding film={selectedFilm} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} signedIn={!!user} onContinue={continueFilm} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} />}
-      {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
+      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
+      {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => window.history.back()} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => navigateTo("home")} catalogState={catalogState} onCatalogChange={setCatalogState} loading={loading} loadError={loadError} onRetry={loadFilms} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({}); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} />}
-      {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={() => {playRequest.current++;pendingFilmRef.current=null;setPayFilm(null);setPage(filmTarget.kind==="film"?"film":"home");}} onPaid={handlePaid} user={user} />}
+      {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
 
       {showInstall && (
@@ -2119,8 +2108,8 @@ export default function Home() {
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
       {showLoginModal && !user && mounted && createPortal(
-        <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingPlanRef.current=null;pendingFilmRef.current=null;setShowLoginModal(false);}} className="login-dialog">
-          <div className="dialog-heading"><div><span className="eyebrow">КИНО САЙТ</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingPlanRef.current=null;pendingFilmRef.current=null;setShowLoginModal(false);}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
+        <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingActionRef.current=null;setWatching(false);setWatchError("");setShowLoginModal(false);}} className="login-dialog">
+          <div className="dialog-heading"><div><span className="eyebrow">КИНО САЙТ</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");setShowLoginModal(false);}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
           {selectedFilm && <p className="login-note">Үргэлжлүүлэх кино: <strong>{selectedFilm.title}</strong></p>}
           <p className="login-note">Утасны дугаар, PIN кодоороо нэвтэрнэ үү.</p>
           <LoginModal onLogin={(u:any)=>{handleLogin(u);setShowLoginModal(false);}}/>

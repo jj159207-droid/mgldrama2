@@ -7,6 +7,7 @@ alter table public.sms_logs add column if not exists key text;
 alter table public.sms_logs add column if not exists value text;
 alter table public.sms_logs add column if not exists text text;
 alter table public.films add column if not exists preview_url text default '';
+alter table public.films add column if not exists description text not null default '';
 alter table public.pending_payments add column if not exists confirmed_at timestamptz;
 alter table public.pending_payments add column if not exists phone text;
 create index if not exists kino_payments_owner_status on public.pending_payments(user_id,status);

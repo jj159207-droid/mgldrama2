@@ -23,6 +23,7 @@ create table if not exists public.films (
  preview_url text default '', created_at timestamptz not null default now()
 );
 alter table public.films add column if not exists preview_url text default '';
+alter table public.films add column if not exists description text not null default '';
 -- Copy only already-designated trailers into their public column.
 update public.films set preview_url=split_part(url,'|||',2)
  where coalesce(preview_url,'')='' and position('|||' in coalesce(url,''))>0;
