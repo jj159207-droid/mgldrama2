@@ -11,6 +11,7 @@ import CatalogBrowser from "@/app/components/CatalogBrowser";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
+import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
 import { INITIAL_CATALOG, type CatalogState } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, type FilmDetails } from "@/lib/film-details";
 import { filmNavigationUrl, readFilmDestination, type FilmDestination } from "@/lib/film-link";
@@ -408,48 +409,31 @@ function FilmCard({ film, onClick, expiry }: any) {
   </article>;
 }
 
-function ContactModal({ onClose, user }: any) {
+function ContactModal({ onClose, user, onLogin, admin, onAdmin }: any) {
+  const dialog = useRef<HTMLDialogElement>(null);
   const [announcement, setAnnouncement] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [messengerUrl,setMessengerUrl]=useState("");
-  useEffect(()=>{requestJson("/api/settings").then(data=>setMessengerUrl(safeUrl(data?.messengerUrl))).catch(()=>{});},[]);
-
+  const [messengerUrl, setMessengerUrl] = useState("");
   useEffect(() => {
-    dbFetch("contact_messages?is_announcement=eq.true&order=created_at.desc&limit=1&select=*")
-      .then((data: any) => {
-        if (Array.isArray(data) && data.length > 0) setAnnouncement(data[0]);
-        setLoading(false);
-      }).catch(()=>{}).finally(()=>setLoading(false));
+    dialog.current?.showModal();
+    const overflow = document.body.style.overflow; document.body.style.overflow = "hidden";
+    requestJson("/api/settings", {}, true).then(data => setMessengerUrl(safeUrl(data?.messengerUrl))).catch(() => {});
+    dbFetch("contact_messages?is_announcement=eq.true&order=created_at.desc&limit=1&select=*", {}, true)
+      .then(data => setAnnouncement(data?.[0] || null)).catch(() => {});
+    return () => { document.body.style.overflow = overflow; };
   }, []);
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: C.bg, zIndex: 300, display: "flex", flexDirection: "column" }}>
-      <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", gap: 10, borderBottom: `0.5px solid ${C.bd}`, flexShrink: 0 }}>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-        <div style={{ fontSize: 15, fontWeight: 700, color: C.txt }}>💬 Мэссэж</div>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px 20px" }}>
-        {messengerUrl && <a href={messengerUrl} target="_blank" rel="noopener noreferrer" style={{...goldBtn,display:"block",textAlign:"center",textDecoration:"none",marginBottom:16}}>Messenger нээх</a>}
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 60, color: C.muted }}>Ачааллаж байна...</div>
-        ) : announcement ? (
-          <div style={{ background: "#1a0a3a", border: "1.5px solid #f59e0b", borderRadius: 16, padding: "20px" }}>
-            <div style={{ fontSize: 12, color: "#f59e0b", fontWeight: 700, marginBottom: 12 }}>📢 Мэдэгдэл</div>
-            {announcement.announcement_image && (
-              <img src={announcement.announcement_image} alt="" style={{ width: "100%", borderRadius: 12, marginBottom: 14, maxHeight: 260, objectFit: "cover" }} />
-            )}
-            <div style={{ fontSize: 15, color: C.txt, lineHeight: 1.8, whiteSpace: "pre-wrap" }}>{announcement.message}</div>
-          </div>
-        ) : (
-          <div style={{ textAlign: "center", marginTop: 60, padding: "0 10px" }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>💬</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.txt, marginBottom: 12 }}>Манай фэйсбүүк хуудас руу бичээрэй</div>
-            <div style={{ fontSize: 14, color: C.muted, lineHeight: 1.8 }}>Асуулт, санал хүсэлт байвал манай фэйсбүүк хуудасны чат руу бичнэ үү. Бид аль болох хурдан хариулах болно.</div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  const notice = announcement && <details className="chat-public-notice"><summary>📢 Админы мэдэгдэл</summary>
+    {announcement.announcement_image && <img src={announcement.announcement_image} alt="Мэдэгдлийн зураг" />}
+    <p>{announcement.message}</p>
+  </details>;
+  return <dialog ref={dialog} className="contact-chat-modal" aria-label="Админтай холбогдох" onCancel={onClose}>
+    {user ? <ChatPanel key={user.id} onBack={onClose}>{notice}</ChatPanel> : <div className="chat-signin">
+      <button className="chat-icon" onClick={onClose} aria-label="Холбогдох хэсгийг хаах">←</button>
+      <h2>Админтай чатлах</h2><p>Нэвтрээд мессеж, зураг илгээж, админы хариуг эндээс уншаарай.</p>
+      {admin ? <button className="chat-primary" onClick={onAdmin}>Хэрэглэгчдийн чатыг нээх</button> : <LoginModal onLogin={onLogin} />}
+      {messengerUrl && <a className="chat-messenger" href={messengerUrl} target="_blank" rel="noopener noreferrer">PIN мартсан уу? Messenger-ээр холбогдох ↗</a>}
+      {notice}
+    </div>}
+  </dialog>;
 }
 
 
@@ -522,7 +506,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
     </dialog>;
 }
 
-function HomePage({ films, onFilm, onSearch, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange }: any) {
+function HomePage({ chatUnread, films, onFilm, onSearch, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const getExpiry = (filmId: number, category?: string): string | null => {
@@ -552,7 +536,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, loadError, onRetr
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
     <header className="site-header"><div className="header-inner">
       <a href="#catalog" className="brand" aria-label="Кино сайт нүүр"><span className="brand-symbol"><UiIcon name="play" /></span><span>Кино<span className="brand-light">сайт</span></span></a>
-      <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>Үзэх багц</button><button onClick={onContact}>Холбогдох</button></nav>
+      <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>Үзэх багц</button><button onClick={onContact}>Холбогдох<ChatBadge count={chatUnread} /></button></nav>
       <div className="header-actions"><button className="icon-button" aria-label="Кино хайх" onClick={onSearch}><UiIcon name="search" /></button>
       {user ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></> : <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button>}
       </div>
@@ -569,7 +553,7 @@ function HomePage({ films, onFilm, onSearch, onAdmin, loading, loadError, onRetr
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand">КИНО САЙТ</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох</button><button onClick={onInstall}><UiIcon name="download" size={16} />Апп суулгах</button><button onClick={onAdmin}>Удирдах</button></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand">КИНО САЙТ</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><button onClick={onInstall}><UiIcon name="download" size={16} />Апп суулгах</button><button onClick={onAdmin}>Удирдах</button></div></footer>
     </main>
   </div>;
 }
@@ -1230,22 +1214,7 @@ function AdminMembersTab() {
   );
 }
 
-function AdminContactTab() {
-  const [msgs, setMsgs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [replyId, setReplyId] = useState<number | null>(null);
-  const [replyText, setReplyText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<number | null>(null);
-
-  useEffect(() => {
-    const handleBack = () => {
-      if (selectedUser !== null) { setSelectedUser(null); window.history.pushState({ page: "admin" }, ""); }
-    };
-    window.addEventListener("adminBackPress", handleBack);
-    return () => window.removeEventListener("adminBackPress", handleBack);
-  }, [selectedUser]);
-
+function AdminAnnouncements() {
   const [annText, setAnnText] = useState("");
   const [annImage, setAnnImage] = useState("");
   const [annSaving, setAnnSaving] = useState(false);
@@ -1282,129 +1251,8 @@ function AdminContactTab() {
     await loadAnnouncement();
   };
 
-  const load = async () => {
-    try {
-    setLoading(true);
-    await loadAnnouncement();
-    const data = await dbFetch("contact_messages?is_announcement=neq.true&order=created_at.asc&limit=200&select=*");
-    setMsgs(Array.isArray(data) ? data : []);
-    setLoading(false);
-  
-    } finally { setLoading(false); }
-  };
-
-  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
-
-  const markRead = async (id: number) => {
-    await dbFetch(`contact_messages?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ read: true }) });
-    setMsgs(ms => ms.map(m => m.id === id ? { ...m, read: true } : m));
-  };
-
-  const sendReply = async (id: number) => {
-    try {
-    if (!replyText.trim()) return;
-    setSending(true);
-    await dbFetch(`contact_messages?id=eq.${id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ reply: replyText.trim(), read: true }),
-    });
-    setMsgs(ms => ms.map(m => m.id === id ? { ...m, reply: replyText.trim(), read: true } : m));
-    setReplyId(null);
-    setReplyText("");
-    setSending(false);
-  
-    } finally { setSending(false); }
-  };
-
-  const deleteAll = async () => {
-    if (!window.confirm(`Одоо жагсаалтад байгаа ${msgs.length} мессежийг устгах уу?`)) return;
-    for(const msg of msgs) await dbFetch(`contact_messages?id=eq.${msg.id}`, { method: "DELETE" });
-    setSelectedUser(null);await load();
-  };
-
-  const deleteOne = async (id: number) => {
-    await dbFetch(`contact_messages?id=eq.${id}`, { method: "DELETE" });
-    setMsgs(ms => ms.filter(m => m.id !== id));
-  };
-
-  // Хэрэглэгч бүрийн мэссэжийг бүлэглэх
-  const grouped = msgs.reduce((acc: any, m: any) => {
-    const key = m.user_id || m.phone;
-    if (!acc[key]) acc[key] = { phone: m.phone, user_id: m.user_id, msgs: [], unread: 0 };
-    acc[key].msgs.push(m);
-    if (!m.read) acc[key].unread++;
-    return acc;
-  }, {});
-  const users = Object.values(grouped) as any[];
-
-  // Сонгосон хэрэглэгчийн чат харагдах
-  if (selectedUser !== null) {
-    const u = users.find((u: any) => u.user_id === selectedUser || u.phone === selectedUser);
-    if (!u) return null;
-    return (
-      <div style={{ padding: "0 14px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <button onClick={() => setSelectedUser(null)} style={{ background: "none", border: "none", color: C.muted, fontSize: 22, cursor: "pointer" }}>←</button>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
-          <button onClick={load} style={{ marginLeft: "auto", background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "5px 10px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
-        </div>
-        {u.msgs.map((m: any) => (
-          <div key={m.id} style={{ marginBottom: 14 }}>
-            {/* Хэрэглэгчийн мессеж — баруун */}
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
-              <div style={{ background: C.blue, borderRadius: "16px 16px 4px 16px", padding: "10px 14px", maxWidth: "80%", fontSize: 13, color: "#fff" }}>
-                <div>{m.message}</div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", marginTop: 4, textAlign: "right" }}>{new Date(m.created_at).toLocaleString("mn-MN")}</div>
-              </div>
-            </div>
-            {/* Админы хариу — зүүн */}
-            {m.reply && (
-              <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 4 }}>
-                <div style={{ background: C.card2, borderRadius: "16px 16px 16px 4px", padding: "10px 14px", maxWidth: "80%", fontSize: 13, color: C.txt, border: `0.5px solid ${C.bd}` }}>
-                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 4 }}>Админ</div>
-                  <div>{m.reply}</div>
-                </div>
-              </div>
-            )}
-            {/* Хариу бичих */}
-            {replyId === m.id ? (
-              <div style={{ marginTop: 6 }}>
-                <textarea value={replyText} onChange={(e: any) => setReplyText(e.target.value)}
-                  placeholder="Хариу бичнэ үү..." autoFocus
-                  style={{ ...inputSt, height: 70, resize: "none", lineHeight: 1.5, marginBottom: 6 }} />
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button onClick={() => sendReply(m.id)} disabled={sending || !replyText.trim()}
-                    style={{ flex: 1, background: C.blue, border: "none", borderRadius: 8, padding: "9px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: sending ? 0.6 : 1 }}>
-                    {sending ? "Илгээж байна..." : "📨 Илгээх"}
-                  </button>
-                  <button onClick={() => { setReplyId(null); setReplyText(""); }}
-                    style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "9px 14px", color: C.muted, fontSize: 12, cursor: "pointer" }}>✕</button>
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 4 }}>
-                <button onClick={() => deleteOne(m.id)} style={{ background: "none", border: "none", color: C.red, fontSize: 13, cursor: "pointer" }}>🗑️</button>
-                <button onClick={() => { setReplyId(m.id); setReplyText(""); markRead(m.id); }}
-                  style={{ background: C.card2, border: `0.5px solid ${C.blue}`, borderRadius: 8, padding: "6px 12px", color: C.blue, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  💬 {m.reply ? "Дахин" : "Хариу"}
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ padding: "0 14px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <span style={{ fontSize: 13, color: C.muted }}>{msgs.filter(m => !m.read).length} шинэ · {users.length} хүн</span>
-        <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={load} style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "6px 12px", color: C.muted, fontSize: 12, cursor: "pointer" }}>🔄</button>
-          <button onClick={deleteAll} style={{ background: "#1a0a0a", border: `0.5px solid ${C.red}`, borderRadius: 8, padding: "6px 12px", color: C.red, fontSize: 12, fontWeight: 700, cursor: "pointer" }}>🗑️</button>
-        </div>
-      </div>
+  useEffect(() => { void loadAnnouncement().catch(() => {}); }, []);
+  return <div>
       {/* Зар — Админ бичих хэсэг */}
       <div style={{ marginBottom: 16 }}>
         {!showAnnForm ? (
@@ -1458,32 +1306,7 @@ function AdminContactTab() {
         )}
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>
-      ) : users.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Мессеж байхгүй байна</div>
-      ) : (
-        users.map((u: any) => (
-          <div key={u.user_id || u.phone} onClick={() => { window.history.pushState({ page: "admin-chat" }, ""); setSelectedUser(u.user_id || u.phone); }}
-            style={{ background: C.card, border: `0.5px solid ${u.unread > 0 ? C.gold : C.bd}`, borderRadius: 12, padding: "12px 14px", marginBottom: 8, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ background: C.card2, borderRadius: "50%", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>👤</div>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: C.gold }}>📞 {u.phone}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>
-                  {u.msgs[u.msgs.length - 1]?.message?.slice(0, 30)}...
-                </div>
-              </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-              {u.unread > 0 && <span style={{ background: C.gold, color: "#000", borderRadius: 10, padding: "2px 8px", fontSize: 11, fontWeight: 800 }}>{u.unread}</span>}
-              <span style={{ fontSize: 10, color: C.muted }}>{u.msgs.length} мессеж</span>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
+  </div>;
 }
 
 function EditFilmPanel({ f, onDone }: any) {
@@ -1635,19 +1458,9 @@ function AdminPage({ films, onBack, onRefresh }: any) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const savingRef = useRef(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const unreadCount = useChatUnread("admin");
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
 
-  // Unread тоо ачааллах + 30 секунд тутамд шинэчлэх
-  useEffect(() => {
-    const fetchUnread = async () => {
-      const data = await dbFetch("contact_messages?read=eq.false&select=id");
-      setUnreadCount(Array.isArray(data) ? data.length : 0);
-    };
-    fetchUnread();
-    const t = setInterval(fetchUnread, 30000);
-    return () => clearInterval(t);
-  }, [tab]);
   const empty = { title: "", description: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
@@ -1708,7 +1521,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
         <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🧾 Захиалга</button>
         <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>👥 Гишүүд</button>
         <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>➕ Нэмэх</button>
-        <button onClick={() => { setTab("sms"); setUnreadCount(0); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11, position: "relative" }}>
+        <button onClick={() => { setTab("sms"); window.dispatchEvent(new Event("kinoChatChanged")); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11, position: "relative" }}>
           💬 Холбогдох
           {unreadCount > 0 && tab !== "sms" && (
             <span style={{ position: "absolute", top: 4, right: 4, background: C.red, color: "#fff", borderRadius: "50%", width: 18, height: 18, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount}</span>
@@ -1720,7 +1533,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
       {tab === "orders" && <AdminOrdersTab />}
       {tab === "settings" && <AdminSettingsTab />}
       {tab === "members" && <AdminMembersTab />}
-      {tab === "sms" && <AdminContactTab />}
+      {tab === "sms" && <AdminChatInbox announcements={<AdminAnnouncements />} />}
 
       {tab === "add" && (
         <div style={{ padding: "0 14px" }}>
@@ -1825,6 +1638,7 @@ export default function Home() {
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
+  const chatUnread = useChatUnread(user?.id || null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -2070,14 +1884,14 @@ export default function Home() {
       {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
 
-      {(page === "home" || page === "payment") && <HomePage films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
+      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => window.history.back()} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => navigateTo("home")} catalogState={catalogState} onCatalogChange={setCatalogState} loading={loading} loadError={loadError} onRetry={loadFilms} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({}); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
-      {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} />}
+      {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
 
       {showInstall && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-end", zIndex: 400 }}>
