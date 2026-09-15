@@ -79,6 +79,7 @@ const title=()=>document.querySelector('#selected-film-title')?.textContent;
 test('poster starts only the public trailer; full playback requires its own button',async()=>{
  await render('/?film=7&fbclid=tracking');
  assert.equal(document.querySelector('video'),null);assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
+ assert.equal(document.querySelector('#film-payment'),null,'payment is hidden until purchase is requested');
  assert.match(document.querySelector('.detail-description').textContent,/<b>Хадмалтай<\/b>/);assert.equal(document.querySelector('.detail-description b'),null);
  await click('.detail-poster');
  const video=document.querySelector('video[data-trailer]');assert.equal(video.getAttribute('src'),films[0].preview_url);assert.equal(video.muted,true);assert.equal(video.hasAttribute('controls'),true);
@@ -99,7 +100,7 @@ test('recommendations show top three of the category, then navigation resets tra
   await render('/?film=7&fbclid=tracking');assert.deepEqual([...document.querySelectorAll('.related-film h3')].map(x=>x.textContent),['Салхи','Зам','Уул']);
   assert.deepEqual([...document.querySelectorAll('.detail-plan h3')].map(x=>x.textContent),['3 хоног','30 хоног']);
   assert.deepEqual([...document.querySelectorAll('.detail-plan strong')].map(x=>x.textContent),['8,000₮','12,500₮']);
-  assert.deepEqual([...document.querySelectorAll('.film-destination > section')].map(x=>x.className),['film-landing','detail-payment','detail-related','detail-packages']);
+  assert.deepEqual([...document.querySelectorAll('.film-destination > section')].map(x=>x.className),['film-landing','detail-related','detail-packages']);
   await click('.detail-poster');await click('.related-film');assert.equal(title(),'Салхи');assert.equal(document.querySelector('video'),null);assert.equal(new URL(window.location.href).searchParams.get('film'),'9');assert.equal(new URL(window.location.href).searchParams.get('fbclid'),'tracking');
   await pop('/?film=34');assert.match(document.querySelector('#detail-packages-title').textContent,/Хятад/);assert.ok([...document.querySelectorAll('.detail-plan button')].every(x=>x.getAttribute('aria-label').startsWith('Хятад')));
  }finally{films.splice(original);}
@@ -128,6 +129,7 @@ test('a closed checkout ignores late confirmation and keeps the detail page',asy
  await act(async()=>[...document.querySelectorAll('.checkout-back')].find(b=>b.textContent==='Төлбөрөө шалгах').click());
  await click('.checkout-complete button');await act(async()=>playbackGate.resolve());
  assert.equal(title(),'Гэрэл');assert.equal(movie(),undefined);assert.equal(document.querySelector('.checkout-inline'),null);
+ assert.equal(document.querySelector('#film-payment'),null);
 });
 
 test('Facebook link shows the selected movie details even when catalog loading fails',async()=>{
