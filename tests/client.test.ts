@@ -22,3 +22,30 @@ test('complete catalog reader traverses a small server cap and detects a non-adv
  assert.deepEqual((await dbAll('films?select=title')).map(r=>r.id),[7,6,5,4,3,2,1]);assert.equal(calls,5);
  global.fetch=async()=>Response.json([{id:1}]);await assert.rejects(dbAll('films'),/бүрэн ачаалж/);
 });
+
+test('HTML outages and database errors produce readable messages without setup instructions',async()=>{
+ global.fetch=async()=>new Response('<html>Deployment disabled</html>',{status:402});
+ await assert.rejects(requestJson('/api/db',{},true),e=>e instanceof RequestError&&e.status===402&&e.message.includes('түр боломжгүй'));
+ global.fetch=async()=>Response.json({message:'SETUP-MN.md SQL configuration',code:'DB_FAILED'},{status:502});
+ await assert.rejects(requestJson('/api/db',{},true),e=>e instanceof RequestError&&e.status===502&&e.code==='DB_FAILED'&&!/SQL|SETUP/.test(e.message));
+ global.fetch=async()=>new Response('broken json',{status:200});
+ await assert.rejects(requestJson('/api/db',{},true),e=>e instanceof RequestError&&e.status===502&&e.code==='INVALID_RESPONSE');
+});
+
+test('quiet catalog failures and explicit cancellation do not raise a duplicate global alert',async()=>{
+ const {dbAll}=await import('../lib/client');
+ const target = new EventTarget();let alerts=0;
+ target.addEventListener('kinoError',()=>alerts++);
+ const previousWindow = Object.getOwnPropertyDescriptor(globalThis,'window');
+ Object.defineProperty(globalThis,'window',{value:target,configurable:true});
+ try {
+  global.fetch=async()=>Response.json({message:'unavailable'},{status:503});
+  await assert.rejects(dbAll('films',{},true));assert.equal(alerts,0);
+  const controller=new AbortController();controller.abort();
+  global.fetch=async()=>{throw new DOMException('Cancelled','AbortError');};
+  await assert.rejects(requestJson('/test',{signal:controller.signal}));assert.equal(alerts,0);
+ } finally {
+  if(previousWindow)Object.defineProperty(globalThis,'window',previousWindow);
+  else Reflect.deleteProperty(globalThis,'window');
+ }
+});

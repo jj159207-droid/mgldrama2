@@ -92,6 +92,49 @@ test('public user list/admin mutation and joins are blocked',async()=>{
  assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{price:0}))).status,403);
  assert.equal((await api.GET(dbReq('films?select=*,users(*)'))).status,400);
 });
+test('movie descriptions round trip through admin edits and public details without exposing full video',async()=>{
+ const cookie=await admin(),description='Хоёр найзын аялал.\nМонгол хадмалтай.';
+ assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description},cookie))).status,200);
+ const rows=await (await api.GET(dbReq('films?id=eq.1'))).json();
+ assert.equal(rows[0].description,description);assert.ok(!JSON.stringify(rows).includes('movie.mp4'));
+ assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description:''},cookie))).status,200);
+ assert.equal(tables.films[0].description,'');
+});
+test('description edits require admin access and validate type and maximum length',async()=>{
+ const user=await register();
+ assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description:'Changed'},user))).status,403);
+ const cookie=await admin();
+ for(const description of [null,12,{},'a'.repeat(4001)])assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description},cookie))).status,400);
+ assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description:'a'.repeat(4000)},cookie))).status,200);
+});
+test('legacy catalog retries only a missing-column failure and still redacts paid URLs',async()=>{
+ const mock=global.fetch;let attempts=0;
+ global.fetch=async(input,init)=>{
+  const url=new URL(String(input));
+  if(url.pathname==='/rest/v1/films'){
+   attempts++;
+   if(url.searchParams.get('select')?.split(',').includes('description'))return Response.json({code:'42703'},{status:400});
+  }
+  return mock(input,init);
+ };
+ const response=await api.GET(dbReq('films?id=eq.1'));assert.equal(response.status,200);
+ const rows=await response.json();assert.equal(attempts,2);assert.equal(rows[0].description,'');assert.ok(!JSON.stringify(rows).includes('movie.mp4'));
+ attempts=0;
+ global.fetch=async()=>{attempts++;return Response.json({code:'XX000'},{status:503});};
+ assert.equal((await api.GET(dbReq('films'))).status,502);assert.equal(attempts,1);
+});
+test('legacy admin description writes report required update without dropping data',async()=>{
+ const cookie=await admin(),mock=global.fetch;let writes=0;
+ global.fetch=async(input,init)=>{
+  if(new URL(String(input)).pathname==='/rest/v1/films'&&init?.method==='PATCH'){
+   writes++;return Response.json({code:'PGRST204'},{status:400});
+  }
+  return mock(input,init);
+ };
+ const response=await api.PATCH(dbReq('films?id=eq.1','PATCH',{description:'Save me'},cookie));
+ assert.equal(response.status,409);assert.equal((await response.json()).code,'FILM_DESCRIPTION_SETUP_REQUIRED');
+ assert.equal(writes,1);assert.equal(tables.films[0].description,undefined);
+});
 test('payment price/status/owner are server controlled and retries idempotent',async()=>{
  const c=await register();const body={ref_code:'123456',film_id:1,plan:'single',amount:1,status:'confirmed',user_id:999};
  let r=await api.POST(dbReq('pending_payments','POST',body,c));assert.equal(r.status,200);

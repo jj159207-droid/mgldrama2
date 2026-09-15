@@ -1,13 +1,14 @@
 import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,db,fail,json,originCheck,session } from '@/lib/server';
-import { isRow,plans,safeUrl,type Row } from '@/lib/domain';
+import { plans,safeUrl,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
 function validateFilm(b:Row) {
-  const fields=['title','views','op','price','badge','free','locked','url','img','bg','preview_url'];
+  const fields=['title','description','views','op','price','badge','free','locked','url','img','bg','preview_url'];
   if(Object.keys(b).some(k=>!fields.includes(k)))throw new ApiError(400,'Киноны талбар буруу.');
   if('title'in b && (typeof b.title!=='string'||!b.title.trim()))throw new ApiError(400,'Гарчиг оруулна уу.');
+  if('description' in b && (typeof b.description!=='string'||b.description.length>4000))throw new ApiError(400,'Киноны тайлбар 4000 хүртэл тэмдэгт байна.');
   if('badge' in b && (typeof b.badge!=='string' || !['Эротик','Гадаад','Хятад'].includes(b.badge.split('|')[1] || 'Эротик')))throw new ApiError(400,'Киноны ангиллыг сонгоно уу. Бүгд нь киноны ангилал биш.');
   for(const k of ['views','op','price'])if(k in b && (typeof b[k]!=='number'||!Number.isSafeInteger(b[k])||Number(b[k])<0))throw new ApiError(400,'Үнэ болон үзсэн тоо 0 эсвэл эерэг бүхэл тоо байна.');
   for(const k of ['free','locked'])if(k in b && typeof b[k]!=='boolean')throw new ApiError(400,'Киноны төлөв буруу.');
@@ -40,7 +41,7 @@ async function handler(req:NextRequest) {
   let b:Row|undefined=req.method==='GET'||req.method==='DELETE'?undefined:await bodyJson(req);
   if(!admin) {
     if(table==='films'&&req.method==='GET') {
-      query.set('select','id,title,views,op,price,badge,free,locked,img,bg,preview_url,created_at');
+      query.set('select','id,title,description,views,op,price,badge,free,locked,img,bg,preview_url,created_at');
     }else if(table==='pending_payments'&&s?.userId) {
       if(req.method==='GET') {
         query.set('user_id',`eq.${s.userId}`);query.set('select','id,ref_code,user_id,film_id,plan,amount,status,created_at,confirmed_at');
@@ -119,9 +120,19 @@ async function handler(req:NextRequest) {
   }
   if(['PATCH','DELETE'].includes(req.method)&&!['id','ref_code','key'].some(k=>query.get(k)?.startsWith('eq.')))throw new ApiError(400,'Өөрчлөх мөрийг сонгоно уу.');
   if(req.method==='GET'&&!query.has('limit'))query.set('limit','2000');
-  const rows=await db(`${table}?${query}`,req.method,b);
+  let rows:Row[];
+  try {rows=await db(`${table}?${query}`,req.method,b);}
+  catch(error){
+    // Older installs remain readable until the additive description update runs.
+    if(table==='films'&&!admin&&req.method==='GET'&&error instanceof ApiError&&['42703','PGRST204'].includes(error.code)){
+      query.set('select',query.get('select')!.split(',').filter(field=>field!=='description').join(','));
+      rows=await db(`${table}?${query}`,req.method,b);
+    }else if(table==='films'&&admin&&b&&'description' in b&&error instanceof ApiError&&['42703','PGRST204'].includes(error.code)){
+      throw new ApiError(409,'Киноны тайлбар хадгалах шинэчлэлийг эхлээд суулгана уу. Админы суулгах зааврыг шалгана уу.','FILM_DESCRIPTION_SETUP_REQUIRED');
+    }else throw error;
+  }
   if(req.method==='PATCH'&&rows.length===0)throw new ApiError(409,'Өөрчлөх мөр олдсонгүй эсвэл аль хэдийн өөрчлөгдсөн байна.');
-  if(table==='films'&&!admin)return json(rows.map(row=>({...row,img:safeUrl(row.img,true),url:row.preview_url?`|||${safeUrl(row.preview_url)}`:''})));
+  if(table==='films'&&!admin)return json(rows.map(row=>({...row,description:typeof row.description==='string'?row.description:'',img:safeUrl(row.img,true),url:row.preview_url?`|||${safeUrl(row.preview_url)}`:''})));
   return json(rows);
  }catch(e){return fail(e);}
 }

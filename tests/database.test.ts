@@ -2,6 +2,24 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
+test('description upgrade preserves existing films and descriptions across repeated installs',async()=>{
+ const pg=new PGlite();
+ try{
+  await pg.exec('create role anon;create role authenticated;create role service_role bypassrls;');
+  await pg.exec(await readFile(new URL('../supabase/setup.sql',import.meta.url),'utf8'));
+  await pg.exec("alter table films drop column description;insert into films(title,url) values('Keep film','https://video.example/private.mp4')");
+  const compatibility=await readFile(new URL('../supabase/compatibility-update.sql',import.meta.url),'utf8');
+  await pg.exec(compatibility);
+  assert.deepEqual((await pg.query('select title,url,description from films')).rows,[{title:'Keep film',url:'https://video.example/private.mp4',description:''}]);
+  await pg.exec("set role service_role;update films set description='Киноны тайлбар';reset role;");
+  await pg.exec(compatibility);
+  await pg.exec(await readFile(new URL('../supabase/review-install.sql',import.meta.url),'utf8'));
+  assert.equal((await pg.query<{description:string}>('select description from films')).rows[0].description,'Киноны тайлбар');
+  for(const role of ['anon','authenticated']){
+   await pg.exec(`set role ${role}`);await assert.rejects(pg.query('select description from films'),/permission denied/);await pg.exec('reset role');
+  }
+ }finally{await pg.close();}
+});
 test('setup SQL runs, preserves records, blocks browser roles and atomically limits attempts',async()=>{
  const pg=new PGlite();
  try{
