@@ -23,8 +23,8 @@ export function generatedTrailerStart(value: string): number | null {
     if (url.protocol !== 'https:' || !/\/storage\/v1\/object\/public\/kino-trailers\/v1\/[a-f0-9]{64}\.mp4$/.test(url.pathname)) return null;
     const params = new URLSearchParams(url.hash.slice(1));
     if (params.get('taza-trailer') !== '1' || !/^\d+$/.test(params.get('start') || '')) return null;
-    const value = Number(params.get('start'));
-    return validTrailerStart(value) ? value : null;
+    const seconds = Number(params.get('start'));
+    return validTrailerStart(seconds) ? seconds : null;
   } catch { return null; }
 }
 export function isBunnySource(value: string): boolean {

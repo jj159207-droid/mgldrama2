@@ -15,22 +15,31 @@ jobs:
           node-version: '22'
           cache: npm
       - name: Apply scoped integration and pin FFmpeg
+        id: prepare
         run: |
+          mkdir -p /tmp/trailer-artifact
           node scripts/install-trailer-editor.mjs
           if ! node -e "if(require('./package.json').dependencies['ffmpeg-static']!=='5.3.0')process.exit(1)"; then
             npm install --save-exact ffmpeg-static@5.3.0
           else
             npm ci
           fi
-      - name: Installed Next route and tracing documentation
-        run: |
-          find node_modules/next/dist/docs -iname '*route-handlers*' -o -iname '*output*' -o -iname '*serverExternalPackages*' | head -15
-      - run: npm test
-      - run: npm run test:ui
-      - run: npm run typecheck
-      - run: npm run build
+          cp "$(node -e 'process.stdout.write(require("ffmpeg-static"))')" /tmp/trailer-artifact/ffmpeg
+          tar -czf /tmp/trailer-artifact/dependencies.tar.gz node_modules
+      - name: Unit and media tests
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: npm test 2>&1 | tee /tmp/trailer-artifact/unit.log
+      - name: UI tests
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: npm run test:ui 2>&1 | tee /tmp/trailer-artifact/ui.log
+      - name: Typecheck
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: npm run typecheck 2>&1 | tee /tmp/trailer-artifact/typecheck.log
+      - name: Build
+        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
+        run: npm run build 2>&1 | tee /tmp/trailer-artifact/build.log
       - name: Commit verified integration only to the feature branch
-        if: github.ref == 'refs/heads/feature/bunny-12-second-trailers'
+        if: ${{ success() && github.ref == 'refs/heads/feature/bunny-12-second-trailers' }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -39,15 +48,14 @@ jobs:
             git commit -m 'Integrate tested Bunny trailer editor and pin FFmpeg runtime'
             git push origin HEAD:feature/bunny-12-second-trailers
           fi
-      - name: Source and documentation snapshot
+      - name: Source snapshot
         if: always()
         run: |
           mkdir -p /tmp/trailer-artifact
           git ls-files -z | tar --null -T - -czf /tmp/trailer-artifact/source.tar.gz
-          if test -d node_modules/next/dist/docs; then tar -czf /tmp/trailer-artifact/next-docs.tar.gz -C node_modules/next/dist docs; fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: trailer-verification
           path: /tmp/trailer-artifact
-          retention-days: 3
+          retention-days: 1
