@@ -41,3 +41,4 @@ jobs:
           git add app/page.tsx app/components/FilmLanding.tsx app/components/TrailerPosterFrame.tsx app/globals.css tests/ui/trailer-poster-fallback.test.cjs
           git commit -m 'Show trailer first frame when poster is missing'
           git push origin HEAD:feature-trailer-poster-fallback
+# retry after transient hosted-runner shutdown
