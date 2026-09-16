@@ -1,0 +1,56 @@
+name: Production source backup
+on:
+  push:
+    branches: [client-master-installer]
+    paths:
+      - '.github/workflows/production-source-backup.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout production main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: da18149f5079d2ef185393608692797248536bfb
+          fetch-depth: 1
+      - name: Build production source backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT="TAZA-PRODUCTION-BACKUP-2026-09-16"
+          mkdir "$ROOT"
+          shopt -s dotglob extglob
+          for item in * .*; do
+            case "$item" in
+              .|..|.git|TAZA-PRODUCTION-BACKUP-2026-09-16) continue ;;
+            esac
+            cp -a "$item" "$ROOT/"
+          done
+          cat > "$ROOT/BACKUP-INFO-MN.txt" <<'TXT'
+          ТАЗА САЙТ — PRODUCTION ЭХ КОДЫН НӨӨЦ
+          ====================================
+          Огноо: 2026-09-16
+          GitHub branch: main
+          Commit: da18149f5079d2ef185393608692797248536bfb
+          Commit message: Add automatic login field focus
+
+          Энэ ZIP нь production GitHub main дээрх эх кодын snapshot.
+          Дотор нь .env.local, Vercel/Supabase нууц түлхүүр, live database мөрүүд,
+          MacroDroid-ийн production secret ороогүй.
+
+          ЭНЭ ФАЙЛЫГ КЛИЕНТЭД ӨГӨХГҮЙ.
+          Зөвхөн өөрийн нөөцөд хадгална.
+          TXT
+          zip -qr TAZA-PRODUCTION-BACKUP-2026-09-16.zip "$ROOT"
+          unzip -t TAZA-PRODUCTION-BACKUP-2026-09-16.zip
+      - name: Upload production source backup
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: TAZA-PRODUCTION-BACKUP-2026-09-16
+          path: TAZA-PRODUCTION-BACKUP-2026-09-16.zip
+          if-no-files-found: error
+          retention-days: 30
