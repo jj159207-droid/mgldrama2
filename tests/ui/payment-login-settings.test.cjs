@@ -40,6 +40,11 @@ test('login and registration are presented as two clear choices with large numer
   assert.match(page,/4 оронтой PIN код/);
 });
 
+test('completed phone and registration PIN fields advance focus automatically',()=>{
+  assert.match(page,/next\.length===8\)document\.getElementById\("user-pin"\)\?\.focus\(\)/);
+  assert.match(page,/register&&next\.length===4\)document\.getElementById\("user-pin2"\)\?\.focus\(\)/);
+});
+
 test('site settings endpoint permits optional Messenger while validating payment details',()=>{
   assert.match(settings,/messengerRaw\?safeUrl\(messengerRaw\):''/);
   assert.match(settings,/validAccount\(bankAccount\)/);
