@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import AgeGate from "@/app/components/AgeGate";
 import "./globals.css";
 import "./chat.css";
 import "./install.css";
@@ -53,7 +54,7 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
-        {children}
+        <AgeGate>{children}</AgeGate>
         <Script src="/install.js" strategy="beforeInteractive" />
       </body>
     </html>
