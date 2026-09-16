@@ -1,0 +1,88 @@
+name: Trailer verification
+on:
+  push:
+    branches: [main, feature/bunny-12-second-trailers]
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned dependencies and encoder
+        run: npm ci
+      - name: Unit and real media tests
+        run: |
+          npm test > /tmp/trailer-unit.log 2>&1 || { tail -100 /tmp/trailer-unit.log; exit 1; }
+          tail -9 /tmp/trailer-unit.log
+      - name: UI tests
+        run: |
+          npm run test:ui > /tmp/trailer-ui.log 2>&1 || { tail -100 /tmp/trailer-ui.log; exit 1; }
+          tail -9 /tmp/trailer-ui.log
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Bunny public documentation demo smoke test
+        if: github.ref == 'refs/heads/feature/bunny-12-second-trailers'
+        run: |
+          node --import tsx --input-type=module <<'JS'
+          import {createRequire} from 'node:module';
+          const require=createRequire(import.meta.url);
+          const {createBunnyClip,parseBunnySource,mp4Duration,mediaUrl,parsePlaylist,variantUri}=require('./lib/trailer-media.ts');
+          const demos=['759/eb1c4f77-0cda-46be-b47d-1118ad7c2ffe','256380/d9d9ab1f-fc9f-4488-9c26-4ffc653c0024'];
+          const options={redirect:'error',headers:{Referer:'https://bunny.net'},signal:AbortSignal.timeout(20000)};
+          let verified=false;
+          for(const demo of demos){
+            const source=parseBunnySource(`https://player.mediadelivery.net/embed/${demo}`);
+            const api=`https://video.bunnycdn.com/library/${source.libraryId}/videos/${source.videoId}/play`;
+            const response=await fetch(api,options);
+            if(!response.ok)throw new Error(`Public demo playback data returned ${response.status}`);
+            const data=await response.json();
+            let url=mediaUrl(data.videoPlaylistUrl,new URL(api),source.videoId);
+            const master=await fetch(url,options);if(!master.ok)throw new Error('Public demo playlist unavailable');
+            let text=await master.text();const variant=variantUri(text);
+            if(variant){url=mediaUrl(variant,url,source.videoId);const child=await fetch(url,options);if(!child.ok)throw new Error('Public demo variant unavailable');text=await child.text();}
+            const duration=parsePlaylist(text).duration;
+            console.log('Public demo duration:',duration,'seconds');
+            if(duration<12)continue;
+            const start=Math.floor((duration-12)/2);
+            const clip=await createBunnyClip(source,start,require('ffmpeg-static'),'https://bunny.net');
+            if(Math.abs(mp4Duration(clip)-12)>0.08)throw new Error('Public Bunny demo produced an invalid clip');
+            console.log('Public Bunny embed -> HLS -> MP4:',mp4Duration(clip),'seconds;',clip.length,'bytes; start',start);
+            verified=true;break;
+          }
+          if(!verified)throw new Error('No public documentation demo contains a full twelve-second window');
+          JS
+      - name: Production build
+        run: npm run build
+      - name: Verify traced encoder and function size
+        run: |
+          node --input-type=module <<'JS'
+          import {readFileSync,statSync} from 'node:fs';
+          import {resolve,dirname} from 'node:path';
+          const path='.next/server/app/api/trailers/route.js.nft.json';
+          const files=[...new Set(JSON.parse(readFileSync(path,'utf8')).files.map(f=>resolve(dirname(path),f)))];
+          if(!files.some(p=>p.endsWith('/ffmpeg-static/ffmpeg')))throw new Error('Encoder missing from production trace');
+          const total=files.reduce((n,f)=>n+statSync(f).size,0);
+          console.log('Unique trailer traced files:',Math.round(total/1048576),'MiB');
+          if(total>245*1048576)throw new Error('Trailer function exceeds safe deployment size');
+          JS
+      - name: Verification snapshot
+        if: always()
+        run: |
+          mkdir -p /tmp/trailer-artifact
+          git archive --format=tar.gz --output=/tmp/trailer-artifact/source.tar.gz HEAD
+          cp /tmp/trailer-unit.log /tmp/trailer-ui.log /tmp/trailer-artifact/ || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: trailer-verification
+          path: /tmp/trailer-artifact
+          retention-days: 1

@@ -6,6 +6,7 @@ import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/d
 
 import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
 import PosterUpload from "@/app/components/PosterUpload";
+import TrailerEditor, { type TrailerEditorHandle } from "@/app/components/TrailerEditor";
 import ReadinessCheck from "@/app/components/ReadinessCheck";
 import CatalogBrowser from "@/app/components/CatalogBrowser";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
@@ -1321,21 +1322,25 @@ function EditFilmPanel({ f, onDone }: any) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const savingRef = useRef(false);
+  const trailerEditorRef = useRef<TrailerEditorHandle>(null);
+  const [trailerBusy, setTrailerBusy] = useState(false);
 
   const save = async () => {
-    if (savingRef.current || uploading) return;
+    if (savingRef.current || uploading || trailerBusy) return;
     if (!title.trim()) { alert("Гарчиг оруулна уу"); return; }
     savingRef.current=true;setSaving(true);
     try {
-      const combinedUrl = previewUrl ? `${url}|||${previewUrl}` : url;
+      const nextPreview = (await trailerEditorRef.current?.prepare()) ?? previewUrl;
+      const combinedUrl = nextPreview ? `${url.trim()}|||${nextPreview}` : url.trim();
       const payload: any = { title: title.trim(), price: Number(price), op: Number(op), url: combinedUrl, badge: encodeBadgeCat(badge, category) };
       payload.img = img.trim();
-      payload.preview_url = previewUrl.trim();
+      payload.preview_url = nextPreview.trim();
       if(description.trim() || typeof f.description === "string")payload.description=description.trim();
       const res = await dbFetch(`films?id=eq.${f.id}`, { method: "PATCH", body: JSON.stringify(payload) });
       if (!Array.isArray(res) || res.length === 0) { alert("Алдаа: " + (res?.message || "Өөрчлөлт баталгаажаагүй.")); return; }
       onDone();
     } catch(e: any) {
+      if (e?.name === "AbortError") return;
       alert("Алдаа: " + (e?.message || "Дахин оролдоно уу"));
     } finally {
       savingRef.current=false;setSaving(false);
@@ -1343,7 +1348,7 @@ function EditFilmPanel({ f, onDone }: any) {
   };
 
   return (
-    <div style={{ marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
+    <fieldset disabled={saving || trailerBusy} style={{ minWidth: 0, padding: 0, border: 0, marginTop: 10, borderTop: `0.5px solid ${C.bd}`, paddingTop: 10 }}>
       <label style={lbl}>Гарчиг</label>
       <input style={inputSt} value={title} onChange={(e: any) => setTitle(e.target.value)} />
       <label style={{...lbl,marginTop:10}} htmlFor={`film-description-${f.id}`}>Киноны тайлбар</label>
@@ -1376,16 +1381,15 @@ function EditFilmPanel({ f, onDone }: any) {
       </div>
       <label style={{ ...lbl, marginTop: 8 }}>Видео URL</label>
       <input style={inputSt} value={url} onChange={(e: any) => setUrl(e.target.value)} placeholder="https://iframe.mediadelivery.net/..." />
-      <label style={{ ...lbl, marginTop: 8 }}>Трейлерийн холбоос (богино хэсэг)</label>
-      <input style={inputSt} value={previewUrl} onChange={(e: any) => setPreviewUrl(e.target.value)} placeholder="https://your.b-cdn.net/preview.mp4" />
-      <PosterUpload value={img} onChange={setImg} onBusyChange={setUploading} disabled={saving || uploading} />
+      <TrailerEditor ref={trailerEditorRef} filmId={f.id} videoUrl={url} value={previewUrl} onChange={setPreviewUrl} onBusyChange={setTrailerBusy} disabled={saving || uploading || trailerBusy} />
+      <PosterUpload value={img} onChange={setImg} onBusyChange={setUploading} disabled={saving || uploading || trailerBusy} />
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <button onClick={save} disabled={saving || uploading} style={{ flex: 1, background: C.gold, border: "none", borderRadius: 8, padding: "10px", fontWeight: 700, cursor: "pointer", color: "#000", opacity: saving ? 0.6 : 1 }}>
+        <button onClick={save} disabled={saving || uploading || trailerBusy} style={{ flex: 1, background: C.gold, border: "none", borderRadius: 8, padding: "10px", fontWeight: 700, cursor: "pointer", color: "#000", opacity: saving ? 0.6 : 1 }}>
           {saving ? "..." : "✅ Хадгалах"}
         </button>
-        <button onClick={onDone} style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px", color: C.muted, fontSize: 13, cursor: "pointer" }}>Болих</button>
+        <button disabled={saving || uploading || trailerBusy} onClick={onDone} style={{ flex: 1, background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 8, padding: "10px", color: C.muted, fontSize: 13, cursor: "pointer" }}>Болих</button>
       </div>
-    </div>
+    </fieldset>
   );
 }
 
