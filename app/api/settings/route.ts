@@ -11,22 +11,21 @@ const DEFAULTS={
 };
 const clean=(value:unknown,max:number)=>typeof value==='string'?value.trim().replace(/\s+/g,' ').slice(0,max):'';
 const validAccount=(value:string)=>/^[A-Za-z0-9 -]{6,40}$/.test(value);
-function normalize(settings:unknown){
- const row=isRow(settings)?settings:{};
- const messengerUrl=safeUrl(row.messengerUrl)||DEFAULTS.messengerUrl;
- const bankName=clean(row.bankName,80)||DEFAULTS.bankName;
- const rawAccount=clean(row.bankAccount,40);
- const bankAccount=validAccount(rawAccount)?rawAccount:DEFAULTS.bankAccount;
- const accountName=clean(row.accountName,100)||DEFAULTS.accountName;
- return {messengerUrl,bankName,bankAccount,accountName};
-}
-async function readSettings(){
+async function storedSettings(){
  const [row]=await db('sms_logs?key=eq.site_settings&select=value&order=id.desc&limit=1');
  let settings:unknown={};try{settings=JSON.parse(String(row?.value||'{}'));}catch{}
- return normalize(settings);
+ return {found:!!row,settings:isRow(settings)?settings:{}};
+}
+function normalize(settings:Record<string,unknown>){
+ const messengerUrl=safeUrl(settings.messengerUrl)||DEFAULTS.messengerUrl;
+ const bankName=clean(settings.bankName,80)||DEFAULTS.bankName;
+ const rawAccount=clean(settings.bankAccount,40);
+ const bankAccount=validAccount(rawAccount)?rawAccount:DEFAULTS.bankAccount;
+ const accountName=clean(settings.accountName,100)||DEFAULTS.accountName;
+ return {messengerUrl,bankName,bankAccount,accountName};
 }
 export async function GET() {
- try { return json(await readSettings()); }
+ try { const {settings}=await storedSettings(); return json(normalize(settings)); }
  catch(e){
   if(e instanceof ApiError && ['42703','42P01','PGRST204','PGRST205'].includes(e.code))
    return json({...DEFAULTS,setupRequired:true});
@@ -38,15 +37,23 @@ export async function PUT(req:NextRequest) {
   originCheck(req);
   if(!(await session(req))?.admin)throw new ApiError(403,'Админы эрх шаардлагатай.');
   const b=await bodyJson(req,4096);
-  const messengerRaw=clean(b.messengerUrl,2000);
+  const has=(key:string)=>Object.prototype.hasOwnProperty.call(b,key);
+  const legacyMessengerOnly=has('messengerUrl')&&!has('bankName')&&!has('bankAccount')&&!has('accountName');
+  const {found,settings:stored}=await storedSettings();
+  const current=normalize(stored);
+  const messengerRaw=has('messengerUrl')?clean(b.messengerUrl,2000):current.messengerUrl;
   const messengerUrl=messengerRaw?safeUrl(messengerRaw):'';
   if(messengerRaw&&!messengerUrl)throw new ApiError(400,'Зөв HTTPS Messenger холбоос оруулна уу.');
-  const bankName=clean(b.bankName,80),bankAccount=clean(b.bankAccount,40),accountName=clean(b.accountName,100);
+  const bankName=has('bankName')?clean(b.bankName,80):current.bankName;
+  const bankAccount=has('bankAccount')?clean(b.bankAccount,40):current.bankAccount;
+  const accountName=has('accountName')?clean(b.accountName,100):current.accountName;
   if(bankName.length<2)throw new ApiError(400,'Банкны нэрийг зөв оруулна уу.');
   if(!validAccount(bankAccount))throw new ApiError(400,'Дансны дугаар 6–40 тэмдэгт, зөвхөн үсэг/тоо байх ёстой.');
   if(accountName.length<2)throw new ApiError(400,'Данс эзэмшигчийн нэрийг зөв оруулна уу.');
-  const settings={messengerUrl,bankName,bankAccount,accountName};
-  await db('rpc/kino_save_settings','POST',{settings_value:JSON.stringify(settings)});
-  return json(settings);
+  // Preserve the historical messenger-only payload on a brand-new install, while
+  // merging it with stored payment details once richer settings exist.
+  const saved=legacyMessengerOnly&&!found?{messengerUrl}:{messengerUrl,bankName,bankAccount,accountName};
+  await db('rpc/kino_save_settings','POST',{settings_value:JSON.stringify(saved)});
+  return json({messengerUrl,bankName,bankAccount,accountName});
  }catch(e){return fail(e);}
 }

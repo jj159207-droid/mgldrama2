@@ -4,6 +4,7 @@ on:
     branches: [feature/admin-payment-login-settings]
     paths:
       - 'scripts/install-payment-login-settings.mjs'
+      - 'scripts/install-payment-login-settings-safe.mjs'
       - 'app/api/settings/route.ts'
       - 'tests/ui/payment-login-settings.test.cjs'
 permissions:
@@ -26,7 +27,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Apply deterministic page integration
-        run: node scripts/install-payment-login-settings.mjs
+        run: node scripts/install-payment-login-settings-safe.mjs
       - name: Unit tests
         run: npm test
       - name: UI tests
