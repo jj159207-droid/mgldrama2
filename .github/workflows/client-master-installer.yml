@@ -58,24 +58,55 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf .package TAZA-SITE-MASTER.zip
-          mkdir -p .package/TAZA-SITE-MASTER/installer
-          cp START-HERE.cmd .package/TAZA-SITE-MASTER/
-          cp installer/TAZA-SETUP.ps1 installer/README-MN.txt installer/macro-template.mdr.gz.b64 .package/TAZA-SITE-MASTER/installer/
-          cp -a app lib public scripts supabase .package/TAZA-SITE-MASTER/
-          cp .env.example .gitignore package.json package-lock.json next.config.js postcss.config.mjs tsconfig.json eslint.config.mjs .package/TAZA-SITE-MASTER/
+          ROOT=.package/TAZA-SITE-MASTER
+          mkdir -p "$ROOT/installer" "$ROOT/scripts"
+
+          cp START-HERE.cmd "$ROOT/"
+          cp installer/TAZA-SETUP.ps1 installer/README-MN.txt installer/macro-template.mdr.gz.b64 "$ROOT/installer/"
+          cp -a app lib public supabase "$ROOT/"
+          cp scripts/provision-ffmpeg.mjs scripts/preflight.mjs scripts/migrate-posters.ts "$ROOT/scripts/"
+          cp .env.example .gitignore package.json package-lock.json next.config.js postcss.config.mjs tsconfig.json eslint.config.mjs "$ROOT/"
+
           node <<'NODE'
           const fs=require('node:fs');
-          const p='.package/TAZA-SITE-MASTER/app/page.tsx';
-          let s=fs.readFileSync(p,'utf8');
-          const before=s;
-          s=s.replace(/const DEFAULT_BANK_ACCOUNT = \{[\s\S]*?\};/,`const DEFAULT_BANK_ACCOUNT = {\n  bank: "Банк",\n  number: "0000000000",\n  name: "Данс эзэмшигч",\n};`);
-          if(s===before) throw new Error('DEFAULT_BANK_ACCOUNT block was not sanitized');
-          fs.writeFileSync(p,s);
+          const root='.package/TAZA-SITE-MASTER';
+
+          const pagePath=`${root}/app/page.tsx`;
+          let page=fs.readFileSync(pagePath,'utf8');
+          let changed=false;
+          page=page.replace(/const DEFAULT_BANK_ACCOUNT = \{[\s\S]*?\};/,()=>{
+            changed=true;
+            return `const DEFAULT_BANK_ACCOUNT = {\n  bank: "Банк",\n  number: "0000000000",\n  name: "Данс эзэмшигч",\n};`;
+          });
+          page=page.replace(/(<input value=\{bankAccount\}[^>]*placeholder=")[^"]+("[^>]*>)/,(_,a,b)=>`${a}0000000000${b}`);
+          if(!changed) throw new Error('DEFAULT_BANK_ACCOUNT block was not sanitized');
+          fs.writeFileSync(pagePath,page);
+
+          const settingsPath=`${root}/app/api/settings/route.ts`;
+          let settings=fs.readFileSync(settingsPath,'utf8');
+          settings=settings
+            .replace(/process\.env\.BANK_NAME\|\|'[^']*'/,"process.env.BANK_NAME||'Банк'")
+            .replace(/process\.env\.BANK_ACCOUNT\|\|'[^']*'/,"process.env.BANK_ACCOUNT||'0000000000'")
+            .replace(/process\.env\.BANK_ACCOUNT_NAME\|\|'[^']*'/,"process.env.BANK_ACCOUNT_NAME||'Данс эзэмшигч'");
+          fs.writeFileSync(settingsPath,settings);
+
+          const checkPage=fs.readFileSync(pagePath,'utf8');
+          const checkSettings=fs.readFileSync(settingsPath,'utf8');
+          if(!/bank: "Банк"[\s\S]*number: "0000000000"[\s\S]*name: "Данс эзэмшигч"/.test(checkPage)) throw new Error('Generic page bank defaults missing');
+          if(!/value=\{bankAccount\}[\s\S]*?placeholder="0000000000"/.test(checkPage)) throw new Error('Generic account placeholder missing');
+          if(!/BANK_NAME\|\|'Банк'/.test(checkSettings)||!/BANK_ACCOUNT\|\|'0000000000'/.test(checkSettings)||!/BANK_ACCOUNT_NAME\|\|'Данс эзэмшигч'/.test(checkSettings)) throw new Error('Generic settings fallbacks missing');
           NODE
-          test ! -e .package/TAZA-SITE-MASTER/installer/TAZA-SETUP-V2.ps1
-          test ! -e .package/TAZA-SITE-MASTER/installer/TAZA-SETUP-FINAL.ps1
-          grep -q 'bank: "Банк"' .package/TAZA-SITE-MASTER/app/page.tsx
-          grep -q 'number: "0000000000"' .package/TAZA-SITE-MASTER/app/page.tsx
+
+          test ! -e "$ROOT/installer/TAZA-SETUP-V2.ps1"
+          test ! -e "$ROOT/installer/TAZA-SETUP-FINAL.ps1"
+          test ! -e "$ROOT/scripts/verify-production-trailers.mjs"
+          test ! -e "$ROOT/scripts/install-payment-login-settings.mjs"
+          test ! -e "$ROOT/scripts/install-payment-login-settings-safe.mjs"
+          if grep -RIn --binary-files=without-match 'kino-uzeh\.vercel\.app' "$ROOT"; then
+            echo 'Production endpoint leaked into client package.' >&2
+            exit 1
+          fi
+
           (cd .package && zip -qr ../TAZA-SITE-MASTER.zip TAZA-SITE-MASTER)
           unzip -t TAZA-SITE-MASTER.zip
       - name: Upload flash-drive package
