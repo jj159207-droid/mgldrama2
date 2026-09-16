@@ -15,16 +15,25 @@ require('esbuild').buildSync({entryPoints:[path.join(repo,'app/page.tsx')],bundl
 const React=require('react'),{act}=React,{createRoot}=require('react-dom/client');
 const App=require(outfile).default;
 const films=Array.from({length:30},(_,i)=>({id:i+1,title:i===1?'Гэрэл — 2':`Хотын түүх ${i+1}`,badge:`Хадмал|${['Гадаад','Хятад','Эротик'][i%3]}`,views:i*3,free:i%3===0||i===1,locked:true,price:5000,img:''}));
-let root,failed,filmRequests;
+let root,failed,filmRequests,session,authWrites;
 const originalFetch=global.fetch;
 beforeEach(()=>{
- failed=false;filmRequests=0;window.history.replaceState({page:"home"},"", "/");
+ failed=false;filmRequests=0;session={};authWrites=[];window.history.replaceState({page:"home"},"", "/");
  Object.defineProperty(dom.window.navigator,'onLine',{value:true,configurable:true});
  root=createRoot(document.getElementById('root'));
  global.fetch=async(path,opts={})=>{
   if(opts.signal?.aborted)throw new DOMException('Cancelled','AbortError');
   const url=new URL(path,'https://app.test');assert.equal(url.origin,'https://app.test');
-  if(url.pathname==='/api/auth')return Response.json({});
+  if(url.pathname==='/api/auth'){
+   if(opts.method==='POST'){
+    const body=JSON.parse(opts.body);authWrites.push(body);
+    if(body.action!=='admin'||body.password!=='test-existing-admin-password')return Response.json({message:'Нууц үг буруу байна.'},{status:401});
+    session={admin:true};
+   }
+   return Response.json(session);
+  }
+  if(url.pathname==='/api/settings')return Response.json({});
+  if(url.pathname==='/api/chat')return Response.json({unread:0,threads:[]});
   if(url.pathname==='/api/db'){
    filmRequests++;
    if(failed)return Response.json({message:'SETUP-MN.md SQL',code:'DB_ERROR'},{status:502});
@@ -39,37 +48,47 @@ afterEach(async()=>{await act(async()=>root.unmount());global.fetch=originalFetc
 after(()=>dom.window.close());
 const render=()=>act(async()=>{root.render(React.createElement(App));});
 const click=async(selector)=>{const el=document.querySelector(selector);assert.ok(el,selector);await act(async()=>el.click());};
-const fill=async(value)=>act(async()=>{const el=document.querySelector('input[type=search]');Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});
-const select=async(selector,value)=>act(async()=>{const el=document.querySelector(selector);el.value=value;el.dispatchEvent(new dom.window.Event('change',{bubbles:true}));});
 const cardCount=()=>document.querySelectorAll('.movie-card').length;
-test('catalog pagination, category filtering and results count work together',async()=>{
- await render();assert.equal(cardCount(),24);assert.match(document.querySelector('.catalog-results-bar').textContent,/30 кино/);
+const logo=()=>click('[aria-label="ТАЗА САЙТ лого"]');
+test('the simplified catalog retains categories and pagination without search, sorting, access or count controls',async()=>{
+ await render();assert.equal(cardCount(),24);
+ assert.equal(document.querySelector('.catalog-controls'),null);assert.equal(document.querySelector('.catalog-results-bar'),null);assert.equal(document.querySelector('[aria-label="Кино хайх"]'),null);
+ assert.match(document.querySelector('.brand').textContent,/ТАЗА САЙТ/);assert.doesNotMatch(document.querySelector('.site-footer').textContent,/Удирдах/);
  await click('.load-more');assert.equal(cardCount(),30);
  await act(async()=>[...document.querySelectorAll('.category-tabs button')].find(b=>b.textContent==='Гадаад').click());
  assert.equal(cardCount(),10);assert.equal(document.querySelector('.load-more'),null);
 });
-test('search tolerates case and punctuation; empty filters reset in one click',async()=>{
- await render();await fill('ГЭРЭЛ  2');assert.equal(cardCount(),1);
- await act(async()=>[...document.querySelectorAll('.category-tabs button')].find(b=>b.textContent==='Гадаад').click());
- assert.equal(cardCount(),0);assert.match(document.querySelector('.empty-state').textContent,/Тохирох кино олдсонгүй/);
- await click('.catalog-reset');assert.equal(cardCount(),24);assert.equal(document.querySelector('input[type=search]').value,'');
-});
-test('free and available filters never show locked paid cards',async()=>{
- await render();await select('.catalog-access select','free');assert.equal(cardCount(),11);
- await select('.catalog-access select','available');assert.equal(cardCount(),11);
- assert.ok([...document.querySelectorAll('.movie-price')].every(el=>el.textContent.includes('Үнэгүй')));
-});
-test('search and selections survive screen navigation and a movie round trip',async()=>{
- await render();await fill('гэрэл');await select('.catalog-select select','title');
- await click('[aria-label="Кино хайх"]');assert.equal(document.querySelector('input[type=search]').value,'гэрэл');assert.equal(cardCount(),1);
+test('category selection survives the movie round trip and Back opens the main page',async()=>{
+ await render();await act(async()=>[...document.querySelectorAll('.category-tabs button')].find(b=>b.textContent==='Гадаад').click());
  await click('.movie-main');assert.ok(document.querySelector('.film-landing'));assert.equal(document.querySelector('video'),null);
- await click('.film-back');
- assert.equal(document.querySelector('input[type=search]').value,'гэрэл');assert.equal(document.querySelector('.catalog-select select').value,'title');assert.equal(cardCount(),1);
+ await click('.film-back');assert.ok(document.querySelector('.site-header'));assert.equal(window.location.search,'');assert.equal(cardCount(),10);
+ assert.equal(document.querySelector('.category-tabs .active').textContent,'Гадаад');
 });
-test('an unavailable catalog stays an error on search, without empty success or duplicate alerts',async()=>{
- failed=true;await render();assert.ok(document.querySelector('.catalog-error'));assert.equal(document.querySelector('.app-alert'),null);
- await click('[aria-label="Кино хайх"]');assert.ok(document.querySelector('.catalog-error'));assert.equal(document.querySelector('.empty-state'),null);assert.doesNotMatch(document.body.textContent,/SQL|SETUP/);
+test('an unavailable catalog remains retryable without exposing internal errors',async()=>{
+ failed=true;await render();assert.ok(document.querySelector('.catalog-error'));assert.equal(document.querySelector('.app-alert'),null);assert.equal(document.querySelector('.empty-state'),null);assert.doesNotMatch(document.body.textContent,/SQL|SETUP/);
  failed=false;await click('.catalog-error button');assert.equal(cardCount(),24);assert.equal(document.querySelector('.catalog-error'),null);
+});
+test('five logo taps within eight seconds reveal sign-in, and the existing password flow still rejects a wrong code',async t=>{
+ let now=0;t.mock.method(performance,'now',()=>now);
+ await render();
+ for(const time of [0,2000,4000,6000]){now=time;await logo();}
+ assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);assert.equal(authWrites.length,0);
+ now=8000;await logo();const field=document.querySelector('[aria-label="Админы нууц үг"]');assert.ok(field);assert.equal(document.querySelector('.admin-surface'),null);
+ const enter=async value=>act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(field,value);field.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});
+ const submit=()=>act(async()=>field.closest('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));
+ await enter('wrong');await submit();assert.match(document.body.textContent,/Нууц үг буруу/);assert.equal(document.querySelector('.admin-surface'),null);
+ await enter('test-existing-admin-password');await submit();assert.ok(document.querySelector('.admin-surface'));assert.deepEqual(authWrites.at(-1),{action:'admin',password:'test-existing-admin-password'});
+});
+test('expired taps and clicks on the name do not unlock the admin entry',async t=>{
+ let now=0;t.mock.method(performance,'now',()=>now);await render();
+ for(const time of [0,2000,4000,6000]){now=time;await logo();}
+ now=8001;await logo();assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);
+ await click('[aria-label="ТАЗА САЙТ нүүр"]');assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);
+ now=8002;await logo();assert.ok(document.querySelector('[aria-label="Админы нууц үг"]'));
+});
+test('an existing admin session still starts on home and opens management after the hidden gesture',async()=>{
+ session={admin:true};await render();assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
+ for(let i=0;i<5;i++)await logo();assert.ok(document.querySelector('.admin-surface'));assert.equal(authWrites.length,0);
 });
 test('reconnection retries only a failed catalog and clears the offline notice',async()=>{
  failed=true;await render();const previous=filmRequests;

@@ -7,26 +7,26 @@ import "./install.css";
 export const viewport: Viewport = { themeColor: "#090d13" };
 
 export const metadata: Metadata = {
-  title: "Кино сайт",
+  title: "ТАЗА САЙТ",
   description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
   manifest: "/manifest.json",
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Кино сайт",
+    title: "ТАЗА САЙТ",
   },
   openGraph: {
-    title: "Кино сайт",
+    title: "ТАЗА САЙТ",
     description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
     ...(process.env.SITE_URL ? {url:process.env.SITE_URL} : {}),
-    siteName: "Кино сайт",
+    siteName: "ТАЗА САЙТ",
     images: [
       {
         url: "/cinema-cover.webp",
         width: 1200,
         height: 630,
-        alt: "Кино сайт",
+        alt: "ТАЗА САЙТ",
       },
     ],
     locale: "mn_MN",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Кино сайт",
+    title: "ТАЗА САЙТ",
     description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
     images: ["/cinema-cover.webp"],
   },

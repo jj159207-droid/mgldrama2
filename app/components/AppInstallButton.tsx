@@ -102,9 +102,9 @@ export default function AppInstallButton() {
     {open && createPortal(<dialog ref={dialogRef} className="install-dialog" aria-labelledby="install-title" onCancel={event => { event.preventDefault(); complete(); }} onClick={event => { if (event.target === event.currentTarget) complete(); }}>
       <button type="button" className="install-close" aria-label="Суулгах цонх хаах" onClick={complete}>×</button>
       <img src="/icon-192.png" width="64" height="64" alt="" className="install-icon" />
-      <span className="install-eyebrow">КИНО САЙТ · {ios ? "iPhone / iPad" : environment.platform === "android" ? "Android" : "Апп"}</span>
+      <span className="install-eyebrow">ТАЗА САЙТ · {ios ? "iPhone / iPad" : environment.platform === "android" ? "Android" : "Апп"}</span>
       <h2 id="install-title">{installed ? "Апп бэлэн байна" : "Кино тань нэг товчны цаана"}</h2>
-      <p className="install-intro">{installed ? "Нүүр дэлгэц дээрх Кино сайт дүрсээр шууд нэвтэрнэ." : "Нүүр дэлгэцдээ нэмээд, дараагийн удаа аппын дүрсээр шууд нээгээрэй."}</p>
+      <p className="install-intro">{installed ? "Нүүр дэлгэц дээрх ТАЗА САЙТ дүрсээр шууд нэвтэрнэ." : "Нүүр дэлгэцдээ нэмээд, дараагийн удаа аппын дүрсээр шууд нээгээрэй."}</p>
       {!installed && <>
         <div role="status" aria-live="polite" className="install-status">
           {outcome === "prompting" && "Нээгдсэн цонхонд «Суулгах» гэдгийг сонгоно уу."}

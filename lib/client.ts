@@ -4,7 +4,7 @@ export class RequestError extends Error {
 
 function responseMessage(status: number, message?: string) {
   if (status === 402 || status === 503) return 'Үйлчилгээ түр боломжгүй байна. Түр хүлээгээд дахин оролдоорой.';
-  if (status >= 500) return 'Кино сайттай холбогдоход алдаа гарлаа. Түр хүлээгээд дахин оролдоорой.';
+  if (status >= 500) return 'ТАЗА САЙТ-тай холбогдоход алдаа гарлаа. Түр хүлээгээд дахин оролдоорой.';
   if (status === 429) return 'Олон хүсэлт зэрэг ирсэн байна. Түр хүлээгээд дахин оролдоорой.';
   return message || 'Хүсэлтийг гүйцэтгэж чадсангүй. Дахин оролдоорой.';
 }

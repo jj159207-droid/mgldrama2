@@ -27,3 +27,12 @@ export function filmNavigationUrl(currentUrl: string, id: number | null): string
   }
   return `${url.pathname}${url.search}${url.hash}`;
 }
+
+// Give a newly opened Facebook/movie link a real home entry directly behind it.
+// The marker survives reloads so refresh and Strict Mode cannot grow the stack.
+export function prepareFilmHistory(history: History, currentUrl: string): void {
+  const url = new URL(currentUrl);
+  if (readFilmDestination(url.search).kind === "none" || history.state?.tazaFilmHome) return;
+  history.replaceState({page: "home"}, "", filmNavigationUrl(currentUrl, null));
+  history.pushState({page: "film", tazaFilmHome: true}, "", `${url.pathname}${url.search}${url.hash}`);
+}
