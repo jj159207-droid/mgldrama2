@@ -20,9 +20,13 @@ jobs:
       - name: Install pinned dependencies and encoder
         run: npm ci
       - name: Unit and real media tests
-        run: npm test
+        run: |
+          npm test > /tmp/trailer-unit.log 2>&1 || { tail -100 /tmp/trailer-unit.log; exit 1; }
+          tail -9 /tmp/trailer-unit.log
       - name: UI tests
-        run: npm run test:ui
+        run: |
+          npm run test:ui > /tmp/trailer-ui.log 2>&1 || { tail -100 /tmp/trailer-ui.log; exit 1; }
+          tail -9 /tmp/trailer-ui.log
       - name: Typecheck
         run: npm run typecheck
       - name: Bunny public documentation demo smoke test
@@ -31,11 +35,30 @@ jobs:
           node --import tsx --input-type=module <<'JS'
           import {createRequire} from 'node:module';
           const require=createRequire(import.meta.url);
-          const {createBunnyClip,parseBunnySource,mp4Duration}=require('./lib/trailer-media.ts');
-          const source=parseBunnySource('https://player.mediadelivery.net/embed/759/eb1c4f77-0cda-46be-b47d-1118ad7c2ffe');
-          const clip=await createBunnyClip(source,13,require('ffmpeg-static'),'https://bunny.net');
-          if(Math.abs(mp4Duration(clip)-12)>0.08)throw new Error('Public Bunny demo produced an invalid clip');
-          console.log('Public Bunny embed -> HLS -> MP4:',mp4Duration(clip),'seconds;',clip.length,'bytes');
+          const {createBunnyClip,parseBunnySource,mp4Duration,mediaUrl,parsePlaylist,variantUri}=require('./lib/trailer-media.ts');
+          const demos=['759/eb1c4f77-0cda-46be-b47d-1118ad7c2ffe','256380/d9d9ab1f-fc9f-4488-9c26-4ffc653c0024'];
+          const options={redirect:'error',headers:{Referer:'https://bunny.net'},signal:AbortSignal.timeout(20000)};
+          let verified=false;
+          for(const demo of demos){
+            const source=parseBunnySource(`https://player.mediadelivery.net/embed/${demo}`);
+            const api=`https://video.bunnycdn.com/library/${source.libraryId}/videos/${source.videoId}/play`;
+            const response=await fetch(api,options);
+            if(!response.ok)throw new Error(`Public demo playback data returned ${response.status}`);
+            const data=await response.json();
+            let url=mediaUrl(data.videoPlaylistUrl,new URL(api),source.videoId);
+            const master=await fetch(url,options);if(!master.ok)throw new Error('Public demo playlist unavailable');
+            let text=await master.text();const variant=variantUri(text);
+            if(variant){url=mediaUrl(variant,url,source.videoId);const child=await fetch(url,options);if(!child.ok)throw new Error('Public demo variant unavailable');text=await child.text();}
+            const duration=parsePlaylist(text).duration;
+            console.log('Public demo duration:',duration,'seconds');
+            if(duration<12)continue;
+            const start=Math.floor((duration-12)/2);
+            const clip=await createBunnyClip(source,start,require('ffmpeg-static'),'https://bunny.net');
+            if(Math.abs(mp4Duration(clip)-12)>0.08)throw new Error('Public Bunny demo produced an invalid clip');
+            console.log('Public Bunny embed -> HLS -> MP4:',mp4Duration(clip),'seconds;',clip.length,'bytes; start',start);
+            verified=true;break;
+          }
+          if(!verified)throw new Error('No public documentation demo contains a full twelve-second window');
           JS
       - name: Production build
         run: npm run build
@@ -56,8 +79,7 @@ jobs:
         run: |
           mkdir -p /tmp/trailer-artifact
           git archive --format=tar.gz --output=/tmp/trailer-artifact/source.tar.gz HEAD
-          cp node_modules/ffmpeg-static/ffmpeg /tmp/trailer-artifact/ffmpeg
-          cp node_modules/ffmpeg-static/ffmpeg.kino.json /tmp/trailer-artifact/ffmpeg.kino.json
+          cp /tmp/trailer-unit.log /tmp/trailer-ui.log /tmp/trailer-artifact/ || true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
