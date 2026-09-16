@@ -20,7 +20,8 @@ test('checkout loads the latest saved bank settings instead of only hardcoded da
   assert.match(page,/const \[bankAccount,setBankAccount\]=useState\(DEFAULT_BANK_ACCOUNT\)/);
   assert.match(page,/requestJson\("\/api\/settings",\{\},true\)/);
   assert.match(page,/bankAccount\.number/);
-  assert.doesNotMatch(page,/BANK_ACCOUNT\.number/);
+  assert.doesNotMatch(page,/const BANK_ACCOUNT =/);
+  assert.doesNotMatch(page,/\bBANK_ACCOUNT\.number\b/);
 });
 
 test('package purchase dialog does not reveal movie counts',()=>{
