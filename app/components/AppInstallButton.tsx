@@ -11,6 +11,7 @@ export default function AppInstallButton() {
   const [installed, setInstalled] = useState(false);
   const [available, setAvailable] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [manual, setManual] = useState(false);
   const [environment, setEnvironment] = useState<{ platform: InstallPlatform; embedded: boolean }>({ platform: "desktop", embedded: false });
   const [outcome, setOutcome] = useState<Outcome>("idle");
   const [siteUrl, setSiteUrl] = useState("");
@@ -94,7 +95,7 @@ export default function AppInstallButton() {
   const nativeReady = available && !environment.embedded && !installed;
   const complete = () => setOpen(false);
   return <>
-    <button type="button" ref={triggerRef} onClick={install} disabled={busy} className="app-install-trigger">
+    <button type="button" ref={triggerRef} onClick={install} aria-busy={busy} className="app-install-trigger">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" /></svg>
       {installed ? "Апп суусан" : "Апп суулгах"}
     </button>
@@ -111,7 +112,8 @@ export default function AppInstallButton() {
           {outcome === "dismissed" && "Суулгалтыг цуцаллаа. Хүссэн үедээ дахин суулгаж болно."}
           {outcome === "failed" && "Суулгах цонх нээгдсэнгүй. Доорх хөтчийн цэсээр нэмээрэй."}
         </div>
-        {!busy && outcome !== "accepted" && <>
+        {busy && !manual && <button type="button" className="install-help" onClick={() => setManual(true)}>Суулгах цонх харагдахгүй байна уу?</button>}
+        {(!busy || manual) && outcome !== "accepted" && <>
           {environment.embedded ? <>
             <h3>Эхлээд {ios ? "Safari" : environment.platform === "android" ? "Chrome" : "үндсэн хөтөч"}-д нээгээрэй</h3>
             <ol className="install-steps"><li>Энэ цонхны <strong>⋯</strong> эсвэл <strong>⋮</strong> цэсийг дарна.</li><li><strong>{ios ? "Open in Safari" : "Open in browser"}</strong> — хөтөч дээр нээх сонголтыг сонгоно.</li><li>Сайт нээгдэхэд <strong>Апп суулгах</strong> товчийг дахин дарна.</li></ol>
