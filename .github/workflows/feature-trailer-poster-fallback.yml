@@ -1,0 +1,43 @@
+name: Verify trailer poster fallback
+on:
+  push:
+    branches: [feature-trailer-poster-fallback]
+    paths:
+      - 'scripts/patch-trailer-poster-fallback.mjs'
+      - '.github/workflows/feature-trailer-poster-fallback.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: feature-trailer-poster-fallback
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply trailer poster fallback
+        run: node scripts/patch-trailer-poster-fallback.mjs
+      - name: Install dependencies
+        run: npm ci
+      - name: UI tests
+        run: npm run test:ui
+      - name: Unit tests
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit verified feature
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/page.tsx app/components/FilmLanding.tsx app/components/TrailerPosterFrame.tsx app/globals.css tests/ui/trailer-poster-fallback.test.cjs
+          git commit -m 'Show trailer first frame when poster is missing'
+          git push origin HEAD:feature-trailer-poster-fallback
