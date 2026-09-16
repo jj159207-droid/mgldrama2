@@ -153,7 +153,16 @@ test('paid playback requires own confirmed unexpired purchase',async()=>{
  const r=await playback.GET(req('/api/playback?id=1','GET',undefined,c));assert.equal(r.status,200);assert.equal((await r.json()).url,'https://video.example/movie.mp4');
  tables.pending_payments[0].status='revoked';assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,403);
 });
-test('free playback works without account',async()=>{tables.films[0].free=true;assert.equal((await playback.GET(req('/api/playback?id=1'))).status,200);});
+test('full playback always requires login, while free/unlocked films need no payment after login',async()=>{
+ const guest=()=>playback.GET(req('/api/playback?id=1'));
+ tables.films[0].free=true;
+ assert.equal((await guest()).status,403);
+ const c=await register();
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
+ tables.films[0].free=false;tables.films[0].locked=false;
+ assert.equal((await guest()).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
+});
 test('3-day and yearly plans, invalid dates and maximum expiry correct',()=>{
  const time=Date.parse('2026-01-01T00:00:00Z');const base={status:'confirmed',confirmed_at:new Date(time).toISOString()};
  assert.equal(paymentExpiry({...base,plan:'3day'}),time+3*86400000);assert.equal(paymentExpiry({...base,plan:'1year'}),time+365*86400000);
