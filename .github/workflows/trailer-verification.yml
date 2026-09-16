@@ -25,6 +25,18 @@ jobs:
         run: npm run test:ui
       - name: Typecheck
         run: npm run typecheck
+      - name: Bunny public documentation demo smoke test
+        if: github.ref == 'refs/heads/feature/bunny-12-second-trailers'
+        run: |
+          node --import tsx --input-type=module <<'JS'
+          import {createRequire} from 'node:module';
+          const require=createRequire(import.meta.url);
+          const {createBunnyClip,parseBunnySource,mp4Duration}=require('./lib/trailer-media.ts');
+          const source=parseBunnySource('https://player.mediadelivery.net/embed/759/eb1c4f77-0cda-46be-b47d-1118ad7c2ffe');
+          const clip=await createBunnyClip(source,13,require('ffmpeg-static'),'https://bunny.net');
+          if(Math.abs(mp4Duration(clip)-12)>0.08)throw new Error('Public Bunny demo produced an invalid clip');
+          console.log('Public Bunny embed -> HLS -> MP4:',mp4Duration(clip),'seconds;',clip.length,'bytes');
+          JS
       - name: Production build
         run: npm run build
       - name: Verify traced encoder and function size
@@ -33,10 +45,10 @@ jobs:
           import {readFileSync,statSync} from 'node:fs';
           import {resolve,dirname} from 'node:path';
           const path='.next/server/app/api/trailers/route.js.nft.json';
-          const files=JSON.parse(readFileSync(path,'utf8')).files;
+          const files=[...new Set(JSON.parse(readFileSync(path,'utf8')).files.map(f=>resolve(dirname(path),f)))];
           if(!files.some(p=>p.endsWith('/ffmpeg-static/ffmpeg')))throw new Error('Encoder missing from production trace');
-          const total=files.reduce((n,f)=>n+statSync(resolve(dirname(path),f)).size,0);
-          console.log('Trailer traced files:',Math.round(total/1048576),'MiB');
+          const total=files.reduce((n,f)=>n+statSync(f).size,0);
+          console.log('Unique trailer traced files:',Math.round(total/1048576),'MiB');
           if(total>245*1048576)throw new Error('Trailer function exceeds safe deployment size');
           JS
       - name: Verification snapshot
