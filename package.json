@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "preflight": "node scripts/preflight.mjs",
     "posters:migrate": "tsx scripts/migrate-posters.ts",
-    "test:ui": "node --test tests/ui/*.test.cjs"
+    "test:ui": "node --test tests/ui/*.test.cjs",
+    "postinstall": "node scripts/provision-ffmpeg.mjs",
+    "prebuild": "node scripts/provision-ffmpeg.mjs"
   },
   "dependencies": {
     "ffmpeg-static": "5.3.0",

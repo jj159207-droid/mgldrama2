@@ -1,59 +1,52 @@
 name: Trailer verification
 on:
   push:
-    branches: [feature/bunny-12-second-trailers]
+    branches: [main, feature/bunny-12-second-trailers]
 permissions:
-  contents: write
+  contents: read
+defaults:
+  run:
+    shell: bash
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
           cache: npm
-      - name: Apply scoped integration and pin FFmpeg
-        id: prepare
-        run: |
-          mkdir -p /tmp/trailer-artifact
-          node scripts/install-trailer-editor.mjs
-          if ! node -e "if(require('./package.json').dependencies['ffmpeg-static']!=='5.3.0')process.exit(1)"; then
-            npm install --save-exact ffmpeg-static@5.3.0
-          else
-            npm ci
-          fi
-          cp "$(node -e 'process.stdout.write(require("ffmpeg-static"))')" /tmp/trailer-artifact/ffmpeg
-          tar -czf /tmp/trailer-artifact/dependencies.tar.gz node_modules
-      - name: Unit and media tests
-        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
-        run: npm test 2>&1 | tee /tmp/trailer-artifact/unit.log
+      - name: Install pinned dependencies and encoder
+        run: npm ci
+      - name: Unit and real media tests
+        run: npm test
       - name: UI tests
-        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
-        run: npm run test:ui 2>&1 | tee /tmp/trailer-artifact/ui.log
+        run: npm run test:ui
       - name: Typecheck
-        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
-        run: npm run typecheck 2>&1 | tee /tmp/trailer-artifact/typecheck.log
-      - name: Build
-        if: ${{ !cancelled() && steps.prepare.outcome == 'success' }}
-        run: npm run build 2>&1 | tee /tmp/trailer-artifact/build.log
-      - name: Commit verified integration only to the feature branch
-        if: ${{ success() && github.ref == 'refs/heads/feature/bunny-12-second-trailers' }}
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
+      - name: Verify traced encoder and function size
         run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/page.tsx next.config.js package.json package-lock.json
-          if ! git diff --cached --quiet; then
-            git commit -m 'Integrate tested Bunny trailer editor and pin FFmpeg runtime'
-            git push origin HEAD:feature/bunny-12-second-trailers
-          fi
-      - name: Source snapshot
+          node --input-type=module <<'JS'
+          import {readFileSync,statSync} from 'node:fs';
+          import {resolve,dirname} from 'node:path';
+          const path='.next/server/app/api/trailers/route.js.nft.json';
+          const files=JSON.parse(readFileSync(path,'utf8')).files;
+          if(!files.some(p=>p.endsWith('/ffmpeg-static/ffmpeg')))throw new Error('Encoder missing from production trace');
+          const total=files.reduce((n,f)=>n+statSync(resolve(dirname(path),f)).size,0);
+          console.log('Trailer traced files:',Math.round(total/1048576),'MiB');
+          if(total>245*1048576)throw new Error('Trailer function exceeds safe deployment size');
+          JS
+      - name: Verification snapshot
         if: always()
         run: |
           mkdir -p /tmp/trailer-artifact
-          git ls-files -z | tar --null -T - -czf /tmp/trailer-artifact/source.tar.gz
-      - uses: actions/upload-artifact@v4
+          git archive --format=tar.gz --output=/tmp/trailer-artifact/source.tar.gz HEAD
+          cp node_modules/ffmpeg-static/ffmpeg /tmp/trailer-artifact/ffmpeg
+          cp node_modules/ffmpeg-static/ffmpeg.kino.json /tmp/trailer-artifact/ffmpeg.kino.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
           name: trailer-verification
