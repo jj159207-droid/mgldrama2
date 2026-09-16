@@ -1,13 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import "./chat.css";
+import "./install.css";
 
-export const viewport: Viewport = { themeColor: "#0d0d14" };
+export const viewport: Viewport = { themeColor: "#090d13" };
 
 export const metadata: Metadata = {
   title: "Кино сайт",
   description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
   manifest: "/manifest.json",
+  icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -50,22 +53,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {children}
-        <script dangerouslySetInnerHTML={{ __html: `
-          if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-              if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-                navigator.serviceWorker.getRegistrations().then(function(regs) {
-                  regs.forEach(function(reg) { reg.unregister(); });
-                });
-                caches.keys().then(function(keys) {
-                  keys.filter(function(key) { return key.startsWith('mgldrama-'); }).forEach(function(key) { caches.delete(key); });
-                });
-              } else {
-                navigator.serviceWorker.register('/sw.js').catch(function(){});
-              }
-            });
-          }
-        `}} />
+        <Script src="/install.js" strategy="beforeInteractive" />
       </body>
     </html>
   );

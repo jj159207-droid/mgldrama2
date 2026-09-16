@@ -20,5 +20,9 @@
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ]
+  ],
+  "id": "/",
+  "scope": "/",
+  "lang": "mn",
+  "prefer_related_applications": false
 }
