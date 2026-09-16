@@ -9,8 +9,9 @@ export async function GET(req:NextRequest) {
   if(!Number.isSafeInteger(id)||id<=0)throw new ApiError(400,'Киноны ID буруу.');
   const [film]=await db(`films?id=eq.${id}&select=*`);if(!film)throw new ApiError(404,'Кино олдсонгүй.');
   const s=await session(req);
-  const payments=s?.userId && !s.admin && film.free!==true && film.locked!==false ? await entitlementPayments(s.userId) : [];
-  if(!s?.admin&&!canWatch(film,payments))throw new ApiError(403,'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.');
+  if(!s)throw new ApiError(403,'Бүтэн кино үзэхийн тулд эхлээд нэвтэрнэ үү.');
+  const payments=s.userId && !s.admin && film.free!==true && film.locked!==false ? await entitlementPayments(s.userId) : [];
+  if(!s.admin&&!canWatch(film,payments))throw new ApiError(403,'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.');
   const url=safeUrl(String(film.url||'').split('|||')[0]);
   if(!url)throw new ApiError(404,'Видео холбоос байхгүй эсвэл буруу байна.');
   return json({...film,url,locked:false});
