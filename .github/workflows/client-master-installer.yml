@@ -7,13 +7,24 @@ on:
       - 'installer/**'
       - 'tests/ui/client-master-installer.test.cjs'
       - '.github/workflows/client-master-installer.yml'
+      - 'app/**'
+      - 'lib/**'
+      - 'public/**'
+      - 'scripts/**'
+      - 'supabase/**'
+      - 'package*.json'
+      - 'next.config.js'
+      - 'tsconfig.json'
+      - 'postcss.config.mjs'
+      - 'eslint.config.mjs'
+      - '.env.example'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
   verify-master:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -27,9 +38,9 @@ jobs:
         run: |
           $tokens=$null
           $errors=$null
-          [System.Management.Automation.Language.Parser]::ParseFile('installer/TAZA-SETUP-V2.ps1',[ref]$tokens,[ref]$errors) | Out-Null
+          [System.Management.Automation.Language.Parser]::ParseFile('installer/TAZA-SETUP.ps1',[ref]$tokens,[ref]$errors) | Out-Null
           if ($errors.Count -gt 0) {
-            $errors | ForEach-Object { Write-Error $_.Message }
+            $errors | ForEach-Object { Write-Error ("line {0}: {1}" -f $_.Extent.StartLineNumber,$_.Message) }
             exit 1
           }
       - name: UI and installer tests
@@ -42,3 +53,35 @@ jobs:
         run: npm run build
       - name: Diff safety
         run: git diff --check
+      - name: Build sanitized flash-drive package
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .package TAZA-SITE-MASTER.zip
+          mkdir -p .package/TAZA-SITE-MASTER/installer
+          cp START-HERE.cmd .package/TAZA-SITE-MASTER/
+          cp installer/TAZA-SETUP.ps1 installer/README-MN.txt installer/macro-template.mdr.gz.b64 .package/TAZA-SITE-MASTER/installer/
+          cp -a app lib public scripts supabase .package/TAZA-SITE-MASTER/
+          cp .env.example .gitignore package.json package-lock.json next.config.js postcss.config.mjs tsconfig.json eslint.config.mjs .package/TAZA-SITE-MASTER/
+          node <<'NODE'
+          const fs=require('node:fs');
+          const p='.package/TAZA-SITE-MASTER/app/page.tsx';
+          let s=fs.readFileSync(p,'utf8');
+          const before=s;
+          s=s.replace(/const DEFAULT_BANK_ACCOUNT = \{[\s\S]*?\};/,`const DEFAULT_BANK_ACCOUNT = {\n  bank: "Банк",\n  number: "0000000000",\n  name: "Данс эзэмшигч",\n};`);
+          if(s===before) throw new Error('DEFAULT_BANK_ACCOUNT block was not sanitized');
+          fs.writeFileSync(p,s);
+          NODE
+          test ! -e .package/TAZA-SITE-MASTER/installer/TAZA-SETUP-V2.ps1
+          test ! -e .package/TAZA-SITE-MASTER/installer/TAZA-SETUP-FINAL.ps1
+          grep -q 'bank: "Банк"' .package/TAZA-SITE-MASTER/app/page.tsx
+          grep -q 'number: "0000000000"' .package/TAZA-SITE-MASTER/app/page.tsx
+          (cd .package && zip -qr ../TAZA-SITE-MASTER.zip TAZA-SITE-MASTER)
+          unzip -t TAZA-SITE-MASTER.zip
+      - name: Upload flash-drive package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: TAZA-SITE-MASTER
+          path: TAZA-SITE-MASTER.zip
+          if-no-files-found: error
+          retention-days: 30
