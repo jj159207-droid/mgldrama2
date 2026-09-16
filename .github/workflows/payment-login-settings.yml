@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/install-payment-login-settings.mjs'
       - 'scripts/install-payment-login-settings-safe.mjs'
+      - 'scripts/install-auth-autofocus.mjs'
       - 'app/api/settings/route.ts'
       - 'tests/ui/payment-login-settings.test.cjs'
 permissions:
@@ -28,6 +29,8 @@ jobs:
         run: npm ci
       - name: Apply deterministic page integration
         run: node scripts/install-payment-login-settings-safe.mjs
+      - name: Apply auth autofocus integration
+        run: node scripts/install-auth-autofocus.mjs
       - name: Unit tests
         run: npm test
       - name: UI tests
@@ -47,5 +50,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add app/page.tsx
-          git commit -m 'Integrate editable bank details and simpler login UX'
+          git commit -m 'Add automatic login field focus'
           git push origin HEAD:feature/admin-payment-login-settings
