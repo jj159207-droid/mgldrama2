@@ -37,7 +37,7 @@ replaceByRegex('app/page.tsx',/function Poster\(\{ film \}: any\) \{[\s\S]*?\n\}
       <span>{decodeCat(film.badge)} · {decodeBadge(film.badge)}</span>
     </div>
     {showImage && <img loading="lazy" decoding="async" width="360" height="540" src={image} alt="" onError={() => setFailed(true)} />}
-    {showTrailer && trailerVisible && <video data-poster-trailer src={trailer} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1} onError={()=>setTrailerFailed(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} />}
+    {showTrailer && trailerVisible && <video data-poster-trailer src={trailer} muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} onError={()=>setTrailerFailed(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} />}
   </div>;
 }
 function FilmCard`,'catalog Poster');
@@ -52,9 +52,9 @@ landing=landing.replace(filmImagePattern,`function FilmImage({film, priority = f
   const src = safeUrl(film.img || "", true);
   const embed = getVideoEmbed(trailerUrl(film));
   const trailer = embed.type === "video" ? safeUrl(embed.src) : "";
-  // When no poster exists, use only the public trailer as visual media. Never use the private full movie URL.
+  // When no poster exists, use only the first visual frame of the public trailer. Never use the private full movie URL.
   return src && !failed ? <Image unoptimized src={src} alt={film.title} fill sizes={priority ? "(max-width: 760px) 54vw, 540px" : "(max-width: 760px) 33vw, 360px"} preload={priority} onError={()=>setFailed(true)} />
-    : trailer && !trailerFailed ? <video data-poster-trailer src={trailer} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1} onError={()=>setTrailerFailed(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} />
+    : trailer && !trailerFailed ? <video data-poster-trailer src={trailer} muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} onError={()=>setTrailerFailed(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} />
     : <span className="detail-poster-fallback" aria-hidden="true"><span>ТАЗА САЙТ</span><strong>{film.title}</strong></span>;
 }
 
@@ -65,7 +65,7 @@ const testPath='tests/ui/movie-details.test.cjs';
 let test=fs.readFileSync(testPath,'utf8');
 const anchor=`test('poster starts only the public trailer; full playback requires its own button',async()=>{`;
 if(!test.includes(anchor)) throw new Error('movie-details anchor missing');
-const addition=`test('a movie without a poster uses its public trailer in poster areas without requesting full playback',async()=>{\n await render('/?film=34');\n let preview=document.querySelector('.detail-poster video[data-poster-trailer]');assert.ok(preview);assert.equal(preview.getAttribute('src'),films[1].preview_url);assert.equal(preview.muted,true);\n assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);\n await pop('/');\n const card=[...document.querySelectorAll('.movie-main')].find(button=>button.textContent.includes('Алсын зам'));assert.ok(card);\n preview=card.querySelector('video[data-poster-trailer]');assert.ok(preview);assert.equal(preview.getAttribute('src'),films[1].preview_url);\n assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);\n});\n`;
+const addition=`test('a movie without a poster uses its public trailer first frame in poster areas without requesting full playback',async()=>{\n await render('/?film=34');\n let preview=document.querySelector('.detail-poster video[data-poster-trailer]');assert.ok(preview);assert.equal(preview.getAttribute('src'),films[1].preview_url);assert.equal(preview.muted,true);assert.equal(preview.autoplay,false);\n assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);\n await pop('/');\n const card=[...document.querySelectorAll('.movie-main')].find(button=>button.textContent.includes('Алсын зам'));assert.ok(card);\n preview=card.querySelector('video[data-poster-trailer]');assert.ok(preview);assert.equal(preview.getAttribute('src'),films[1].preview_url);assert.equal(preview.autoplay,false);\n assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);\n});\n`;
 test=test.replace(anchor,addition+anchor);
 fs.writeFileSync(testPath,test);
-console.log('Applied trailer-as-poster fallback and regression coverage.');
+console.log('Applied lightweight trailer-first-frame poster fallback and regression coverage.');
