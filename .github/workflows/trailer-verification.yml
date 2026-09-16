@@ -1,0 +1,28 @@
+name: Trailer verification
+on:
+  push:
+    branches: [feature/bunny-12-second-trailers]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source snapshot
+        run: git archive --format=zip --output=trailer-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trailer-source
+          path: trailer-source.zip
+          retention-days: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:ui
+      - run: npm run typecheck
+      - run: npm run build
