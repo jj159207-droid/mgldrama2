@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {},
+  serverExternalPackages: ['ffmpeg-static'],
+  outputFileTracingIncludes: { '/api/trailers': ['./node_modules/ffmpeg-static/ffmpeg*'] },
   poweredByHeader: false,
   async headers() {
     const security=[
