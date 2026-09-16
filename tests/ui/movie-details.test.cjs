@@ -36,6 +36,7 @@ beforeEach(()=>{
   }
   if(url.pathname==='/api/access')return Response.json({access:entitled?{film_7:Date.now()+86400000}:{}});
   if(url.pathname==='/api/settings')return Response.json({});
+  if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/playback'){
    if(playbackGate)await playbackGate.promise;
    if(failPlayback)return Response.json({message:'Backend unavailable'},{status:503});
