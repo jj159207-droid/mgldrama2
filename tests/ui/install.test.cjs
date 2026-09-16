@@ -77,8 +77,15 @@ test('double clicks cannot consume the same prompt twice while the system dialog
   let finish;
   const prompt = nativePrompt('dismissed', () => new Promise(resolve => { finish = resolve; }));
   await render(); await trigger(); await trigger(); assert.equal(prompt.calls(), 1);
-  assert.equal(document.querySelector('.app-install-trigger').disabled, true);
-  await act(async () => finish()); assert.equal(document.querySelector('.app-install-trigger').disabled, false);
+  assert.equal(document.querySelector('.app-install-trigger').getAttribute('aria-busy'), 'true');
+  await act(async () => finish()); assert.equal(document.querySelector('.app-install-trigger').getAttribute('aria-busy'), 'false');
+});
+test('if the native dialog never responds, users can reopen help and use manual installation without a second prompt', async () => {
+  const prompt = nativePrompt('dismissed', () => new Promise(() => {}));
+  await render(); await trigger(); await click('.install-close'); await trigger(); await click('.install-help');
+  assert.equal(prompt.calls(), 1);
+  assert.match(document.body.textContent, /Chrome цэсээр суулгах/);
+  assert.ok(document.querySelector('.install-copy'));
 });
 for (const kind of ['sync', 'async']) test(`${kind} prompt errors recover to manual instructions without an unhandled failure`, async () => {
   const prompt = nativePrompt('dismissed', () => { if (kind === 'sync') throw Error('not allowed'); return Promise.reject(Error('not allowed')); });
