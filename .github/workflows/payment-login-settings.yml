@@ -1,0 +1,50 @@
+name: Payment and login settings verification
+on:
+  push:
+    branches: [feature/admin-payment-login-settings]
+    paths:
+      - 'scripts/install-payment-login-settings.mjs'
+      - 'app/api/settings/route.ts'
+      - 'tests/ui/payment-login-settings.test.cjs'
+permissions:
+  contents: write
+defaults:
+  run:
+    shell: bash
+jobs:
+  verify-and-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Apply deterministic page integration
+        run: node scripts/install-payment-login-settings.mjs
+      - name: Unit tests
+        run: npm test
+      - name: UI tests
+        run: npm run test:ui
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
+      - name: Diff safety check
+        run: git diff --check
+      - name: Commit verified integration
+        run: |
+          if git diff --quiet -- app/page.tsx; then
+            echo 'No page integration changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/page.tsx
+          git commit -m 'Integrate editable bank details and simpler login UX'
+          git push origin HEAD:feature/admin-payment-login-settings
