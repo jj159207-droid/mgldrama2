@@ -1,0 +1,44 @@
+name: Client master installer verification
+on:
+  push:
+    branches: [client-master-installer]
+    paths:
+      - 'START-HERE.cmd'
+      - 'installer/**'
+      - 'tests/ui/client-master-installer.test.cjs'
+      - '.github/workflows/client-master-installer.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-master:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Parse PowerShell installer
+        shell: pwsh
+        run: |
+          $tokens=$null
+          $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile('installer/TAZA-SETUP-V2.ps1',[ref]$tokens,[ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+      - name: UI and installer tests
+        run: npm run test:ui
+      - name: Unit tests
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
+      - name: Diff safety
+        run: git diff --check
