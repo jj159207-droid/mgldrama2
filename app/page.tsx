@@ -9,6 +9,7 @@ import PosterUpload from "@/app/components/PosterUpload";
 import ReadinessCheck from "@/app/components/ReadinessCheck";
 import CatalogBrowser from "@/app/components/CatalogBrowser";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
+import AppInstallButton from "@/app/components/AppInstallButton";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
@@ -506,7 +507,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
     </dialog>;
 }
 
-function HomePage({ chatUnread, films, onFilm, onSearch, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onInstall, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange }: any) {
+function HomePage({ chatUnread, films, onFilm, onSearch, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const getExpiry = (filmId: number, category?: string): string | null => {
@@ -553,7 +554,7 @@ function HomePage({ chatUnread, films, onFilm, onSearch, onAdmin, loading, loadE
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand">КИНО САЙТ</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><button onClick={onInstall}><UiIcon name="download" size={16} />Апп суулгах</button><button onClick={onAdmin}>Удирдах</button></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand">КИНО САЙТ</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /><button onClick={onAdmin}>Удирдах</button></div></footer>
     </main>
   </div>;
 }
@@ -1634,9 +1635,7 @@ export default function Home() {
   const [watchError, setWatchError] = useState("");
   const pendingActionRef = useRef<{kind:"watch";film:FilmDetails} | {kind:"plan";plan:string;film:FilmDetails|null} | null>(null);
   const [showContact, setShowContact] = useState(false);
-  const [showInstall, setShowInstall] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
-  const [pwaPrompt, setPwaPrompt] = useState<any>(null);
   const [user, setUser] = useState<any>(null);
   const chatUnread = useChatUnread(user?.id || null);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -1649,29 +1648,6 @@ export default function Home() {
   const syncAccessFromDB = async (userId: number) => {
     const data=await requestJson("/api/access",{},true);
     if(accessOwner.current===userId)setAccessMap(data.access || {});
-  };
-
-  // PWA install prompt барих
-  useEffect(() => {
-    const handler = (e: any) => {
-      e.preventDefault();
-      setPwaPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handler as any);
-    return () => window.removeEventListener('beforeinstallprompt', handler as any);
-  }, []);
-
-  const handleInstallClick = () => {
-    const prompt = pwaPrompt || (window as any).__pwaPrompt;
-    if (prompt) {
-      prompt.prompt();
-      prompt.userChoice.then(() => {
-        setPwaPrompt(null);
-        (window as any).__pwaPrompt = null;
-      });
-    } else {
-      setShowInstall(true);
-    }
   };
 
   useEffect(() => {
@@ -1753,7 +1729,7 @@ export default function Home() {
     const readLocation = (event?: PopStateEvent) => {
       playRequest.current++;
       pendingActionRef.current=null;setWatching(false);setWatchError("");
-      setShowContact(false);setShowLoginModal(false);setShowInstall(false);setShowPlanModal(false);
+      setShowContact(false);setShowLoginModal(false);setShowPlanModal(false);
       setCurFilm(null);setPayFilm(null);setSelectedFilm(null);setFilmError("");
       const target=readFilmDestination(window.location.search);
       setFilmTarget(target);
@@ -1885,7 +1861,7 @@ export default function Home() {
       {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
 
-      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} onInstall={handleInstallClick} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
+      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onSearch={() => navigateTo("search")} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => window.history.back()} />}
       {page === "search" && <SearchPage films={filmsWithUnlock} onFilm={handleFilm} onBack={() => navigateTo("home")} catalogState={catalogState} onCatalogChange={setCatalogState} loading={loading} loadError={loadError} onRetry={loadFilms} />}
@@ -1893,33 +1869,6 @@ export default function Home() {
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
-
-      {showInstall && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "flex-end", zIndex: 400 }}>
-          <div style={{ background: C.card, borderRadius: "18px 18px 0 0", padding: "24px 20px 40px", width: "100%", border: `0.5px solid ${C.bd}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <div style={{ fontSize: 16, fontWeight: 800, color: C.txt }}>📲 Утсанд суулгах заавар</div>
-              <button onClick={() => setShowInstall(false)} style={{ background: "none", border: "none", color: C.muted, fontSize: 24, cursor: "pointer" }}>✕</button>
-            </div>
-            <div style={{ background: C.card2, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.gold, marginBottom: 10 }}>🤖 Android (Chrome)</div>
-              <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
-                1. Chrome цэс <span style={{ color: C.gold, fontWeight: 700 }}>⋮</span> дарна<br/>
-                2. <span style={{ color: C.gold, fontWeight: 700 }}>&quot;Нүүр дэлгэцэнд нэмэх&quot;</span> дарна<br/>
-                3. <span style={{ color: C.gold, fontWeight: 700 }}>&quot;Суулгах&quot;</span> дарна
-              </div>
-            </div>
-            <div style={{ background: C.card2, borderRadius: 12, padding: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.blue, marginBottom: 10 }}>🍎 iPhone (Safari)</div>
-              <div style={{ fontSize: 13, color: C.txt, lineHeight: 1.8 }}>
-                1. Safari дээр нээнэ<br/>
-                2. Share товч <span style={{ color: C.blue, fontWeight: 700 }}>□↑</span> дарна<br/>
-                3. <span style={{ color: C.blue, fontWeight: 700 }}>&quot;Add to Home Screen&quot;</span> дарна
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
       {showLoginModal && !user && mounted && createPortal(
