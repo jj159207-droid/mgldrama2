@@ -9,6 +9,7 @@ import * as playback from '../app/api/playback/route';
 import * as sms from '../app/api/sms/route';
 import * as settings from '../app/api/settings/route';
 import * as access from '../app/api/access/route';
+import * as appearance from '../app/api/appearance/route';
 process.env.SUPABASE_URL='https://test.invalid';
 process.env.SUPABASE_SERVICE_ROLE_KEY='fake.service.jwt';
 process.env.ADMIN_PASSWORD='test-admin-password-long-enough';
@@ -19,7 +20,7 @@ let counters:Record<string,number>;
 let nextId=1;
 const now=()=>new Date().toISOString();
 beforeEach(()=>{
- delete process.env.SMS_ALLOWED_SENDER;nextId=100;counters={};tables={users:[],films:[{id:1,title:'Test',price:5000,locked:true,free:false,url:'https://video.example/movie.mp4',preview_url:'https://video.example/trailer.mp4',badge:'Хэлтэй|Гадаад'}],pending_payments:[],app_sessions:[],contact_messages:[],sms_logs:[]};
+ delete process.env.SMS_ALLOWED_SENDER;nextId=100;counters={};tables={users:[],films:[{id:1,title:'Test',price:5000,locked:true,free:false,url:'https://video.example/movie.mp4',preview_url:'https://video.example/trailer.mp4',badge:'Хэлтэй|Гадаад'}],pending_payments:[],app_sessions:[],contact_messages:[],sms_logs:[],site_appearance:[{id:1,layout:1,tone:25,revision:0}]};
  global.fetch=async(input,init)=>{
   const u=new URL(String(input));assert.equal(u.origin,'https://test.invalid','test must never access real service');
   const name=u.pathname.replace('/rest/v1/','');const method=init?.method||'GET';const body=init?.body?JSON.parse(String(init.body)):null;
@@ -441,4 +442,30 @@ test('order creation retries acknowledge an already-confirmed same purchase with
  await api.POST(dbReq('pending_payments','POST',body,c));const confirmedAt=new Date(Date.now()-3600000).toISOString();tables.pending_payments[0].status='confirmed';tables.pending_payments[0].confirmed_at=confirmedAt;
  const r=await api.POST(dbReq('pending_payments','POST',body,c));assert.equal(r.status,200);assert.equal(tables.pending_payments.length,1);assert.equal((await r.json())[0].confirmed_at,confirmedAt);
  tables.pending_payments[0].user_id=999;const conflict=await api.POST(dbReq('pending_payments','POST',body,c));assert.equal(conflict.status,409);assert.equal((await conflict.json()).code,'REF_CONFLICT');
+});
+
+
+test('appearance is public but only an admin may update its bounded settings',async()=>{
+ const settings={layout:4,tone:77,revision:0};
+ assert.deepEqual(await (await appearance.GET()).json(),{appearance:{layout:1,tone:25,revision:0}});
+ assert.match((await appearance.GET()).headers.get('cache-control')||'',/no-store/);
+ assert.equal((await appearance.PUT(req('/api/appearance','PUT',settings))).status,403);
+ const user=await register();
+ assert.equal((await appearance.PUT(req('/api/appearance','PUT',settings,user))).status,403);
+ const cookie=await admin();
+ assert.equal((await appearance.PUT(req('/api/appearance','PUT',settings,cookie,{origin:'https://evil.test'}))).status,403);
+ const result=await appearance.PUT(req('/api/appearance','PUT',settings,cookie));
+ assert.equal(result.status,200);
+ assert.deepEqual(await result.json(),{appearance:{layout:4,tone:77,revision:1}});
+ assert.deepEqual(await (await appearance.GET()).json(),{appearance:{layout:4,tone:77,revision:1}});
+ assert.equal((await appearance.PUT(req('/api/appearance','PUT',{...settings,layout:2},cookie))).status,409);
+ assert.deepEqual(tables.site_appearance,[{id:1,layout:4,tone:77,revision:1}]);
+});
+test('appearance rejects unbounded or executable input without changing settings',async()=>{
+ const cookie=await admin(),base={layout:1,tone:25,revision:0};
+ const invalid=[null,[],{}, {...base,layout:0},{...base,layout:5},{...base,layout:'2'}, {...base,tone:-1},{...base,tone:101},{...base,tone:1.5},{...base,tone:'50'}, {...base,revision:-1},{...base,revision:0.1},{...base,css:'url(https://evil.test)'},{...base,id:2}];
+ for(const value of invalid)assert.equal((await appearance.PUT(req('/api/appearance','PUT',value,cookie))).status,400);
+ assert.deepEqual(tables.site_appearance,[{id:1,...base}]);
+ tables.site_appearance=[];
+ assert.equal((await appearance.GET()).status,503);
 });

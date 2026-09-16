@@ -11,6 +11,9 @@ import CatalogBrowser from "@/app/components/CatalogBrowser";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
 import AppInstallButton from "@/app/components/AppInstallButton";
 import AdminEntryLogo from "@/app/components/AdminEntryLogo";
+import AppearanceEditor from "@/app/components/AppearanceEditor";
+import useSiteAppearance from "@/app/components/useSiteAppearance";
+import {appearanceStyle} from "@/lib/appearance";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
@@ -45,9 +48,9 @@ function decodeBadge(badge: string): string { return (badge || "").split("|")[0]
 function decodeCat(badge: string): string { return (badge || "").split("|")[1] || "Эротик"; }
 
 const C = {
-  bg: "#090d13", card: "#111822", card2: "#1a2431", bd: "#2a3543",
-  txt: "#f5f5f3", muted: "#a6b0be",
-  red: "#e8281e", gold: "#efb65b", green: "#16a34a", blue: "#2563eb", amber: "#ca8a04",
+  bg: "var(--background)", card: "var(--surface)", card2: "var(--surface-raised, #1a2431)", bd: "var(--border)",
+  txt: "var(--foreground)", muted: "var(--muted)",
+  red: "#e8281e", gold: "var(--accent)", green: "#16a34a", blue: "#2563eb", amber: "#ca8a04",
 };
 
 const badgeColor = (b: string) => b === "Хадмал" ? C.amber : C.blue;
@@ -508,7 +511,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
     </dialog>;
 }
 
-function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange }: any) {
+function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const getExpiry = (filmId: number, category?: string): string | null => {
@@ -549,7 +552,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
         <div className="package-banner-copy"><span className="package-banner-label"><UiIcon name="film" size={18} /> КИНО БАГЦ</span><h1 id="package-banner-title">Олон киног нэг багцаар</h1><p>Гадаад · Хятад · Эротик 18+</p><span className="package-banner-detail">Нэг ангиллын бүх кино · 3 хоног</span></div>
         <div className="package-banner-action"><div className="package-banner-price"><strong>{PLAN_PRICES.gadaad_3day.toLocaleString()}₮</strong><span>-өөс эхлэн</span></div><button type="button" className="primary-button" onClick={openPlans}>Багц сонгох<UiIcon name="arrow" size={18} /></button></div>
       </section>
-      <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />
+      {!preview && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />}
@@ -1446,8 +1449,14 @@ function AdminSettingsTab() {
   );
 }
 
-function AdminPage({ films, onBack, onRefresh }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "settings">("list");
+function AppearancePreview({films}: {films:any[]}) {
+  const [catalogState,setCatalogState]=useState<CatalogState>({...INITIAL_CATALOG});
+  const noop=()=>{};
+  return <HomePage preview films={films} catalogState={catalogState} onCatalogChange={setCatalogState} loading={false} user={null} chatUnread={0} onFilm={noop} onAdmin={noop} onContact={noop} onOpenLogin={noop} onMonthly={noop} onRetry={noop}/>;
+}
+
+function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
+  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "settings" | "appearance">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1501,6 +1510,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
   const updateImg = async (id: number, img: string) => { await dbFetch(`films?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ img }) }); setEditId(null); onRefresh(); };
   const updateUrl = async (id: number, url: string) => { await dbFetch(`films?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ url }) }); setEditId(null); onRefresh(); };
 
+  if(tab === "appearance")return <AppearanceEditor onClose={()=>setTab("list")} onSaved={onAppearanceSaved}><AppearancePreview films={films}/></AppearanceEditor>;
   return (
     <div className="admin-surface" style={{ background: C.bg, minHeight: "100vh", paddingBottom: 30 }}>
       <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 10 }}>
@@ -1522,6 +1532,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
           )}
         </button>
         <button onClick={() => setTab("settings")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "settings" ? C.gold : C.card2, color: tab === "settings" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>⚙️ Тохиргоо</button>
+        <button type="button" onClick={() => setTab("appearance")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: `1px solid ${C.bd}`, background: C.card2, color: C.txt, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>◫ Загвар өөрчлөх</button>
       </div>
 
       {tab === "orders" && <AdminOrdersTab />}
@@ -1601,6 +1612,7 @@ function AdminPage({ films, onBack, onRefresh }: any) {
 }
 
 export default function Home() {
+  const {appearance,apply:applyAppearance}=useSiteAppearance();
   const [appError,setAppError]=useState("");
   useEffect(()=>{
     const show=(event:Event)=>setAppError(String((event as CustomEvent).detail||"Алдаа гарлаа."));
@@ -1857,7 +1869,7 @@ export default function Home() {
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
 
   return (
-    <div className="app-shell" style={{ minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
+    <div className="app-shell site-theme" data-layout={appearance.layout} style={{...appearanceStyle(appearance), minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
       <ConnectionStatus />
       {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
@@ -1866,7 +1878,7 @@ export default function Home() {
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({}); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}
-      {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} />}
+      {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
 

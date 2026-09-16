@@ -33,6 +33,7 @@ beforeEach(()=>{
    return Response.json(session);
   }
   if(url.pathname==='/api/settings')return Response.json({});
+  if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/chat')return Response.json({unread:0,threads:[]});
   if(url.pathname==='/api/db'){
    filmRequests++;
@@ -83,7 +84,7 @@ test('expired taps and clicks on the name do not unlock the admin entry',async t
  let now=0;t.mock.method(performance,'now',()=>now);await render();
  for(const time of [0,2000,4000,6000]){now=time;await logo();}
  now=8001;await logo();assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);
- await click('[aria-label="ТАЗА САЙТ нүүр"]');assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);
+ await act(async()=>new Promise(resolve=>{window.addEventListener("hashchange",resolve,{once:true});document.querySelector('[aria-label="ТАЗА САЙТ нүүр"]').click();}));assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);
  now=8002;await logo();assert.ok(document.querySelector('[aria-label="Админы нууц үг"]'));
 });
 test('an existing admin session still starts on home and opens management after the hidden gesture',async()=>{
@@ -97,4 +98,19 @@ test('reconnection retries only a failed catalog and clears the offline notice',
  failed=false;await act(async()=>{Object.defineProperty(navigator,'onLine',{value:true,configurable:true});window.dispatchEvent(new dom.window.Event('online'));});
  assert.equal(filmRequests,previous+2);assert.equal(cardCount(),24);assert.equal(document.querySelector('.connection-status'),null);
  const complete=filmRequests;await act(async()=>window.dispatchEvent(new dom.window.Event('online')));assert.equal(filmRequests,complete);
+});
+
+test('admin appearance entry previews the real catalog in an inert full-screen dialog',async()=>{
+ session={admin:true};await render();for(let i=0;i<5;i++)await logo();
+ await act(async()=>[...document.querySelectorAll('.admin-tabs button')].find(b=>b.textContent.includes('Загвар өөрчлөх')).click());
+ const dialog=document.querySelector('.appearance-editor');assert.ok(dialog.open);
+ assert.equal(dialog.querySelectorAll('input[type="range"]').length,2);
+ assert.ok(dialog.querySelector('.appearance-preview-content[inert]'));
+ assert.equal(dialog.querySelectorAll('.movie-card').length,24);
+ assert.match(dialog.querySelector('.brand').textContent,/ТАЗА САЙТ/);
+ await click('[aria-label="Загвар 4: Постер"]');
+ assert.equal(dialog.querySelector('.appearance-preview-content').dataset.layout,'4');
+ assert.equal(document.querySelector('.app-shell').dataset.layout,'1');
+ window.confirm=()=>true;await click('[aria-label="Удирдах хэсэг рүү буцах"]');
+ assert.ok(document.querySelector('.admin-surface'));assert.equal(document.querySelector('.appearance-editor'),null);
 });
