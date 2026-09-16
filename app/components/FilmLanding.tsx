@@ -3,6 +3,7 @@ import Image from "next/image";
 import { safeUrl } from "@/lib/domain";
 import { filmCategory } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, relatedFilms, trailerUrl, type FilmDetails } from "@/lib/film-details";
+import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 
 type Props = {
   film: FilmDetails | null;
@@ -30,7 +31,7 @@ function FilmImage({film, priority = false}: {film:FilmDetails; priority?:boolea
   const src = safeUrl(film.img || "", true);
   // Posters are already resized by the upload service; retain their original CDN URL.
   return src && !failed ? <Image unoptimized src={src} alt={film.title} fill sizes={priority ? "(max-width: 760px) 54vw, 540px" : "(max-width: 760px) 33vw, 360px"} preload={priority} onError={()=>setFailed(true)} />
-    : <span className="detail-poster-fallback" aria-hidden="true"><span>ТАЗА САЙТ</span><strong>{film.title}</strong></span>;
+    : <><span className="detail-poster-fallback" aria-hidden="true"><span>ТАЗА САЙТ</span><strong>{film.title}</strong></span><TrailerPosterFrame film={film} className="detail-poster-video" /></>;
 }
 
 function Trailer({film, onClose}: {film:FilmDetails; onClose:()=>void}) {

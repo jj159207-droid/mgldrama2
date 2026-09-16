@@ -17,6 +17,7 @@ import useSiteAppearance from "@/app/components/useSiteAppearance";
 import {appearanceStyle} from "@/lib/appearance";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
+import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
 import { INITIAL_CATALOG, type CatalogState } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, type FilmDetails } from "@/lib/film-details";
@@ -400,7 +401,9 @@ function Poster({ film }: any) {
       <strong>{film.title}</strong>
       <span>{decodeCat(film.badge)} · {decodeBadge(film.badge)}</span>
     </div>
-    {film.img && !failed && <img loading="lazy" decoding="async" width="360" height="540" src={film.img} alt="" onError={() => setFailed(true)} />}
+    {film.img && !failed
+      ? <img loading="lazy" decoding="async" width="360" height="540" src={film.img} alt="" onError={() => setFailed(true)} />
+      : <TrailerPosterFrame film={film} />}
   </div>;
 }
 function FilmCard({ film, onClick, expiry }: any) {
