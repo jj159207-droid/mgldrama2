@@ -73,13 +73,10 @@ jobs:
 
           const pagePath=`${root}/app/page.tsx`;
           let page=fs.readFileSync(pagePath,'utf8');
-          let changed=false;
-          page=page.replace(/const DEFAULT_BANK_ACCOUNT = \{[\s\S]*?\};/,()=>{
-            changed=true;
-            return `const DEFAULT_BANK_ACCOUNT = {\n  bank: "Банк",\n  number: "0000000000",\n  name: "Данс эзэмшигч",\n};`;
-          });
-          page=page.replace(/(<input value=\{bankAccount\}[^>]*placeholder=")[^"]+("[^>]*>)/,(_,a,b)=>`${a}0000000000${b}`);
-          if(!changed) throw new Error('DEFAULT_BANK_ACCOUNT block was not sanitized');
+          const originalPage=page;
+          page=page.replace(/const DEFAULT_BANK_ACCOUNT = \{[\s\S]*?\};/,`const DEFAULT_BANK_ACCOUNT = {\n  bank: "Банк",\n  number: "0000000000",\n  name: "Данс эзэмшигч",\n};`);
+          page=page.replace(/<input value=\{bankAccount\}[^\n]*/,(line)=>line.replace(/placeholder="[^"]*"/,'placeholder="0000000000"'));
+          if(page===originalPage) throw new Error('Page client defaults were not sanitized');
           fs.writeFileSync(pagePath,page);
 
           const settingsPath=`${root}/app/api/settings/route.ts`;
@@ -92,8 +89,9 @@ jobs:
 
           const checkPage=fs.readFileSync(pagePath,'utf8');
           const checkSettings=fs.readFileSync(settingsPath,'utf8');
+          const accountLine=checkPage.split(/\r?\n/).find(line=>line.includes('value={bankAccount}'));
           if(!/bank: "Банк"[\s\S]*number: "0000000000"[\s\S]*name: "Данс эзэмшигч"/.test(checkPage)) throw new Error('Generic page bank defaults missing');
-          if(!/value=\{bankAccount\}[\s\S]*?placeholder="0000000000"/.test(checkPage)) throw new Error('Generic account placeholder missing');
+          if(!accountLine||!accountLine.includes('placeholder="0000000000"')) throw new Error('Generic account placeholder missing');
           if(!/BANK_NAME\|\|'Банк'/.test(checkSettings)||!/BANK_ACCOUNT\|\|'0000000000'/.test(checkSettings)||!/BANK_ACCOUNT_NAME\|\|'Данс эзэмшигч'/.test(checkSettings)) throw new Error('Generic settings fallbacks missing');
           NODE
 
