@@ -42,6 +42,7 @@ beforeEach(()=>{
    if(failPlayback)return Response.json({message:'Backend unavailable'},{status:503});
    const id=Number(url.searchParams.get('id')),film=films.find(f=>f.id===id);
    if(!film)return Response.json({message:'Кино олдсонгүй.'},{status:404});
+   if(!session.admin && !session.user)return Response.json({message:'Нэвтэрч орно уу.'},{status:403});
    if(!film.free && !session.admin && !(session.user && entitled))return Response.json({message:'Үзэх эрх байхгүй.'},{status:403});
    return Response.json({...film,locked:false});
   }
@@ -115,11 +116,11 @@ test('a category package bought from details stays inline and opens the selected
  assert.equal(movie(),films[0].url);assert.equal(orders.length,1);
 });
 test('leaving during a full movie request prevents its late result from opening a player',async()=>{
- await render('/?film=34');playbackGate=defer();await click('.film-continue');await click('.film-back');
+ session={user:{id:12,phone:'99112233'}};await render('/?film=34');playbackGate=defer();await click('.film-continue');await click('.film-back');
  await act(async()=>playbackGate.resolve());assert.ok(document.querySelector('.catalog-browser'));assert.equal(movie(),undefined);
 });
 test('full player Back returns to the main page and stops playback',async()=>{
- await render('/?film=34');await click('.film-continue');assert.equal(movie(),films[1].url);
+ session={user:{id:12,phone:'99112233'}};await render('/?film=34');await click('.film-continue');assert.equal(movie(),films[1].url);
  const before=requests.filter(r=>r.path==='/api/playback').length;
  await click('[aria-label="Нүүр рүү буцах"]');
  assert.ok(document.querySelector('.site-header'));assert.equal(window.location.search,'');assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
@@ -133,9 +134,12 @@ test('a closed checkout ignores late confirmation and keeps the detail page',asy
  assert.equal(document.querySelector('#film-payment'),null);
 });
 
-test('Facebook link shows the selected movie details even when catalog loading fails',async()=>{
+test('Facebook link shows details but requires login before even a free full movie',async()=>{
  failCatalog=true;await render('/?utm_source=facebook&film=34&fbclid=tracking');
- assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);await click('.film-continue');assert.equal(movie(),films[1].url);assert.equal(orders.length,0);assert.equal(document.querySelector('.login-dialog'),null);
+ assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);
+ const before=requests.filter(r=>r.path==='/api/playback').length;
+ await click('.film-continue');assert.ok(document.querySelector('.login-dialog'));assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
+ await login();assert.equal(movie(),films[1].url);assert.equal(orders.length,0);
  assert.equal(new URL(window.location.href).searchParams.get('film'),'34');
 });
 test('session restoration completes before selecting login or playback',async()=>{
@@ -176,7 +180,7 @@ test('invalid and deleted links show a clear error without opening another movie
  await pop('/?film=999');assert.match(document.querySelector('.film-link-error').textContent,/Кино олдсонгүй/);assert.equal(movie(),undefined);assert.equal(orders.length,0);
 });
 test('playback connection failure can be retried on the same direct link',async()=>{
- failPlayback=true;await render('/?film=34');await click('.film-continue');assert.ok(document.querySelector('.detail-watch-error'));
+ session={user:{id:12,phone:'99112233'}};failPlayback=true;await render('/?film=34');await click('.film-continue');assert.ok(document.querySelector('.detail-watch-error'));
  failPlayback=false;await click('.film-continue');assert.equal(movie(),films[1].url);
 });
 test('back and forward URL events select the correct movie and close payment',async()=>{
@@ -195,8 +199,11 @@ test('admin shares the movie page URL without private playback data and can copy
  await click('[aria-label="Алсын зам: зарын холбоос хуулах"]');assert.match(document.body.textContent,/өөрөө хуулна уу/);
  const input=document.querySelector('[aria-label="Алсын зам: киноны холбоос"]');await act(async()=>input.click());assert.equal(input.selectionEnd,input.value.length);
 });
-test('an admin movie link shows details first and waits for explicit full playback',async()=>{
- session={admin:true};await render('/?film=7');assert.equal(title(),'Гэрэл');assert.equal(movie(),undefined);await click('.film-continue');assert.equal(movie(),films[0].url);assert.equal(document.querySelector('.admin-surface'),null);
+test('an admin session cannot bypass the public user login gate for full playback',async()=>{
+ session={admin:true};await render('/?film=34');assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);
+ const before=requests.filter(r=>r.path==='/api/playback').length;
+ await click('.film-continue');assert.ok(document.querySelector('.login-dialog'));assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
+ assert.equal(document.querySelector('.admin-surface'),null);
 });
 test('package purchase after login remains a package without a movie ID',async()=>{
  await render();await click('.package-continue');await login();
@@ -213,7 +220,7 @@ test('native history back restores catalog and forward restores details without 
 
 const traverse=direction=>act(async()=>{const done=new Promise(resolve=>window.addEventListener('popstate',resolve,{once:true}));window.history[direction]();await done;});
 test('native Back from full playback goes home; Forward requires another explicit play',async()=>{
- await render('/?film=34');await click('.film-continue');assert.equal(movie(),films[1].url);
+ session={user:{id:12,phone:'99112233'}};await render('/?film=34');await click('.film-continue');assert.equal(movie(),films[1].url);
  await traverse('back');assert.ok(document.querySelector('.site-header'));assert.equal(movie(),undefined);assert.equal(window.location.search,'');
  const before=requests.filter(r=>r.path==='/api/playback').length;
  await traverse('forward');assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);

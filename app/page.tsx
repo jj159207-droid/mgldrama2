@@ -1821,6 +1821,13 @@ export default function Home() {
     window.scrollTo?.({top:0,behavior:"instant"});
   };
   const watchFilm = async (film: FilmDetails, viewerId: number | null) => {
+    // Public full playback always requires a normal user login. An existing
+    // hidden admin session must not bypass the public Login/Register gate.
+    if(!viewerId){
+      pendingActionRef.current={kind:"watch",film};
+      setWatching(false);setWatchError("");setShowLoginModal(true);
+      return;
+    }
     const intent=playRequest.current+1;
     const current=()=>intent===playRequest.current && accessOwner.current===viewerId;
     setWatching(true);setWatchError("");
