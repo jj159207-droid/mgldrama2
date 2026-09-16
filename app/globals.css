@@ -217,3 +217,7 @@
 .film-share label{display:grid;gap:8px;margin-top:12px;font-size:14px;color:var(--muted)}
 .film-share input{width:100%;min-width:0;padding:12px;font-size:16px;color:var(--foreground);background:var(--background);border:1px solid var(--border);border-radius:8px}
 .film-share p:not(:empty){margin:10px 0 0;font-size:14px;line-height:1.6;color:var(--accent)}
+
+/* The logo keeps its original artwork; five deliberate taps reveal sign-in. */
+.brand-logo-button{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;padding:0;border:0;background:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;border-radius:10px}
+.brand-logo-button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}

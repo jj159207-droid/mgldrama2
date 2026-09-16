@@ -117,11 +117,11 @@ test('leaving during a full movie request prevents its late result from opening 
  await render('/?film=34');playbackGate=defer();await click('.film-continue');await click('.film-back');
  await act(async()=>playbackGate.resolve());assert.ok(document.querySelector('.catalog-browser'));assert.equal(movie(),undefined);
 });
-test('full player back returns to details with poster and never restarts playback',async()=>{
+test('full player Back returns to the main page and stops playback',async()=>{
  await render('/?film=34');await click('.film-continue');assert.equal(movie(),films[1].url);
  const before=requests.filter(r=>r.path==='/api/playback').length;
- await act(async()=>{const done=new Promise(resolve=>window.addEventListener('popstate',resolve,{once:true}));document.querySelector('[aria-label="Киноны мэдээлэл рүү буцах"]').click();await done;});
- assert.equal(title(),'Алсын зам');assert.ok(document.querySelector('.detail-poster'));assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
+ await click('[aria-label="Нүүр рүү буцах"]');
+ assert.ok(document.querySelector('.site-header'));assert.equal(window.location.search,'');assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
 });
 test('a closed checkout ignores late confirmation and keeps the detail page',async()=>{
  session={user:{id:12,phone:'99112233'}};await render('/?film=7');await click('.film-continue');assert.equal(orders.length,1);
@@ -187,6 +187,7 @@ test('back and forward URL events select the correct movie and close payment',as
 });
 test('admin shares the movie page URL without private playback data and can copy manually',async()=>{
  session={admin:true};await render('/?utm_source=private');
+ for(let i=0;i<5;i++)await click('[aria-label="ТАЗА САЙТ лого"]');
  await click('[aria-label="Гэрэл: зарын холбоос хуулах"]');assert.deepEqual(clipboard,['https://app.test/?film=7']);
  assert.equal(document.querySelector('[aria-label="Гэрэл: киноны холбоос"]').value,'https://app.test/?film=7');
  Object.defineProperty(navigator,'clipboard',{value:{writeText:async()=>{throw new Error('Denied');}},configurable:true});
@@ -207,4 +208,35 @@ test('native history back restores catalog and forward restores details without 
  assert.equal(window.location.search,'');assert.ok(document.querySelector('.catalog-browser'));
  await act(async()=>{const done=new Promise(resolve=>window.addEventListener('popstate',resolve,{once:true}));window.history.forward();await done;});
  assert.equal(window.location.search,'?film=34');assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);
+});
+
+const traverse=direction=>act(async()=>{const done=new Promise(resolve=>window.addEventListener('popstate',resolve,{once:true}));window.history[direction]();await done;});
+test('native Back from full playback goes home; Forward requires another explicit play',async()=>{
+ await render('/?film=34');await click('.film-continue');assert.equal(movie(),films[1].url);
+ await traverse('back');assert.ok(document.querySelector('.site-header'));assert.equal(movie(),undefined);assert.equal(window.location.search,'');
+ const before=requests.filter(r=>r.path==='/api/playback').length;
+ await traverse('forward');assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
+});
+test('native Back after inline payment and playback also reaches home',async()=>{
+ session={user:{id:12,phone:'99112233'}};await render('/?film=7');await click('.film-continue');assert.equal(orders.length,1);
+ orders[0].status='confirmed';entitled=true;
+ await act(async()=>[...document.querySelectorAll('.checkout-back')].find(b=>b.textContent==='Төлбөрөө шалгах').click());assert.equal(movie(),films[0].url);
+ await traverse('back');assert.ok(document.querySelector('.site-header'));assert.equal(movie(),undefined);assert.equal(document.querySelector('.checkout-inline'),null);
+});
+test('a fresh Facebook movie link gets a home entry; native Back goes home and Forward restores only details',async()=>{
+ await render('/?film=7&utm_source=facebook&fbclid=tracking');assert.equal(title(),'Гэрэл');
+ await traverse('back');assert.ok(document.querySelector('.site-header'));assert.equal(new URL(window.location.href).searchParams.has('film'),false);assert.equal(new URL(window.location.href).searchParams.get('fbclid'),'tracking');
+ await traverse('forward');assert.equal(title(),'Гэрэл');assert.equal(movie(),undefined);assert.equal(orders.length,0);
+});
+test('reloading a direct movie link does not add more home entries',async()=>{
+ await render('/?film=34');const length=window.history.length;
+ await act(async()=>root.unmount());root=createRoot(document.getElementById('root'));await act(async()=>root.render(React.createElement(App)));
+ assert.equal(window.history.length,length);assert.equal(title(),'Алсын зам');await traverse('back');assert.ok(document.querySelector('.site-header'));
+});
+test('Back from a related movie opened from an ad also returns home',async()=>{
+ const length=films.length;films.push({id:8,title:'Найз',badge:'Хэлтэй|Гадаад',views:50});
+ try {await render('/?film=7');await click('.related-film');assert.equal(title(),'Найз');await traverse('back');assert.ok(document.querySelector('.site-header'));assert.equal(window.location.search,'');} finally {films.splice(length);}
+});
+test('a delayed admin-session response after leaving an ad never replaces the home page with management',async()=>{
+ authGate=defer();session={admin:true};await render('/?film=7');await click('.film-back');await act(async()=>authGate.resolve());assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
 });
