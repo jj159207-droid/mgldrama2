@@ -25,13 +25,12 @@ import { filmNavigationUrl, prepareFilmHistory, readFilmDestination, type FilmDe
 // ══════════════════════════════════════════════
 // ДАНСНЫ МЭДЭЭЛЭЛ
 // ══════════════════════════════════════════════
-const BANK_ACCOUNT = {
+const DEFAULT_BANK_ACCOUNT = {
   bank: "Хаан банк",
   number: "5403972086",
-  ibn: "MN95000500",
   name: "Т.Жаргалбаяр",
-  shortNumber: "MN95000500",
 };
+const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
 function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
 function genRef(): string {
@@ -134,6 +133,18 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
+  const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT);
+  useEffect(()=>{
+    let alive=true;
+    requestJson("/api/settings",{},true).then(data=>{
+      if(!alive)return;
+      const bank=String(data?.bankName||DEFAULT_bankAccount.bank).trim();
+      const number=String(data?.bankAccount||DEFAULT_bankAccount.number).trim();
+      const name=String(data?.accountName||DEFAULT_bankAccount.name).trim();
+      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name});
+    }).catch(()=>{});
+    return()=>{alive=false;};
+  },[]);
   const [paymentError, setPaymentError] = useState("");
   const [orderReady,setOrderReady]=useState(false);
   const [orderAmount,setOrderAmount]=useState<number|null>(null);
@@ -265,7 +276,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>
     {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
     <div className="checkout-summary"><div><strong>{film.title}</strong><span>{film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
-    <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{BANK_ACCOUNT.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{BANK_ACCOUNT.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(BANK_ACCOUNT.number,"account")}><span>Дансны дугаар<strong>{BANK_ACCOUNT.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+    <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span>Дансны дугаар<strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
     <section className="reference-section"><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Кодоо зөв бичсэнээр таны төлбөрийг захиалгатай тулгана." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
     <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
     <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
@@ -462,16 +473,20 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
     } catch (err) { setError(err instanceof Error ? err.message : "Алдаа гарлаа."); }
     finally { pending.current = false; setBusy(false); }
   };
-  return <form onSubmit={submit}>
+  return <form onSubmit={submit} className="simple-auth-form">
+    <div role="group" aria-label="Нэвтрэх эсвэл бүртгүүлэх" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18}}>
+      <button type="button" aria-pressed={!register} disabled={busy} onClick={()=>{setRegister(false);setPin("");setPin2("");setError("");}} style={{...goldBtn,background:!register?C.gold:C.card2,color:!register?"#000":C.txt}}>Нэвтрэх</button>
+      <button type="button" aria-pressed={register} disabled={busy} onClick={()=>{setRegister(true);setPin("");setPin2("");setError("");}} style={{...goldBtn,background:register?C.gold:C.card2,color:register?"#000":C.txt}}>Бүртгүүлэх</button>
+    </div>
     <label style={lbl} htmlFor="user-phone">Утасны дугаар</label>
-    <input id="user-phone" type="tel" inputMode="numeric" autoComplete="username" required pattern="[0-9]{8}" maxLength={8} value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,""))} style={inputSt}/>
-    <label style={{...lbl,marginTop:12}} htmlFor="user-pin">4 оронтой PIN</label>
-    <input id="user-pin" type="password" inputMode="numeric" autoComplete={register?"new-password":"current-password"} required pattern="[0-9]{4}" maxLength={4} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} style={inputSt}/>
-    {register && <><label style={{...lbl,marginTop:12}} htmlFor="user-pin2">PIN дахин оруулна уу</label><input id="user-pin2" type="password" inputMode="numeric" autoComplete="new-password" required pattern="[0-9]{4}" maxLength={4} value={pin2} onChange={e=>setPin2(e.target.value.replace(/\D/g,""))} style={inputSt}/></>}
+    <input id="user-phone" type="tel" inputMode="numeric" autoComplete="username" autoFocus required pattern="[0-9]{8}" maxLength={8} value={phone} onChange={e=>setPhone(e.target.value.replace(/\D/g,""))} placeholder="Жишээ: 99112233" style={{...inputSt,padding:"15px 16px",fontSize:18}}/>
+    <label style={{...lbl,marginTop:14}} htmlFor="user-pin">4 оронтой PIN код</label>
+    <input id="user-pin" type="password" inputMode="numeric" autoComplete={register?"new-password":"current-password"} required pattern="[0-9]{4}" maxLength={4} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder="••••" style={{...inputSt,padding:"15px 16px",fontSize:18,letterSpacing:"0.2em"}}/>
+    {register && <><label style={{...lbl,marginTop:14}} htmlFor="user-pin2">PIN кодоо дахин оруулна уу</label><input id="user-pin2" type="password" inputMode="numeric" autoComplete="new-password" required pattern="[0-9]{4}" maxLength={4} value={pin2} onChange={e=>setPin2(e.target.value.replace(/\D/g,""))} placeholder="••••" style={{...inputSt,padding:"15px 16px",fontSize:18,letterSpacing:"0.2em"}}/></>}
     {error && <p role="alert" style={{color:C.red,marginTop:10}}>{error}</p>}
-    <button type="submit" disabled={busy} style={{...goldBtn,marginTop:16}}>{busy?"Түр хүлээнэ үү...":register?"Бүртгүүлэх":"Нэвтрэх"}</button>
-    <button type="button" disabled={busy} onClick={()=>{setRegister(v=>!v);setPin("");setPin2("");setError("");}} style={{...goldBtn,background:C.card2,color:C.txt,marginTop:8}}>{register?"Бүртгэлтэй бол нэвтрэх":"Шинээр бүртгүүлэх"}</button>
-    <p style={{fontSize:12,color:C.muted,marginTop:12}}>PIN мартсан бол Мессэж хэсгээр админтай холбогдоно уу.</p>
+    <button type="submit" disabled={busy || phone.length!==8 || pin.length!==4 || (register && pin2.length!==4)} style={{...goldBtn,marginTop:18,padding:15,fontSize:16,opacity:(busy || phone.length!==8 || pin.length!==4 || (register && pin2.length!==4))?0.55:1}}>{busy?"Түр хүлээнэ үү...":register?"Бүртгэл үүсгэх":"Нэвтрэх"}</button>
+    <p style={{fontSize:12,color:C.muted,marginTop:12,lineHeight:1.6}}>{register?"8 оронтой утасны дугаар, өөрийн 4 оронтой PIN кодоо оруулна уу.":"Бүртгэлгүй бол дээрх “Бүртгүүлэх” товчийг сонгоно уу."}</p>
+    <p style={{fontSize:12,color:C.muted,marginTop:6}}>PIN мартсан бол Мессэж хэсгээр админтай холбогдоно уу.</p>
   </form>;
 }
 
@@ -497,7 +512,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
       <fieldset className="package-fieldset"><legend>1. Ямар кино үзэх вэ?</legend><div className="package-choices">
         {categories.map(c => <label key={c.key} className={`package-choice ${category === c.key ? "selected" : ""}`}>
           <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);if(c.key === "all")setDuration("1month");}} />
-          <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">18+</span>}</strong><span>{countsReady ? `${countFor(c.key)} кино` : "Киноны тоог шалгаж байна…"}</span></span>
+          <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">18+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
         </label>)}
       </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, эротик — гурван ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
       <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
@@ -506,7 +521,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
           <span><strong>{d === "3day" ? "3 хоног" : "1 сар"}</strong><span>{PLAN_PRICES[category === "all" ? "all_1month" : `${category}_${d}`].toLocaleString()}₮</span></span>
         </label>)}
       </div><p className="package-hint">Төлбөр баталгаажсан үеэс үзэх хугацаа эхэлнэ.</p></fieldset>
-      <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>{countsReady ? `${selectedCount} кино үзэх эрх` : "Сонгосон ангиллын кинонууд"}</span></span><strong>{price.toLocaleString()}₮</strong></div>
+      <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>Сонгосон багцын кинонууд</span></span><strong>{price.toLocaleString()}₮</strong></div>
       {countsReady && selectedCount === 0 && <p className="package-hint" role="status">Одоогоор энэ ангилалд кино байхгүй байна. Өөр ангилал сонгоорой.</p>}
       <button type="button" className="primary-button package-continue" disabled={countsReady && selectedCount === 0} onClick={select}>{user ? "Төлбөр төлөх" : "Нэвтрээд үргэлжлүүлэх"}</button>
     </dialog>;
@@ -1397,60 +1412,63 @@ function EditFilmPanel({ f, onDone }: any) {
 // ADMIN ТОХИРГОО — Messenger URL
 // ══════════════════════════════════════════════
 function AdminSettingsTab() {
-  const [messengerUrl, setMessengerUrl] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const saveBusy = useRef(false);
-  useEffect(() => {
+  const [messengerUrl,setMessengerUrl]=useState("");
+  const [bankName,setBankName]=useState(DEFAULT_BANK_ACCOUNT.bank);
+  const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT.number);
+  const [accountName,setAccountName]=useState(DEFAULT_BANK_ACCOUNT.name);
+  const [saved,setSaved]=useState(false);
+  const [loading,setLoading]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const saveBusy=useRef(false);
+  useEffect(()=>{
     let active=true;
-    requestJson("/api/settings").then(data=>{if(active)setMessengerUrl(data.messengerUrl || "");}).catch(()=>{}).finally(()=>{if(active)setLoading(false);});
+    requestJson("/api/settings").then(data=>{
+      if(!active)return;
+      setMessengerUrl(data?.messengerUrl||"");
+      setBankName(data?.bankName||DEFAULT_BANK_ACCOUNT.bank);
+      setBankAccount(data?.bankAccount||DEFAULT_BANK_ACCOUNT.number);
+      setAccountName(data?.accountName||DEFAULT_BANK_ACCOUNT.name);
+    }).catch(()=>{}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
-  }, []);
-  const saveSettings = async () => {
+  },[]);
+  const saveSettings=async()=>{
     if(saveBusy.current)return;
-    if (!safeUrl(messengerUrl)) { alert("Зөв HTTPS Messenger холбоос оруулна уу."); return; }
+    const messenger=messengerUrl.trim();
+    const bank=bankName.trim();
+    const number=bankAccount.trim();
+    const owner=accountName.trim();
+    if(messenger&&!safeUrl(messenger)){alert("Зөв HTTPS Messenger холбоос оруулна уу.");return;}
+    if(bank.length<2){alert("Банкны нэрийг оруулна уу.");return;}
+    if(!/^[A-Za-z0-9 -]{6,40}$/.test(number)){alert("Дансны дугаараа зөв оруулна уу.");return;}
+    if(owner.length<2){alert("Данс эзэмшигчийн нэрийг оруулна уу.");return;}
     saveBusy.current=true;setSaving(true);setSaved(false);
-    try {
-      await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl})});
+    try{
+      const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankName:bank,bankAccount:number,accountName:owner})});
+      setMessengerUrl(data?.messengerUrl||"");setBankName(data.bankName);setBankAccount(data.bankAccount);setAccountName(data.accountName);
       setSaved(true);window.dispatchEvent(new Event("kinoSettingsChanged"));
-    } catch {} finally {saveBusy.current=false;setSaving(false);}
+    }catch{}finally{saveBusy.current=false;setSaving(false);}
   };
-
-  if (loading) return <div style={{ textAlign: "center", padding: 40, color: C.muted }}>Ачааллаж байна...</div>;
-
-  return (
-    <div style={{ padding: "0 14px" }}>
-      <ReadinessCheck />
-      <div style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: C.txt, marginBottom: 16 }}>⚙️ Сайтын тохиргоо</div>
-        <label style={lbl}>💬 Messenger холбоос</label>
-        <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
-          Жишээ: https://m.me/таны_хуудас_нэр
-        </div>
-        <input
-          value={messengerUrl}
-          onChange={(e: any) => setMessengerUrl(e.target.value)}
-          placeholder="https://m.me/..."
-          style={{ ...inputSt, marginBottom: 12 }}
-        />
-        <button
-          onClick={saveSettings} disabled={saving}
-          style={{ ...goldBtn, borderRadius: 10 }}
-        >
-          {saving ? "Хадгалж байна…" : saved ? "✅ Хадгалагдлаа!" : "💾 Хадгалах"}
-        </button>
+  if(loading)return <div style={{textAlign:"center",padding:40,color:C.muted}}>Ачааллаж байна...</div>;
+  return <div style={{padding:"0 14px"}}>
+    <ReadinessCheck />
+    <div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:12,padding:16,marginBottom:12}}>
+      <div style={{fontSize:14,fontWeight:700,color:C.txt,marginBottom:16}}>⚙️ Сайтын тохиргоо</div>
+      <label style={lbl}>🏦 Банкны нэр</label>
+      <input value={bankName} maxLength={80} onChange={(e:any)=>setBankName(e.target.value)} placeholder="Хаан банк" style={{...inputSt,marginBottom:12}}/>
+      <label style={lbl}>👤 Данс эзэмшигчийн нэр</label>
+      <input value={accountName} maxLength={100} onChange={(e:any)=>setAccountName(e.target.value)} placeholder="Данс эзэмшигч" style={{...inputSt,marginBottom:12}}/>
+      <label style={lbl}>💳 Дансны дугаар</label>
+      <input value={bankAccount} maxLength={40} autoComplete="off" onChange={(e:any)=>setBankAccount(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="5403972086" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:17}}/>
+      <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:16}}>
+        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:4}}>{bankAccount||"—"}</strong>
       </div>
-      <div style={{ background: C.card2, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 14px" }}>
-        <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.8 }}>
-          <div style={{ marginBottom: 4 }}>📌 Messenger холбоос яаж авах:</div>
-          <div>1. Facebook хуудсаа нээнэ</div>
-          <div>2. Settings → Messaging → Username</div>
-          <div>3. https://m.me/<span style={{ color: C.gold }}>username</span> гэж оруулна</div>
-        </div>
-      </div>
+      <label style={lbl}>💬 Messenger холбоос</label>
+      <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Жишээ: https://m.me/таны_хуудас_нэр</div>
+      <input value={messengerUrl} onChange={(e:any)=>setMessengerUrl(e.target.value)} placeholder="https://m.me/..." style={{...inputSt,marginBottom:12}}/>
+      <button onClick={saveSettings} disabled={saving} style={{...goldBtn,borderRadius:10}}>{saving?"Хадгалж байна…":saved?"✅ Хадгалагдлаа!":"💾 Бүгдийг хадгалах"}</button>
     </div>
-  );
+    <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 14px"}}><div style={{fontSize:12,color:C.muted,lineHeight:1.7}}>Дансны нэр, дугаар хадгалмагц дараагийн төлбөрийн цонхонд шинэ мэдээлэл шууд ашиглагдана.</div></div>
+  </div>;
 }
 
 function AppearancePreview({films}: {films:any[]}) {
