@@ -36,10 +36,9 @@ replaceByRegex('app/page.tsx',/function Poster\(\{ film \}: any\) \{[\s\S]*?\n\}
     {showTrailer && trailerVisible && <video data-poster-trailer src={trailer} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" tabIndex={-1} onError={()=>setTrailerFailed(true)} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover"}} />}
   </div>;
 }
-function FilmCard`,`catalog Poster');
+function FilmCard`,'catalog Poster');
 
 let landing=fs.readFileSync('app/components/FilmLanding.tsx','utf8');
-landing=landing.replace('import { useState, type ReactNode } from "react";','import { useState, type ReactNode } from "react";');
 const filmImagePattern=/function FilmImage\(\{film, priority = false\}: \{film:FilmDetails; priority\?:boolean\}\) \{[\s\S]*?\n\}\n\nfunction Trailer/;
 const matches=[...landing.matchAll(filmImagePattern)];
 if(matches.length!==1) throw new Error(`FilmImage: expected 1 match, found ${matches.length}`);
