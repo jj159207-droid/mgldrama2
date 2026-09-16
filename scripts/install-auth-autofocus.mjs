@@ -9,6 +9,7 @@ function replaceExact(label, before, after) {
   source = source.replace(before, after);
 }
 
+// Keep mobile sign-in flowing forward without requiring an extra tap.
 replaceExact(
   'phone to PIN autofocus',
   `<input id="user-phone" type="tel" inputMode="numeric" autoComplete="username" autoFocus required pattern="[0-9]{8}" maxLength={8} value={phone} onChange={e=>setPhone(e.target.value.replace(/\\D/g,""))} placeholder="Жишээ: 99112233" style={{...inputSt,padding:"15px 16px",fontSize:18}}/>`,
