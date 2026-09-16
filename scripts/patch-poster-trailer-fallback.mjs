@@ -1,9 +1,13 @@
 import fs from 'node:fs';
 
+function countMatches(text, pattern) {
+  const flags=pattern.flags.includes('g')?pattern.flags:pattern.flags+'g';
+  return [...text.matchAll(new RegExp(pattern.source,flags))].length;
+}
 function replaceByRegex(path, pattern, replacement, label) {
   let text=fs.readFileSync(path,'utf8');
-  const matches=[...text.matchAll(pattern)];
-  if(matches.length!==1) throw new Error(`${label}: expected 1 match, found ${matches.length}`);
+  const count=countMatches(text,pattern);
+  if(count!==1) throw new Error(`${label}: expected 1 match, found ${count}`);
   text=text.replace(pattern,replacement);
   fs.writeFileSync(path,text);
 }
@@ -40,8 +44,8 @@ function FilmCard`,'catalog Poster');
 
 let landing=fs.readFileSync('app/components/FilmLanding.tsx','utf8');
 const filmImagePattern=/function FilmImage\(\{film, priority = false\}: \{film:FilmDetails; priority\?:boolean\}\) \{[\s\S]*?\n\}\n\nfunction Trailer/;
-const matches=[...landing.matchAll(filmImagePattern)];
-if(matches.length!==1) throw new Error(`FilmImage: expected 1 match, found ${matches.length}`);
+const filmImageCount=countMatches(landing,filmImagePattern);
+if(filmImageCount!==1) throw new Error(`FilmImage: expected 1 match, found ${filmImageCount}`);
 landing=landing.replace(filmImagePattern,`function FilmImage({film, priority = false}: {film:FilmDetails; priority?:boolean}) {
   const [failed, setFailed] = useState(false);
   const [trailerFailed, setTrailerFailed] = useState(false);
