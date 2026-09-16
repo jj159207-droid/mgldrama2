@@ -1,0 +1,33 @@
+name: Trailer production probe
+on:
+  push:
+    branches: [main, feature/bunny-12-second-trailers]
+permissions:
+  contents: read
+jobs:
+  public-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Observe existing production before release
+        if: github.ref != 'refs/heads/main'
+        run: node scripts/verify-production-trailers.mjs --probe > production-probe.log 2>&1
+      - name: Verify deployed public routes and access protection
+        if: github.ref == 'refs/heads/main'
+        run: node scripts/verify-production-trailers.mjs > production-probe.log 2>&1
+      - name: Show probe result
+        if: always()
+        run: cat production-probe.log
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: trailer-production-probe
+          path: production-probe.log
+          retention-days: 3
