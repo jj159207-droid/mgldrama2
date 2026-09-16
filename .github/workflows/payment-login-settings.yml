@@ -27,8 +27,6 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Apply deterministic page integration
-        run: node scripts/install-payment-login-settings-safe.mjs
       - name: Apply auth autofocus integration
         run: node scripts/install-auth-autofocus.mjs
       - name: Unit tests
