@@ -9,6 +9,7 @@ import "./appearance.css";
 import "./cinematic3d.css";
 import "./hero-carousel.css";
 import "./hero-carousel-tuning.css";
+import "./payment-cleanup.css";
 
 export const viewport: Viewport = { themeColor: "#05070c" };
 
