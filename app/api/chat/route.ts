@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     if (q.get('inbox') === '1') {
       if (!s.admin) throw new ApiError(403, 'Админы эрх шаардлагатай.');
       const search = (q.get('q') || '').trim(), offset = Number(q.get('offset') || 0);
-      if (search.length > 30 || !/^[\d #]*$/.test(search) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1000000)
+      if (search.length > 30 || !/^[A-Za-z0-9 #_-]*$/.test(search) || !Number.isSafeInteger(offset) || offset < 0 || offset > 1000000)
         throw new ApiError(400, 'Хайлтын утга буруу.');
       const rows = await db('rpc/kino_chat_inbox', 'POST', {p_search: search, p_offset: offset});
       return json({threads: rows.slice(0, 50), more: rows.length > 50});

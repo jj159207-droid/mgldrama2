@@ -3,7 +3,7 @@ import { ApiError,bodyJson,db,equalSecret,fail,issueSession,json,originCheck,pin
 export const runtime='nodejs';
 export async function GET(req:NextRequest) {
   try {const s=await session(req);if(!s)return json({user:null,admin:false});
-    const [u]=s.userId?await db(`users?id=eq.${s.userId}&select=id,phone,user_id`):[];
+    const [u]=s.userId?await db(`users?id=eq.${s.userId}&select=id,phone,user_id,is_guest`):[];
     return json({user:u?publicUser(u):null,admin:s.admin});
   }catch(e){return fail(e);}
 }

@@ -526,7 +526,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
       </div><p className="package-hint">Төлбөр баталгаажсан үеэс үзэх хугацаа эхэлнэ.</p></fieldset>
       <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>Сонгосон багцын кинонууд</span></span><strong>{price.toLocaleString()}₮</strong></div>
       {countsReady && selectedCount === 0 && <p className="package-hint" role="status">Одоогоор энэ ангилалд кино байхгүй байна. Өөр ангилал сонгоорой.</p>}
-      <button type="button" className="primary-button package-continue" disabled={countsReady && selectedCount === 0} onClick={select}>{user ? "Төлбөр төлөх" : "Нэвтрээд үргэлжлүүлэх"}</button>
+      <button type="button" className="primary-button package-continue" disabled={countsReady && selectedCount === 0} onClick={select}>Төлбөр төлөх</button>
     </dialog>;
 }
 
@@ -562,7 +562,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label="ТАЗА САЙТ нүүр">ТАЗА САЙТ</a></div>
       <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>Үзэх багц</button><button onClick={onContact}>Холбогдох<ChatBadge count={chatUnread} /></button></nav>
       <div className="header-actions">
-      {user ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></> : <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button>}
+      {user && !user.guest ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></> : !user ? <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button> : null}
       </div>
     </div></header>
     <main className="catalog-shell">
@@ -835,9 +835,9 @@ function AdminMembersTab() {
         dbAll("films?select=id,title"),
         dbAll("pending_payments?status=eq.confirmed&select=id,user_id,film_id,plan,amount,created_at,confirmed_at,ref_code,phone"),
       ]);
-      setUsers(Array.isArray(us) ? us : []);
+      setUsers(Array.isArray(us) ? us.filter((u:any)=>u.is_guest!==true) : []);
       setFilms(Array.isArray(fl) ? fl : []);
-      setAllPayments(Array.isArray(pay) ? pay : []);
+      setAllPayments(Array.isArray(pay) ? pay.filter((p:any)=>!us.find((u:any)=>u.id===p.user_id)?.is_guest) : []);
     } catch(e) {
       setUsers([]); setFilms([]); setAllPayments([]);
     } finally {
@@ -1673,11 +1673,26 @@ export default function Home() {
   useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
   const accessOwner = useRef<number | null>(null);
+  const deviceRequest = useRef<Promise<any> | null>(null);
 
   // DB-с confirmed төлбөрүүдийг татаж access олгох
   const syncAccessFromDB = async (userId: number) => {
     const data=await requestJson("/api/access",{},true);
     if(accessOwner.current===userId)setAccessMap(data.access || {});
+  };
+
+  const ensureDeviceUser = async () => {
+    if(user?.id)return user;
+    if(adminAuth)return null;
+    if(deviceRequest.current)return deviceRequest.current;
+    const pending=requestJson("/api/device",{method:"POST",body:"{}"},true).then(async data=>{
+      if(!data?.user?.id)throw new Error("Төхөөрөмжийг таньж чадсангүй. Дахин оролдоно уу.");
+      accessOwner.current=data.user.id;setUser(data.user);
+      try{await syncAccessFromDB(data.user.id);}catch{}
+      return data.user;
+    });
+    deviceRequest.current=pending;
+    try{return await pending;}finally{if(deviceRequest.current===pending)deviceRequest.current=null;}
   };
 
   useEffect(() => {
@@ -1823,30 +1838,35 @@ export default function Home() {
     setFilmTarget({kind:"film",id:Number(f.id)});setPage("film");
     window.scrollTo?.({top:0,behavior:"instant"});
   };
-  const watchFilm = async (film: FilmDetails, viewerId: number | null) => {
-    // Public full playback always requires a normal user login. An existing
-    // hidden admin session must not bypass the public Login/Register gate.
-    if(!viewerId){
-      pendingActionRef.current={kind:"watch",film};
-      setWatching(false);setWatchError("");setShowLoginModal(true);
+  const watchFilm = async (film: FilmDetails) => {
+    const startedAt=playRequest.current;
+    setWatching(true);setWatchError("");
+    if(adminAuth && !user){
+      try {if(await playFilm(film))setPayFilm(null);}
+      catch(error){setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");}
+      finally{setWatching(false);}
       return;
     }
-    const intent=playRequest.current+1;
-    const current=()=>intent===playRequest.current && accessOwner.current===viewerId;
-    setWatching(true);setWatchError("");
+    let viewer=user;
     try {
-      if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
-    } catch(error) {
-      if(!current())return;
-      if(error instanceof RequestError && error.status===403){
-        if(!viewerId){pendingActionRef.current={kind:"watch",film};setShowLoginModal(true);return;}
-        setPayFilm({...film,returnFilm:film});setPage("film");
-      } else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
-    } finally {if(current())setWatching(false);}
+      if(!viewer)viewer=await ensureDeviceUser();
+      if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+      if(startedAt!==playRequest.current)return;
+      const viewerId=Number(viewer.id),intent=playRequest.current+1;
+      const current=()=>intent===playRequest.current && accessOwner.current===viewerId;
+      try {
+        if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
+      } catch(error) {
+        if(!current())return;
+        if(error instanceof RequestError && error.status===403){setPayFilm({...film,returnFilm:film});setPage("film");}
+        else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
+      }
+    } catch(error) {setWatchError(error instanceof Error?error.message:"Төхөөрөмжийг таньж чадсангүй. Дахин оролдоно уу.");}
+    finally{setWatching(false);}
   };
   const continueFilm = () => {
     if(!selectedFilm || filmOpening || watching || !authReady)return;
-    void watchFilm(selectedFilm,user?.id || null);
+    void watchFilm(selectedFilm);
   };
   const handlePaid = async (stillActive = () => true) => {
     if(!payFilm || !user || !stillActive())return;
@@ -1869,9 +1889,18 @@ export default function Home() {
     else navigateTo("payment");
     setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true,returnFilm:sourceFilm});
   };
-  const handlePlanSelect = (plan: string, sourceFilm: FilmDetails | null = null) => {
-    if (!user) {pendingActionRef.current={kind:"plan",plan,film:sourceFilm};setShowLoginModal(true);return;}
-    openPlanCheckout(plan,sourceFilm);
+  const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
+    try {
+      if(!user && !adminAuth)await ensureDeviceUser();
+      if(adminAuth && !user){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
+      openPlanCheckout(plan,sourceFilm);
+    } catch(error) {setAppError(error instanceof Error?error.message:"Төхөөрөмжийг таньж чадсангүй.");}
+  };
+  const openContact = async () => {
+    try {
+      if(!adminAuth && !user)await ensureDeviceUser();
+      window.history.pushState({page:"contact"},"");setShowContact(true);
+    } catch(error) {setAppError(error instanceof Error?error.message:"Холбогдох хэсгийг нээж чадсангүй.");}
   };
   const closeCheckout = () => {
     playRequest.current++;pendingActionRef.current=null;setWatching(false);setPayFilm(null);
@@ -1886,7 +1915,7 @@ export default function Home() {
     accessOwner.current=u.id;setUser(u);
     void syncAccessFromDB(u.id).catch(()=>{});setShowLoginModal(false);
     const action=pendingActionRef.current;pendingActionRef.current=null;
-    if(action?.kind==="watch"){void watchFilm(action.film,u.id);return;}
+    if(action?.kind==="watch"){void watchFilm(action.film);return;}
     if(action?.kind==="plan"){openPlanCheckout(action.plan,action.film);return;}
     // A completed login may arrive after its dialog was closed. Preserve the
     // current destination unless the user still has an explicit pending action.
@@ -1906,7 +1935,7 @@ export default function Home() {
       {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
 
-      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={() => { window.history.pushState({ page: "contact" }, ""); setShowContact(true); }} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
+      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({}); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}

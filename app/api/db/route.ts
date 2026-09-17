@@ -87,7 +87,7 @@ async function handler(req:NextRequest) {
   }
   if(table==='users') {
     if(req.method!=='GET')throw new ApiError(405,'Хэрэглэгчийн өөрчлөлтийг зөвхөн баталгаажуулсан нэвтрэлтийн үйлдлээр хийнэ.');
-    query.set('select','id,phone,user_id,created_at');
+    query.set('select','id,phone,user_id,is_guest,created_at');
   }
   if(table==='films'&&b){
     validateFilm(b);

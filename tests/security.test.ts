@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 import { accessFromPayments, canWatch, parseBankSms, paymentExpiry, safeUrl, type Row } from '../lib/domain';
 import { pinHash, pinMatches } from '../lib/server';
 import * as auth from '../app/api/auth/route';
+import * as device from '../app/api/device/route';
 import * as api from '../app/api/db/route';
 import * as playback from '../app/api/playback/route';
 import * as sms from '../app/api/sms/route';
@@ -82,6 +83,14 @@ test('legacy PIN is upgraded at successful login',async()=>{
 test('logout revokes server token and forged cookie has no session',async()=>{
  const c=await register();await auth.POST(req('/api/auth','POST',{action:'logout'},c));assert.equal((await (await auth.GET(req('/api/auth','GET',undefined,c))).json()).user,null);
  assert.equal((await (await auth.GET(req('/api/auth','GET',undefined,'kino_session_v2='+'a'.repeat(64)))).json()).user,null);
+});
+test('anonymous device gets one persistent guest identity and can own its payment',async()=>{
+ const first=await device.POST(req('/api/device','POST',{}));assert.equal(first.status,200);
+ const firstBody=await first.json();assert.equal(firstBody.user.guest,true);assert.equal(firstBody.user.phone,'');assert.match(firstBody.user.user_id,/^G[A-F0-9]{12}$/);
+ const cookie=first.headers.get('set-cookie')!.split(';')[0];assert.equal(tables.users.length,1);assert.equal(tables.users[0].is_guest,true);
+ const second=await device.POST(req('/api/device','POST',{},cookie));assert.equal(second.status,200);assert.equal((await second.json()).user.id,firstBody.user.id);assert.equal(tables.users.length,1);
+ const order=await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',film_id:1,plan:'single'},cookie));assert.equal(order.status,200);
+ const saved=(await order.json())[0];assert.equal(saved.user_id,firstBody.user.id);assert.equal(saved.status,'pending');assert.equal(saved.amount,5000);
 });
 test('cross-origin mutation is rejected',async()=>{const r=await auth.POST(req('/api/auth','POST',{action:'register',phone:'99112233',pin:'1234'},undefined,{origin:'https://evil.test'}));assert.equal(r.status,403);});
 test('public catalog never returns full paid URL; unsafe URLs rejected',async()=>{

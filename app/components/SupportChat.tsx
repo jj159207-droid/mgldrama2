@@ -225,7 +225,7 @@ export function AdminChatInbox({announcements}: {announcements?: ReactNode}) {
   useEffect(() => {const back = () => setSelected(null); window.addEventListener('adminBackPress', back); return () => window.removeEventListener('adminBackPress', back);}, []);
   return <div className={`admin-chat-layout ${selected ? 'chat-selected' : ''}`}>
     <aside className="chat-inbox"><h2>Хэрэглэгчдийн чат</h2><p>Хариу өгөх харилцан яриагаа сонгоно уу.</p>
-      <label className="chat-search"><span>Утас / хэрэглэгчийн дугаар</span><input type="search" inputMode="numeric" placeholder="Дугаараар хайх…" value={search} onChange={e => setSearch(e.target.value.replace(/[^\d #]/g, '').slice(0,30))} /></label>
+      <label className="chat-search"><span>Утас / төхөөрөмжийн код</span><input type="search" placeholder="Утас эсвэл G кодоор хайх…" value={search} onChange={e => setSearch(e.target.value.replace(/[^A-Za-z0-9 #_-]/g, '').slice(0,30))} /></label>
       {error && <div className="chat-error" role="alert">{error}<button onClick={() => void load()}>Дахин ачаалах</button></div>}
       {loading ? <p className="chat-empty">Ачаалж байна…</p> : !threads.length && !error ? <p className="chat-empty">{query ? 'Тохирох чат олдсонгүй.' : 'Шинэ мессеж энд харагдана.'}</p> : null}
       <div className="chat-thread-list">{threads.map(t => <button type="button" key={t.user_id} className={`chat-thread ${selected?.user_id === t.user_id ? 'chat-thread-selected' : ''}`} onClick={() => setSelected(t)}>

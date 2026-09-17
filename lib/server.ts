@@ -88,9 +88,9 @@ export async function session(req:NextRequest):Promise<Session|null> {
   const [row]=await db(`app_sessions?token_hash=eq.${digest(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id,is_admin&limit=1`);
   return row?{userId:typeof row.user_id==='number'?row.user_id:null,admin:row.is_admin===true}:null;
 }
-export async function issueSession(req:NextRequest,userId:number|null,admin:boolean) {
+export async function issueSession(req:NextRequest,userId:number|null,admin:boolean,ageOverride?:number) {
   await revokeSession(req);
-  const token=randomBytes(32).toString('hex'),age=admin?3600:604800;
+  const token=randomBytes(32).toString('hex'),age=ageOverride ?? (admin?3600:604800);
   await db('app_sessions','POST',{token_hash:digest(token),user_id:userId,is_admin:admin,expires_at:new Date(Date.now()+age*1000).toISOString()});
   return {token,age};
 }
@@ -104,5 +104,6 @@ export async function rateLimit(key:string) {
   if(result?.allowed!==true)throw new ApiError(429,'Олон удаа оролдсон байна. 15 минут хүлээгээд дахин оролдоно уу.');
 }
 export function publicUser(user:Row) {
-  return {id:user.id,phone:user.phone,user_id:user.user_id || `#${String(user.id).padStart(6,'0')}`};
+  const guest=user.is_guest===true;
+  return {id:user.id,phone:guest?'':user.phone,user_id:user.user_id || `#${String(user.id).padStart(6,'0')}`,guest};
 }
