@@ -65,6 +65,7 @@ export default function FilmLanding(props:Props) {
   const preview = trailerUrl(film);
   const busy = props.watching || !props.authReady;
   const description = film.description?.trim() || "Киноны тайлбар удахгүй нэмэгдэнэ.";
+  const priceLabel = film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   return <main className="film-destination catalog-shell">
     <nav className="detail-top" aria-label="Киноны навигац"><button className="icon-button film-back" onClick={onBack} aria-label="Нүүр рүү буцах"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8"/></svg></button><span className="detail-brand"><span className="brand-symbol" aria-hidden="true">▶</span>ТАЗА САЙТ</span><span aria-hidden="true"/></nav>
     <section className={`film-landing${previewOpen ? " preview-playing" : ""}`} aria-labelledby="selected-film-title">
@@ -82,7 +83,7 @@ export default function FilmLanding(props:Props) {
         <h1 id="selected-film-title">{film.title}</h1>
         <div className="detail-summary"><p id="film-description" className={`detail-description${descriptionExpanded ? " expanded" : ""}`}>{description}</p>{description.length > 64 && <button className="detail-description-toggle" aria-expanded={descriptionExpanded} aria-controls="film-description" onClick={()=>setDescriptionExpanded(!descriptionExpanded)}>{descriptionExpanded ? "Хураах" : "Дэлгэрэнгүй"}</button>}</div>
         <div className="detail-language"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M6 15h5m2 0h5M6 11h3m2 0h7"/></svg><span>{film.badge?.split("|")[0] || "Хэлтэй"}</span></div>
-        <p className="film-landing-price">{film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`}<span>{film.free || film.locked === false ? "Шууд үзэх боломжтой" : "3 хоног үзэх эрх"}</span></p>
+        <p className="film-landing-price"><strong className="film-landing-price-value">{priceLabel}</strong><span>{film.free || film.locked === false ? "Шууд үзэх боломжтой" : "3 хоног үзэх эрх"}</span></p>
       </div>
       <div className="detail-watch"><button className="primary-button film-continue" onClick={watch} disabled={busy}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4v16l13-8Z"/></svg>{props.watching ? "Үзэх эрхийг шалгаж байна…" : "Бүтэн үзэх"}</button>{props.available && <p className="film-landing-note">Танд энэ киног үзэх эрх байна.</p>}{props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}</div>
     </section>
