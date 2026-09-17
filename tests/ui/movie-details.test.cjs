@@ -99,12 +99,12 @@ test('recommendations show top three of the category, then navigation resets tra
  const original=films.length;
  films.push({id:8,title:'Найз',badge:'Хэлтэй|Гадаад',views:50}, {id:9,title:'Салхи',badge:'Хадмал|Гадаад',views:200}, {id:10,title:'Зам',badge:'Хэлтэй|Гадаад',views:100}, {id:11,title:'Уул',badge:'Хэлтэй|Гадаад',views:80});
  try {
-  await render('/?film=7&fbclid=tracking');assert.deepEqual([...document.querySelectorAll('.related-film h3')].map(x=>x.textContent),['Салхи','Зам','Уул']);
+  await render('/?film=7&fbclid=tracking');assert.deepEqual([...document.querySelectorAll('.related-film h3')].map(x=>x.textContent),['Салхи','Зам','Уул']);assert.equal(document.querySelector('.detail-play span').textContent,'Трейлер үзэх');assert.equal(document.querySelector('#related-title'),null);
   assert.deepEqual([...document.querySelectorAll('.detail-plan h3')].map(x=>x.textContent),['3 хоног','30 хоног']);
   assert.deepEqual([...document.querySelectorAll('.detail-plan strong')].map(x=>x.textContent),['8,000₮','12,500₮']);
-  assert.deepEqual([...document.querySelectorAll('.film-destination > section')].map(x=>x.className),['film-landing','detail-related','detail-packages']);
+  assert.deepEqual([...document.querySelectorAll('.film-destination > section')].map(x=>x.className),['film-landing','detail-packages','detail-related']);
   await click('.detail-poster');await click('.related-film');assert.equal(title(),'Салхи');assert.equal(document.querySelector('video'),null);assert.equal(new URL(window.location.href).searchParams.get('film'),'9');assert.equal(new URL(window.location.href).searchParams.get('fbclid'),'tracking');
-  await pop('/?film=34');assert.match(document.querySelector('#detail-packages-title').textContent,/Хятад/);assert.ok([...document.querySelectorAll('.detail-plan button')].every(x=>x.getAttribute('aria-label').startsWith('Хятад')));
+  await pop('/?film=34');assert.equal(document.querySelector('#detail-packages-title').textContent,'60 кино багц 8000 төгрөг');assert.ok([...document.querySelectorAll('.detail-plan button')].every(x=>x.getAttribute('aria-label').startsWith('Хятад')));
  }finally{films.splice(original);}
 });
 test('a category package bought from details stays inline and opens the selected movie after payment',async()=>{

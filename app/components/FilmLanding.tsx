@@ -72,7 +72,7 @@ export default function FilmLanding(props:Props) {
         {previewOpen ? <Trailer film={film} onClose={()=>setPreviewOpen(false)} /> : <>
           <button className="detail-poster" onClick={()=>setPreviewOpen(true)} disabled={!preview} aria-label={`${film.title} — трейлер тоглуулах`}>
             <FilmImage key={film.img} film={film} priority />
-            {preview && <span className="detail-play"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4v16l13-8Z"/></svg><span>Трейлер</span></span>}
+            {preview && <span className="detail-play"><svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4v16l13-8Z"/></svg><span>Трейлер үзэх</span></span>}
           </button>
           {!preview && <p className="detail-media-caption">Трейлер удахгүй нэмэгдэнэ.</p>}
         </>}
@@ -92,8 +92,12 @@ export default function FilmLanding(props:Props) {
       {props.payment}
     </section>}
 
-    <section className="detail-related" aria-labelledby="related-title">
-      <div className="detail-section-heading"><h2 id="related-title">Их үзсэн 3 кино</h2></div>
+    {packages.length > 0 && <section className="detail-packages" aria-labelledby="detail-packages-title">
+      <div className="detail-section-heading"><h2 id="detail-packages-title">60 кино багц 8000 төгрөг</h2></div>
+      <div className="detail-plan-grid">{packages.map((plan,index)=><article key={plan.id} className="detail-plan"><svg className="plan-calendar" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg><h3>{plan.days} хоног</h3><strong>{plan.price.toLocaleString("mn-MN")}₮</strong><button className={index === 0 ? "secondary-button" : "primary-button"} disabled={busy} onClick={()=>choosePlan(plan.id)} aria-label={`${plan.category} ${plan.days} хоногийн багц авах`}>Багц авах</button></article>)}</div>
+    </section>}
+
+    <section className="detail-related">
       {props.relatedError ? <div className="detail-related-error" role="alert"><p>Санал болгох киног ачаалж чадсангүй.</p><button className="secondary-button" onClick={props.onRetryRelated}>Дахин ачаалах</button></div>
         : props.relatedLoading ? <p role="status">Ижил ангиллын кинонуудыг ачаалж байна…</p>
         : related.length ? <div className="related-grid">{related.map((item,index)=><button className="related-film" key={item.id} onClick={()=>props.onFilm(item)}>
@@ -101,9 +105,5 @@ export default function FilmLanding(props:Props) {
         </button>)}</div> : <p>Энэ ангиллын өөр кино одоогоор алга.</p>}
     </section>
 
-    {packages.length > 0 && <section className="detail-packages" aria-labelledby="detail-packages-title">
-      <div className="detail-section-heading"><h2 id="detail-packages-title">{category} киноны багц</h2></div>
-      <div className="detail-plan-grid">{packages.map((plan,index)=><article key={plan.id} className="detail-plan"><svg className="plan-calendar" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg><h3>{plan.days} хоног</h3><strong>{plan.price.toLocaleString("mn-MN")}₮</strong><button className={index === 0 ? "secondary-button" : "primary-button"} disabled={busy} onClick={()=>choosePlan(plan.id)} aria-label={`${plan.category} ${plan.days} хоногийн багц авах`}>Багц авах</button></article>)}</div>
-    </section>}
   </main>;
 }
