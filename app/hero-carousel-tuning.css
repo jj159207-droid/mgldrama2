@@ -1,6 +1,70 @@
 /* Final mobile hero tuning: hide the compact site header, move the 3D carousel up,
    and place the 60-movie package call-to-action directly below the carousel dots. */
 
+/* Language + package chip directly on every hero image. */
+.cinematic-hero-package {
+  position: absolute;
+  z-index: 8;
+  top: 14px;
+  left: 50%;
+  max-width: calc(100% - 28px);
+  transform: translateX(-50%);
+  padding: 7px 11px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  background: rgba(3,7,12,.76);
+  color: #f8fbff;
+  font-size: clamp(10px, 1.15vw, 13px);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+  text-shadow: 0 1px 3px rgba(0,0,0,.8);
+}
+
+/* More physical depth and cleaner full-bleed artwork. */
+.cinematic-hero-frame {
+  background: #03060b !important;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.08),
+    inset 0 0 0 1px rgba(255,255,255,.14),
+    0 30px 48px rgba(0,0,0,.72),
+    0 12px 22px rgba(0,0,0,.52) !important;
+}
+
+.cinematic-hero-frame img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  margin: 0 !important;
+  display: block !important;
+  filter: saturate(1.12) contrast(1.08) brightness(.94) !important;
+}
+
+.cinematic-hero-card.is-current .cinematic-hero-frame {
+  box-shadow:
+    -9px 0 30px rgba(255,42,67,.72),
+    10px 0 32px rgba(38,168,255,.72),
+    0 0 0 2px rgba(255,255,255,.14),
+    inset 0 0 0 1px rgba(255,255,255,.18),
+    0 34px 56px rgba(0,0,0,.78) !important;
+}
+
+.cinematic-hero-title {
+  left: 14px !important;
+  right: 14px !important;
+  bottom: 16px !important;
+  color: #fff !important;
+  font-weight: 950 !important;
+  line-height: 1.02 !important;
+  text-align: center !important;
+  text-shadow: 0 4px 16px #000, 0 1px 3px #000 !important;
+}
+
 .cinematic-package-cta {
   width: min(760px, 100%);
   min-height: 72px;
@@ -80,9 +144,25 @@
     perspective-origin: 50% 40%;
   }
 
-  .cinematic-hero-card,
-  .cinematic-hero-arrow {
+  .cinematic-hero-card {
     top: 43% !important;
+  }
+
+  /* Swipe on mobile like the approved mockup; arrows stay available on desktop. */
+  .cinematic-hero-arrow {
+    display: none !important;
+  }
+
+  .cinematic-hero-package {
+    top: 10px;
+    max-width: calc(100% - 20px);
+    padding: 6px 9px;
+    font-size: clamp(8px, 2.55vw, 11px);
+  }
+
+  .cinematic-hero-title {
+    bottom: 13px !important;
+    font-size: clamp(16px, 5.2vw, 23px) !important;
   }
 
   /* Dots become part of normal flow so the package banner sits immediately below them. */
@@ -123,6 +203,11 @@
   .cinematic-hero-stage {
     height: 108vw !important;
     min-height: 335px !important;
+  }
+
+  .cinematic-hero-package {
+    font-size: 8px;
+    padding: 5px 7px;
   }
 
   .cinematic-package-cta {
