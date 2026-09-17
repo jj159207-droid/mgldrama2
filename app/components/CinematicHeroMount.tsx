@@ -19,7 +19,7 @@ function circularOffset(index: number, active: number, count: number) {
   return offset;
 }
 
-function Carousel({ films }: { films: HeroFilm[] }) {
+function Carousel({ films, onOpenPlans }: { films: HeroFilm[]; onOpenPlans: () => void }) {
   const [active, setActive] = useState(0);
   const [failed, setFailed] = useState<Record<number, true>>({});
   const swipe = useRef({ startX: 0, moved: false });
@@ -135,6 +135,14 @@ function Carousel({ films }: { films: HeroFilm[] }) {
           ))}
         </div>
       )}
+
+      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label="60 кино 8000 төгрөгийн үзэх багц сонгох">
+        <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
+          <path d="m12 10 1.5 2.5M15 15l1.5 2.5M18 20l1.5 2.5" />
+        </svg>
+        <span><strong>60</strong> кино <strong>8000</strong> төгрөг үзэх багц</span>
+      </button>
     </section>
   );
 }
@@ -175,6 +183,11 @@ export default function CinematicHeroMount() {
     return () => target.classList.remove("has-cinematic-carousel");
   }, [target, films.length]);
 
-  const content = useMemo(() => films.length ? <Carousel films={films} /> : null, [films]);
+  const openPlans = useCallback(() => {
+    const button = target?.querySelector<HTMLButtonElement>(".package-banner-action .primary-button");
+    button?.click();
+  }, [target]);
+
+  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} /> : null, [films, openPlans]);
   return target && content ? createPortal(content, target) : null;
 }
