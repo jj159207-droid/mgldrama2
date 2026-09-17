@@ -1,0 +1,400 @@
+/*
+ * TAZA SITE — cinematic 3D presentation layer
+ * Visual-only overrides. Payment, catalog, playback and admin behaviour stay untouched.
+ */
+
+.site-theme {
+  --cinema-blue: #39b8ff;
+  --cinema-red: #ff304d;
+  --cinema-black: #05070c;
+  --cinema-edge: color-mix(in srgb, var(--accent) 78%, white 22%);
+  --cinema-glow: color-mix(in srgb, var(--accent) 58%, transparent);
+  background:
+    radial-gradient(circle at 18% -8%, color-mix(in srgb, var(--accent) 14%, transparent) 0, transparent 34rem),
+    radial-gradient(circle at 86% 12%, rgba(57,184,255,.09) 0, transparent 28rem),
+    linear-gradient(180deg, #070a10 0%, var(--background) 34%, #05070c 100%);
+}
+
+.cinema-site {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+.cinema-site::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 20%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 36%),
+    linear-gradient(180deg, transparent 0 56%, rgba(0,0,0,.22) 100%);
+}
+
+/* Header — darker, cleaner and closer to a native streaming app. */
+.site-header {
+  background: rgba(5, 8, 13, .88);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: 0 10px 40px rgba(0,0,0,.28);
+}
+
+.brand a {
+  letter-spacing: .045em;
+  text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.brand-symbol {
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 44%, transparent);
+}
+
+.header-nav .nav-current {
+  color: var(--foreground);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Hero/package banner — gives the page the same cinematic stage as the mockup. */
+.package-banner {
+  border: 1px solid color-mix(in srgb, var(--accent) 48%, transparent);
+  border-radius: 24px;
+  background: linear-gradient(130deg, #0a0e15, var(--surface));
+  box-shadow:
+    0 28px 70px rgba(0,0,0,.42),
+    0 0 0 1px rgba(255,255,255,.025) inset,
+    0 0 54px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.package-banner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--accent) 13%, transparent), transparent 38%),
+    radial-gradient(circle at 82% 45%, rgba(57,184,255,.12), transparent 34%);
+}
+
+.package-banner-art {
+  filter: saturate(1.12) contrast(1.08) brightness(.72);
+  transform: scale(1.02);
+}
+
+.package-banner h1 {
+  text-shadow: 0 8px 28px rgba(0,0,0,.7);
+}
+
+.package-banner .primary-button,
+.primary-button {
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--accent) 22%, transparent),
+    0 0 0 1px rgba(255,255,255,.12) inset;
+}
+
+/* Category pills */
+.category-tabs {
+  scrollbar-width: none;
+}
+.category-tabs::-webkit-scrollbar { display: none; }
+.category-tabs button {
+  border-radius: 999px;
+  background: rgba(255,255,255,.018);
+  backdrop-filter: blur(8px);
+  transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.category-tabs button:hover { transform: translateY(-1px); }
+.category-tabs button.active {
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* Main 3D poster wall */
+.film-grid {
+  perspective: 1500px;
+  perspective-origin: 50% 30%;
+  gap: 34px 25px;
+  align-items: start;
+}
+
+.movie-card {
+  --card-tilt: -3.8deg;
+  position: relative;
+  min-width: 0;
+  perspective: 950px;
+  transform-style: preserve-3d;
+  isolation: isolate;
+}
+
+.movie-card:nth-child(2n) { --card-tilt: 3.8deg; }
+.movie-card:nth-child(3n) { --card-tilt: 2.2deg; }
+.movie-card:nth-child(6n+1) { --card-tilt: -4.8deg; }
+
+.movie-card::after {
+  content: "";
+  position: absolute;
+  left: 9%;
+  right: 9%;
+  bottom: 56px;
+  height: 20px;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%);
+  filter: blur(11px);
+  opacity: .72;
+  transform: translateY(16px);
+}
+
+.movie-main {
+  position: relative;
+  overflow: visible;
+  transform-style: preserve-3d;
+  transform: perspective(950px) rotateY(var(--card-tilt)) rotateX(.7deg);
+  transform-origin: center center;
+  transition: transform .32s cubic-bezier(.2,.75,.25,1), filter .25s ease;
+  will-change: transform;
+}
+
+.movie-poster {
+  overflow: hidden;
+  border: 2px solid var(--cinema-edge);
+  border-radius: 15px;
+  background: #090d14;
+  transform-style: preserve-3d;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.12),
+    0 0 0 4px color-mix(in srgb, var(--accent) 16%, rgba(255,255,255,.04)),
+    -9px 0 28px color-mix(in srgb, var(--accent) 24%, transparent),
+    9px 0 26px rgba(57,184,255,.12),
+    0 24px 42px rgba(0,0,0,.72),
+    inset 0 0 22px rgba(0,0,0,.38);
+  transition: border-color .25s ease, box-shadow .3s ease, transform .3s ease;
+}
+
+.movie-poster::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 2px 2px 0 rgba(255,255,255,.28),
+    inset -2px -2px 0 rgba(0,0,0,.58),
+    inset 8px 0 18px rgba(255,255,255,.035),
+    inset -10px 0 22px rgba(0,0,0,.2);
+}
+
+.movie-poster::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.025) 19%, transparent 40%),
+    linear-gradient(180deg, transparent 58%, rgba(0,0,0,.24) 100%);
+  mix-blend-mode: screen;
+  opacity: .55;
+}
+
+.poster-art,
+.poster-art > img,
+.poster-art > .trailer-poster-frame-shell,
+.poster-fallback {
+  border-radius: 12px;
+}
+
+.poster-art > img,
+.poster-art > .trailer-poster-frame-shell > .trailer-poster-frame {
+  filter: saturate(1.08) contrast(1.04);
+}
+
+.movie-info {
+  position: relative;
+  z-index: 2;
+  transform: translateZ(16px);
+  padding-top: 16px;
+}
+
+.movie-info h3 {
+  text-shadow: 0 4px 18px rgba(0,0,0,.55);
+}
+
+.movie-category {
+  color: color-mix(in srgb, var(--accent) 56%, var(--muted));
+}
+
+.movie-detail-hint {
+  opacity: .78;
+}
+
+.movie-play {
+  width: 54px;
+  height: 54px;
+  border-color: rgba(255,255,255,.72);
+  background: rgba(4,8,14,.58);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.movie-card:hover { z-index: 8; }
+.movie-main:hover,
+.movie-main:focus-visible {
+  transform: perspective(950px) rotateY(0deg) rotateX(0deg) translateY(-10px) scale(1.035);
+  filter: brightness(1.035);
+}
+
+.movie-main:hover .movie-poster,
+.movie-main:focus-visible .movie-poster {
+  border-color: color-mix(in srgb, var(--accent) 84%, white 16%);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.18),
+    0 0 0 4px color-mix(in srgb, var(--accent) 22%, rgba(255,255,255,.04)),
+    -12px 0 36px color-mix(in srgb, var(--accent) 34%, transparent),
+    12px 0 34px rgba(57,184,255,.18),
+    0 30px 54px rgba(0,0,0,.78);
+}
+
+.movie-main:hover .poster-art > img,
+.movie-main:hover .poster-art > .trailer-poster-frame-shell > .trailer-poster-frame,
+.movie-main:focus-visible .poster-art > img,
+.movie-main:focus-visible .poster-art > .trailer-poster-frame-shell > .trailer-poster-frame {
+  transform: scale(1.055);
+}
+
+/* Layout 4 becomes the strongest poster-wall version while preserving its overlay captions. */
+[data-layout="4"] > .cinema-site .movie-main { overflow: visible; }
+[data-layout="4"] > .cinema-site .movie-card { --card-tilt: -4.8deg; }
+[data-layout="4"] > .cinema-site .movie-card:nth-child(2n) { --card-tilt: 4.8deg; }
+[data-layout="4"] > .cinema-site .movie-poster { border-radius: 18px; }
+[data-layout="4"] > .cinema-site .movie-info {
+  transform: translateZ(18px);
+  border-radius: 0 0 16px 16px;
+}
+
+/* Journal layout stays readable instead of tilting whole rows. */
+[data-layout="3"] > .cinema-site .movie-main {
+  transform: none;
+  will-change: auto;
+}
+[data-layout="3"] > .cinema-site .movie-main:hover,
+[data-layout="3"] > .cinema-site .movie-main:focus-visible {
+  transform: translateY(-4px);
+}
+[data-layout="3"] > .cinema-site .movie-card::after { display: none; }
+
+/* Mobile: keep the 3D frame, but reduce tilt/shadows for speed and touch comfort. */
+@media (max-width: 760px) {
+  .site-header {
+    background: #060910;
+    box-shadow: 0 8px 26px rgba(0,0,0,.38);
+  }
+
+  .header-inner { min-height: 68px; }
+  .brand a { letter-spacing: .025em; }
+
+  .package-banner {
+    border-radius: 18px;
+    box-shadow: 0 18px 42px rgba(0,0,0,.44), 0 0 34px color-mix(in srgb, var(--accent) 10%, transparent);
+  }
+
+  .package-banner-art {
+    transform: none;
+    filter: saturate(1.06) contrast(1.05) brightness(.63);
+  }
+
+  .film-grid {
+    perspective: 900px;
+    gap: 27px 15px;
+  }
+
+  .movie-card { --card-tilt: -2.8deg; }
+  .movie-card:nth-child(2n) { --card-tilt: 2.8deg; }
+  .movie-card:nth-child(3n) { --card-tilt: -1.8deg; }
+
+  .movie-main {
+    transform: perspective(800px) rotateY(var(--card-tilt));
+  }
+
+  .movie-poster {
+    border-width: 2px;
+    border-radius: 13px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.09),
+      0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent),
+      -5px 0 18px color-mix(in srgb, var(--accent) 20%, transparent),
+      5px 0 16px rgba(57,184,255,.1),
+      0 17px 28px rgba(0,0,0,.66);
+  }
+
+  .movie-card::after {
+    bottom: 49px;
+    filter: blur(9px);
+    opacity: .55;
+  }
+
+  .movie-info {
+    transform: none;
+    padding-top: 13px;
+  }
+
+  .movie-play {
+    width: 46px;
+    height: 46px;
+  }
+
+  .movie-main:active {
+    transform: perspective(800px) rotateY(0deg) translateY(-3px) scale(1.015);
+  }
+}
+
+@media (max-width: 600px) {
+  .catalog-shell,
+  .header-inner { width: calc(100% - 26px); }
+
+  .film-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 25px 14px;
+  }
+
+  .movie-info h3 { font-size: 14px; }
+  .movie-category,
+  .movie-price,
+  .movie-detail-hint { font-size: 11px; }
+
+  .movie-badge,
+  .movie-free {
+    top: 8px;
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  .movie-badge { left: 8px; }
+  .movie-free { right: 8px; }
+
+  [data-layout="4"] > .cinema-site .film-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
+  .film-grid { gap: 23px 11px; }
+  .movie-card { --card-tilt: -2deg; }
+  .movie-card:nth-child(2n) { --card-tilt: 2deg; }
+  .movie-poster {
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.08),
+      0 0 0 2px color-mix(in srgb, var(--accent) 12%, transparent),
+      0 14px 23px rgba(0,0,0,.62);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movie-main,
+  .movie-main:hover,
+  .movie-main:focus-visible,
+  .movie-main:active {
+    transform: none !important;
+    filter: none !important;
+  }
+}
