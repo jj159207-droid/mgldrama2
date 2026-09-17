@@ -110,7 +110,7 @@ test('recommendations show top three of the category, then navigation resets tra
   assert.deepEqual([...document.querySelectorAll('.detail-plan strong')].map(x=>x.textContent),['8,000₮','12,500₮']);
   assert.deepEqual([...document.querySelectorAll('.film-destination > section')].map(x=>x.className),['film-landing','detail-packages','detail-related']);
   await click('.detail-poster');await click('.related-film');assert.equal(title(),'Салхи');assert.equal(document.querySelector('video'),null);assert.equal(new URL(window.location.href).searchParams.get('film'),'9');assert.equal(new URL(window.location.href).searchParams.get('fbclid'),'tracking');
-  await pop('/?film=34');assert.equal(document.querySelector('#detail-packages-title').textContent,'60 кино багц 8000 төгрөг');assert.ok([...document.querySelectorAll('.detail-plan button')].every(x=>x.getAttribute('aria-label').startsWith('Хятад')));
+  await pop('/?film=34');assert.equal(document.querySelector('#detail-packages-title'),null);assert.deepEqual([...document.querySelectorAll('.detail-plan .eyebrow')].map(x=>x.textContent),['60 кино үзэх эрх','60 кино үзэх эрх']);assert.ok([...document.querySelectorAll('.detail-plan button')].every(x=>x.getAttribute('aria-label').startsWith('Хятад')));
  }finally{films.splice(original);}
 });
 test('a category package bought from details stays inline and opens the selected movie after payment',async()=>{
