@@ -8,6 +8,7 @@ import "./install.css";
 import "./appearance.css";
 import "./cinematic3d.css";
 import "./hero-carousel.css";
+import "./hero-carousel-tuning.css";
 
 export const viewport: Viewport = { themeColor: "#05070c" };
 
