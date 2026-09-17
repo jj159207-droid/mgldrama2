@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import AgeGate from "@/app/components/AgeGate";
 import CinematicHeroMount from "@/app/components/CinematicHeroMount";
+import CatalogCardTuning from "@/app/components/CatalogCardTuning";
 import "./globals.css";
 import "./chat.css";
 import "./install.css";
@@ -10,6 +11,7 @@ import "./cinematic3d.css";
 import "./hero-carousel.css";
 import "./hero-carousel-tuning.css";
 import "./payment-cleanup.css";
+import "./catalog-card-tuning.css";
 
 export const viewport: Viewport = { themeColor: "#05070c" };
 
@@ -62,6 +64,7 @@ export default function RootLayout({
         <AgeGate>
           {children}
           <CinematicHeroMount />
+          <CatalogCardTuning />
         </AgeGate>
         <Script src="/install.js" strategy="beforeInteractive" />
       </body>
