@@ -1,0 +1,81 @@
+/* Final home-card size + trailer button tuning. */
+
+.cinema-site .catalog-trailer-button {
+  width: 100%;
+  min-height: 34px;
+  margin: 8px 0 0;
+  padding: 7px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,.2));
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(12,18,28,.96), rgba(5,8,14,.98));
+  color: #f8fbff;
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: .01em;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.035) inset,
+    -2px 0 8px var(--edge-left),
+    2px 0 8px var(--edge-right),
+    0 7px 16px rgba(0,0,0,.48);
+  cursor: pointer;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.cinema-site .catalog-trailer-button > span:first-child {
+  color: var(--accent);
+  font-size: 10px;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--accent) 60%, transparent));
+}
+
+.cinema-site .catalog-trailer-button:hover,
+.cinema-site .catalog-trailer-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(20,30,44,.98), rgba(7,11,18,.98));
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.05) inset,
+    -3px 0 11px var(--edge-left),
+    3px 0 11px var(--edge-right),
+    0 10px 20px rgba(0,0,0,.54);
+}
+
+@media (max-width: 760px) {
+  /* Make each of the two movie cards visibly larger while keeping two columns. */
+  .cinema-site .catalog-section .film-grid {
+    width: calc(100% + 10px) !important;
+    margin-left: -5px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px 5px !important;
+  }
+
+  .cinema-site .movie-poster {
+    aspect-ratio: 1.36 / 1 !important;
+  }
+
+  .cinema-site .catalog-trailer-button {
+    min-height: 32px;
+    margin-top: 7px;
+    padding: 6px 7px;
+    border-radius: 9px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 390px) {
+  .cinema-site .catalog-section .film-grid {
+    width: calc(100% + 12px) !important;
+    margin-left: -6px !important;
+    gap: 10px 4px !important;
+  }
+
+  .cinema-site .catalog-trailer-button {
+    min-height: 30px;
+    font-size: 10.5px;
+    gap: 5px;
+  }
+}
