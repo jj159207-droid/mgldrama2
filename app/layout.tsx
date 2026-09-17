@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import AgeGate from "@/app/components/AgeGate";
+import CinematicHeroMount from "@/app/components/CinematicHeroMount";
 import "./globals.css";
 import "./chat.css";
 import "./install.css";
 import "./appearance.css";
 import "./cinematic3d.css";
+import "./hero-carousel.css";
 
 export const viewport: Viewport = { themeColor: "#05070c" };
 
@@ -55,7 +57,10 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
-        <AgeGate>{children}</AgeGate>
+        <AgeGate>
+          {children}
+          <CinematicHeroMount />
+        </AgeGate>
         <Script src="/install.js" strategy="beforeInteractive" />
       </body>
     </html>
