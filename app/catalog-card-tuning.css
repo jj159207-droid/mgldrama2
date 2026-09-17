@@ -288,9 +288,15 @@
 
 /* Mobile = the approved two-column reference. */
 @media (max-width: 760px) {
+  /* Use more of the phone width so each poster is slightly larger. */
+  .cinema-site .catalog-shell {
+    width: calc(100% - 12px) !important;
+    max-width: none !important;
+  }
+
   .cinema-site .film-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 14px 12px !important;
+    gap: 12px 8px !important;
     align-items: start !important;
   }
 
@@ -300,7 +306,7 @@
   }
 
   .cinema-site .movie-poster {
-    aspect-ratio: 1.42 / 1 !important;
+    aspect-ratio: 1.40 / 1 !important;
     border-radius: 13px !important;
     box-shadow:
       -2px 0 8px var(--edge-left),
@@ -360,8 +366,12 @@
 }
 
 @media (max-width: 390px) {
+  .cinema-site .catalog-shell {
+    width: calc(100% - 8px) !important;
+  }
+
   .cinema-site .film-grid {
-    gap: 12px 10px !important;
+    gap: 10px 7px !important;
   }
 
   .cinema-site .movie-badge {
