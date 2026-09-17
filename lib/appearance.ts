@@ -1,7 +1,7 @@
 export type SiteAppearance = { layout: number; tone: number; revision: number };
 export const DEFAULT_APPEARANCE: SiteAppearance = {layout: 1, tone: 25, revision: 0};
 export const LAYOUTS = [
-  {name: "Сонгодог", description: "Кино театрын уур амьсгалтай цэгцтэй тор"},
+  {name: "3D Кино", description: "Хүрээ, гялбаа, гүнтэй 3D кино постерын тор"},
   {name: "Премьер", description: "Том баннер, өргөн кино картууд"},
   {name: "Сэтгүүл", description: "Зураг, нэрийг зэрэгцүүлсэн тухтай жагсаалт"},
   {name: "Постер", description: "Постер давамгайлсан кино галерей"},
