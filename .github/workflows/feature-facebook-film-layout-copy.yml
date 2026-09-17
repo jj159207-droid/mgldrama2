@@ -1,0 +1,43 @@
+name: Verify Facebook film layout copy
+on:
+  push:
+    branches: [feature-facebook-film-layout-copy]
+    paths:
+      - 'scripts/patch-facebook-film-layout-copy.mjs'
+      - '.github/workflows/feature-facebook-film-layout-copy.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: feature-facebook-film-layout-copy
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Apply requested film page layout
+        run: node scripts/patch-facebook-film-layout-copy.mjs
+      - name: Install dependencies
+        run: npm ci
+      - name: UI tests
+        run: npm run test:ui
+      - name: Unit tests
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Production build
+        run: npm run build
+      - name: Diff safety
+        run: git diff --check
+      - name: Commit verified change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/components/FilmLanding.tsx tests/ui/movie-details.test.cjs
+          git commit -m 'Update Facebook film page package and trailer copy'
+          git push origin HEAD:feature-facebook-film-layout-copy
