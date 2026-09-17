@@ -8,6 +8,7 @@ type HeroFilm = {
   id: number;
   title: string;
   img?: string | null;
+  badge?: string | null;
 };
 
 const MAX_HERO_FILMS = 9;
@@ -17,6 +18,13 @@ function circularOffset(index: number, active: number, count: number) {
   let offset = (index - active + count) % count;
   if (offset > count / 2) offset -= count;
   return offset;
+}
+
+function heroPackageLabel(film: HeroFilm) {
+  const [languageRaw, categoryRaw] = String(film.badge || "").split("|");
+  const language = languageRaw?.trim() || "Хэлтэй";
+  const category = categoryRaw?.trim() || "Эротик";
+  return `${language} · ${category} багц`;
 }
 
 function Carousel({ films, onOpenPlans }: { films: HeroFilm[]; onOpenPlans: () => void }) {
@@ -108,6 +116,7 @@ function Carousel({ films, onOpenPlans }: { films: HeroFilm[]; onOpenPlans: () =
                 ) : (
                   <span className="cinematic-hero-fallback" aria-hidden="true">ТАЗА САЙТ</span>
                 )}
+                <span className="cinematic-hero-package">◉ {heroPackageLabel(film)}</span>
                 <span className="cinematic-hero-shade" aria-hidden="true" />
                 <strong className="cinematic-hero-title">{film.title}</strong>
               </span>
@@ -153,12 +162,17 @@ export default function CinematicHeroMount() {
 
   useEffect(() => {
     let cancelled = false;
-    dbAll("films?select=id,title,img&order=id.desc", {}, true)
+    dbAll("films?select=id,title,img,badge&order=id.desc", {}, true)
       .then(rows => {
         if (cancelled || !Array.isArray(rows)) return;
         const clean = rows
           .filter((film: any) => Number.isSafeInteger(Number(film?.id)) && String(film?.title || "").trim())
-          .map((film: any) => ({ id: Number(film.id), title: String(film.title).trim(), img: typeof film.img === "string" ? film.img : "" }));
+          .map((film: any) => ({
+            id: Number(film.id),
+            title: String(film.title).trim(),
+            img: typeof film.img === "string" ? film.img : "",
+            badge: typeof film.badge === "string" ? film.badge : "",
+          }));
         const withPosters = clean.filter(film => film.img);
         setFilms((withPosters.length >= 3 ? withPosters : clean).slice(0, MAX_HERO_FILMS));
       })
