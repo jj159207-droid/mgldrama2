@@ -1,26 +1,215 @@
-/* Home catalog card cleanup.
- * The film detail page is intentionally untouched.
+/* Home catalog cards — neon 3D poster tiles matching the approved mobile reference.
+ * Film detail pages are intentionally untouched.
  */
 
-.cinema-site .movie-main {
+.cinema-site .movie-card {
+  --edge-left: rgba(255, 48, 77, .92);
+  --edge-right: rgba(57, 184, 255, .95);
   position: relative;
+  min-width: 0;
+  overflow: visible;
+  perspective: 1000px;
+  transform-style: preserve-3d;
 }
 
-/* No separate description/info block under the poster. Reuse only title + price as an overlay. */
+.cinema-site .movie-card:nth-child(2n) {
+  --edge-left: rgba(57, 184, 255, .9);
+  --edge-right: rgba(255, 92, 63, .92);
+}
+
+.cinema-site .movie-card:nth-child(3n) {
+  --edge-left: rgba(255, 167, 55, .9);
+  --edge-right: rgba(57, 184, 255, .92);
+}
+
+.cinema-site .movie-main {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  border-radius: 16px !important;
+  transform-style: preserve-3d;
+  transform: perspective(900px) rotateX(1.2deg) rotateY(-1.4deg) translateZ(0);
+  transform-origin: center center;
+  transition: transform .24s ease, filter .24s ease;
+  isolation: isolate;
+}
+
+.cinema-site .movie-card:nth-child(2n) .movie-main {
+  transform: perspective(900px) rotateX(1.2deg) rotateY(1.4deg) translateZ(0);
+}
+
+/* Physical-looking bevel/thickness behind each tile. */
+.cinema-site .movie-main::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  left: 5px;
+  right: -5px;
+  top: 5px;
+  bottom: -7px;
+  border-radius: 17px;
+  background: linear-gradient(135deg, rgba(255,255,255,.22), #0a111d 20%, #03060b 67%, rgba(57,184,255,.28));
+  box-shadow:
+    0 12px 20px rgba(0,0,0,.78),
+    0 18px 32px rgba(0,0,0,.48);
+  pointer-events: none;
+}
+
+.cinema-site .movie-poster {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 16 / 10 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  border: 1.5px solid rgba(235,246,255,.9) !important;
+  border-radius: 15px !important;
+  background: #03060b !important;
+  box-shadow:
+    -3px 0 10px var(--edge-left),
+    3px 0 11px var(--edge-right),
+    0 0 0 2px rgba(255,255,255,.06),
+    0 8px 16px rgba(0,0,0,.72),
+    inset 0 0 0 1px rgba(255,255,255,.16),
+    inset 0 -10px 24px rgba(0,0,0,.18) !important;
+}
+
+/* Full-bleed artwork: no letterbox, no blank strip. */
+.cinema-site .movie-poster .poster-art,
+.cinema-site .movie-poster .trailer-poster-frame-shell,
+.cinema-site .movie-poster .trailer-poster-frame,
+.cinema-site .movie-poster .poster-fallback {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 13px !important;
+  overflow: hidden !important;
+}
+
+.cinema-site .movie-poster .poster-art > img,
+.cinema-site .movie-poster img,
+.cinema-site .movie-poster .trailer-poster-frame {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  display: block !important;
+  margin: 0 !important;
+  border-radius: 13px !important;
+  filter: saturate(1.12) contrast(1.08) brightness(.94) !important;
+}
+
+/* Glass + cinematic depth over the image. */
+.cinema-site .movie-poster::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  border-radius: inherit;
+  background:
+    linear-gradient(118deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,.025) 17%, transparent 34%),
+    linear-gradient(180deg, rgba(0,0,0,.06), transparent 45%, rgba(0,0,0,.12));
+  box-shadow:
+    inset 2px 2px 0 rgba(255,255,255,.22),
+    inset -2px -2px 0 rgba(0,0,0,.58),
+    inset 0 0 18px rgba(255,255,255,.025);
+}
+
+.cinema-site .movie-poster::after {
+  content: "";
+  position: absolute;
+  z-index: 4;
+  inset: auto 0 0;
+  height: 55%;
+  pointer-events: none;
+  border-radius: 0 0 13px 13px;
+  background: linear-gradient(180deg, transparent 0%, rgba(2,5,10,.18) 24%, rgba(2,5,10,.82) 82%, rgba(2,5,10,.95) 100%);
+  opacity: 1 !important;
+  mix-blend-mode: normal !important;
+}
+
+/* Language + package badge sits on top of the artwork. */
+.cinema-site .movie-badge {
+  position: absolute !important;
+  z-index: 10 !important;
+  top: 9px !important;
+  left: 9px !important;
+  right: auto !important;
+  max-width: calc(100% - 18px) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 24px !important;
+  padding: 5px 8px !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 999px !important;
+  background: rgba(4,8,14,.78) !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  backdrop-filter: blur(10px) !important;
+  box-shadow: 0 5px 14px rgba(0,0,0,.34) !important;
+}
+
+.cinema-site .movie-badge::before {
+  content: "◉";
+  display: inline-block;
+  margin-right: 5px;
+  color: #d9f1ff;
+  font-size: 9px;
+}
+
+.cinema-site .movie-badge[data-package-name]::after {
+  content: " · " attr(data-package-name);
+  color: rgba(255,255,255,.94);
+  font-weight: 760;
+}
+
+.cinema-site .movie-free {
+  z-index: 11 !important;
+  top: 9px !important;
+  right: 9px !important;
+  border-radius: 999px !important;
+  background: rgba(4,70,38,.82) !important;
+  backdrop-filter: blur(8px);
+}
+
+/* Remove the play icon from the poster — the reference is cleaner without it. */
+.cinema-site .movie-play {
+  display: none !important;
+}
+
+/* Title and price live INSIDE the image; nothing remains below the tile. */
 .cinema-site .movie-info {
   position: absolute !important;
+  z-index: 9 !important;
   left: 2px !important;
   right: 2px !important;
   bottom: 2px !important;
-  z-index: 7 !important;
-  display: block !important;
+  top: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 3px !important;
+  min-height: 45% !important;
   margin: 0 !important;
-  padding: 48px 12px 12px !important;
+  padding: 34px 9px 9px !important;
   transform: none !important;
-  text-align: left !important;
+  text-align: center !important;
   pointer-events: none !important;
   border-radius: 0 0 13px 13px !important;
-  background: linear-gradient(180deg, transparent 0%, rgba(3,6,11,.30) 30%, rgba(3,6,11,.92) 72%, rgba(3,6,11,.98) 100%) !important;
+  background: linear-gradient(180deg, transparent 0%, rgba(2,5,10,.04) 16%, rgba(2,5,10,.78) 78%, rgba(2,5,10,.93) 100%) !important;
 }
 
 .cinema-site .movie-info > *:not(h3):not(.movie-price) {
@@ -28,97 +217,168 @@
 }
 
 .cinema-site .movie-info h3 {
-  display: block !important;
-  margin: 0 0 5px !important;
+  display: -webkit-box !important;
+  margin: 0 !important;
+  max-width: 100% !important;
   color: #fff !important;
-  font-size: 15px !important;
-  font-weight: 850 !important;
-  line-height: 1.2 !important;
-  letter-spacing: -.015em !important;
-  text-shadow: 0 2px 9px #000, 0 1px 2px #000 !important;
-  white-space: nowrap !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  line-height: 1.08 !important;
+  letter-spacing: .01em !important;
+  text-align: center !important;
+  text-transform: none !important;
+  text-shadow: 0 3px 10px #000, 0 1px 2px #000 !important;
+  white-space: normal !important;
   overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .cinema-site .movie-info .movie-price {
   display: flex !important;
+  justify-content: center !important;
   align-items: center !important;
-  gap: 7px !important;
+  gap: 6px !important;
+  min-height: 16px !important;
   margin: 0 !important;
-  min-height: 18px !important;
-  font-size: 13px !important;
-  line-height: 1.15 !important;
+  line-height: 1 !important;
 }
 
 .cinema-site .movie-info .movie-price strong {
-  color: #fbbf24 !important;
-  font-size: 13px !important;
+  color: #ffd166 !important;
+  font-size: 11px !important;
   font-weight: 900 !important;
-  text-shadow: 0 2px 8px rgba(0,0,0,.9) !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.95) !important;
 }
 
 .cinema-site .movie-info .movie-price strong.available {
-  color: #86efac !important;
+  color: #9bf2b8 !important;
 }
 
 .cinema-site .movie-info .movie-price del {
-  color: #c7cbd3 !important;
-  font-size: 11px !important;
-  opacity: .78 !important;
+  color: rgba(255,255,255,.68) !important;
+  font-size: 9px !important;
 }
 
-/* Explicitly hide any old hint/description text on the scrolling home catalog. */
 .cinema-site .movie-detail-hint,
 .cinema-site .movie-description,
 .cinema-site .movie-info p {
   display: none !important;
 }
 
-/* Put the package name immediately after Хэлтэй / Хадмал inside the poster badge. */
-.cinema-site .movie-badge[data-package-name]::after {
-  content: " · " attr(data-package-name);
-  color: rgba(255,255,255,.92);
-  font-weight: 750;
-}
-
-.cinema-site .movie-badge {
-  max-width: calc(100% - 18px) !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  backdrop-filter: blur(8px);
-  background: rgba(5,8,14,.72) !important;
-}
-
-/* Card height is now the poster height because the former info block is overlaid. */
 .cinema-site .movie-card::after {
-  bottom: 9px !important;
+  content: "";
+  position: absolute;
+  z-index: -3;
+  left: 12%;
+  right: 8%;
+  bottom: -11px !important;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 30%, transparent), transparent 70%);
+  filter: blur(9px);
+  opacity: .76;
 }
 
-@media (max-width: 600px) {
+.cinema-site .movie-main:hover,
+.cinema-site .movie-main:focus-visible {
+  transform: perspective(900px) rotateX(0deg) rotateY(0deg) translateY(-5px) scale(1.018) !important;
+  filter: brightness(1.035);
+}
+
+/* Mobile = the approved two-column reference. */
+@media (max-width: 760px) {
+  .cinema-site .film-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px 12px !important;
+    align-items: start !important;
+  }
+
+  .cinema-site .movie-main,
+  .cinema-site .movie-card:nth-child(2n) .movie-main {
+    transform: perspective(760px) rotateX(1deg) rotateY(0deg) !important;
+  }
+
+  .cinema-site .movie-poster {
+    aspect-ratio: 1.42 / 1 !important;
+    border-radius: 13px !important;
+    box-shadow:
+      -2px 0 8px var(--edge-left),
+      2px 0 8px var(--edge-right),
+      0 0 0 1px rgba(255,255,255,.09),
+      0 7px 14px rgba(0,0,0,.7),
+      inset 0 0 0 1px rgba(255,255,255,.13) !important;
+  }
+
+  .cinema-site .movie-poster .poster-art,
+  .cinema-site .movie-poster .trailer-poster-frame-shell,
+  .cinema-site .movie-poster .trailer-poster-frame,
+  .cinema-site .movie-poster .poster-fallback,
+  .cinema-site .movie-poster img {
+    border-radius: 11px !important;
+  }
+
+  .cinema-site .movie-badge {
+    top: 7px !important;
+    left: 7px !important;
+    max-width: calc(100% - 14px) !important;
+    min-height: 21px !important;
+    padding: 4px 6px !important;
+    font-size: 8.5px !important;
+  }
+
+  .cinema-site .movie-badge::before {
+    margin-right: 4px;
+    font-size: 8px;
+  }
+
+  .cinema-site .movie-free {
+    top: 7px !important;
+    right: 7px !important;
+    font-size: 8px !important;
+    padding: 4px 6px !important;
+  }
+
   .cinema-site .movie-info {
-    padding: 38px 8px 8px !important;
+    min-height: 48% !important;
+    padding: 26px 7px 7px !important;
     border-radius: 0 0 11px 11px !important;
   }
 
   .cinema-site .movie-info h3 {
-    margin-bottom: 3px !important;
-    font-size: 12px !important;
+    font-size: clamp(11px, 3.5vw, 14px) !important;
+    line-height: 1.05 !important;
   }
 
-  .cinema-site .movie-info .movie-price,
   .cinema-site .movie-info .movie-price strong {
-    font-size: 11px !important;
+    font-size: 9.5px !important;
   }
 
   .cinema-site .movie-info .movie-price del {
-    font-size: 9px !important;
+    font-size: 8px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  .cinema-site .film-grid {
+    gap: 12px 10px !important;
   }
 
   .cinema-site .movie-badge {
-    max-width: calc(100% - 14px) !important;
-    font-size: 9px !important;
-    padding: 4px 6px !important;
+    font-size: 7.8px !important;
+    padding: 3px 5px !important;
+  }
+
+  .cinema-site .movie-info h3 {
+    font-size: 11px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-site .movie-main,
+  .cinema-site .movie-main:hover,
+  .cinema-site .movie-main:focus-visible {
+    transform: none !important;
+    transition: none !important;
   }
 }
