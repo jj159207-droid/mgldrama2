@@ -1,0 +1,47 @@
+/* Emphasize the exact selected film price on the detail page. */
+.film-destination .film-landing-price {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.film-destination .film-landing-price-value {
+  display: inline-block;
+  color: #ffd166;
+  font-size: clamp(28px, 6.2vw, 42px);
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: .01em;
+  text-shadow:
+    0 0 8px rgba(255,209,102,.45),
+    0 0 18px rgba(255,143,51,.35),
+    0 3px 12px rgba(0,0,0,.85);
+  animation: film-price-pulse 1.15s ease-in-out infinite;
+  transform-origin: left center;
+}
+
+@keyframes film-price-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    opacity: .42;
+    transform: scale(1.055);
+    filter: brightness(1.28);
+  }
+}
+
+@media (max-width: 760px) {
+  .film-destination .film-landing-price-value {
+    font-size: clamp(27px, 8vw, 36px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film-destination .film-landing-price-value {
+    animation: none;
+  }
+}
