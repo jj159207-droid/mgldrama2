@@ -1,0 +1,124 @@
+/* Home catalog card cleanup.
+ * The film detail page is intentionally untouched.
+ */
+
+.cinema-site .movie-main {
+  position: relative;
+}
+
+/* No separate description/info block under the poster. Reuse only title + price as an overlay. */
+.cinema-site .movie-info {
+  position: absolute !important;
+  left: 2px !important;
+  right: 2px !important;
+  bottom: 2px !important;
+  z-index: 7 !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 48px 12px 12px !important;
+  transform: none !important;
+  text-align: left !important;
+  pointer-events: none !important;
+  border-radius: 0 0 13px 13px !important;
+  background: linear-gradient(180deg, transparent 0%, rgba(3,6,11,.30) 30%, rgba(3,6,11,.92) 72%, rgba(3,6,11,.98) 100%) !important;
+}
+
+.cinema-site .movie-info > *:not(h3):not(.movie-price) {
+  display: none !important;
+}
+
+.cinema-site .movie-info h3 {
+  display: block !important;
+  margin: 0 0 5px !important;
+  color: #fff !important;
+  font-size: 15px !important;
+  font-weight: 850 !important;
+  line-height: 1.2 !important;
+  letter-spacing: -.015em !important;
+  text-shadow: 0 2px 9px #000, 0 1px 2px #000 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.cinema-site .movie-info .movie-price {
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  margin: 0 !important;
+  min-height: 18px !important;
+  font-size: 13px !important;
+  line-height: 1.15 !important;
+}
+
+.cinema-site .movie-info .movie-price strong {
+  color: #fbbf24 !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  text-shadow: 0 2px 8px rgba(0,0,0,.9) !important;
+}
+
+.cinema-site .movie-info .movie-price strong.available {
+  color: #86efac !important;
+}
+
+.cinema-site .movie-info .movie-price del {
+  color: #c7cbd3 !important;
+  font-size: 11px !important;
+  opacity: .78 !important;
+}
+
+/* Explicitly hide any old hint/description text on the scrolling home catalog. */
+.cinema-site .movie-detail-hint,
+.cinema-site .movie-description,
+.cinema-site .movie-info p {
+  display: none !important;
+}
+
+/* Put the package name immediately after Хэлтэй / Хадмал inside the poster badge. */
+.cinema-site .movie-badge[data-package-name]::after {
+  content: " · " attr(data-package-name);
+  color: rgba(255,255,255,.92);
+  font-weight: 750;
+}
+
+.cinema-site .movie-badge {
+  max-width: calc(100% - 18px) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  backdrop-filter: blur(8px);
+  background: rgba(5,8,14,.72) !important;
+}
+
+/* Card height is now the poster height because the former info block is overlaid. */
+.cinema-site .movie-card::after {
+  bottom: 9px !important;
+}
+
+@media (max-width: 600px) {
+  .cinema-site .movie-info {
+    padding: 38px 8px 8px !important;
+    border-radius: 0 0 11px 11px !important;
+  }
+
+  .cinema-site .movie-info h3 {
+    margin-bottom: 3px !important;
+    font-size: 12px !important;
+  }
+
+  .cinema-site .movie-info .movie-price,
+  .cinema-site .movie-info .movie-price strong {
+    font-size: 11px !important;
+  }
+
+  .cinema-site .movie-info .movie-price del {
+    font-size: 9px !important;
+  }
+
+  .cinema-site .movie-badge {
+    max-width: calc(100% - 14px) !important;
+    font-size: 9px !important;
+    padding: 4px 6px !important;
+  }
+}
