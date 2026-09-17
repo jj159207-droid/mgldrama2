@@ -63,4 +63,9 @@ text=replaceOnce(text,
 });`,
 'guest package regression');
 fs.writeFileSync(path,text);
-console.log('Guest device race and admin UI tests updated.');
+
+const pagePath='app/page.tsx';
+let page=fs.readFileSync(pagePath,'utf8');
+page=replaceOnce(page,'if(action?.kind==="watch"){void watchFilm(action.film,u.id);return;}','if(action?.kind==="watch"){void watchFilm(action.film);return;}','login continuation watch signature');
+fs.writeFileSync(pagePath,page);
+console.log('Guest device race, admin UI, and type regressions updated.');
