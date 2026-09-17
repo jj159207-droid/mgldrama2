@@ -1,0 +1,159 @@
+/* Simplified payment screen: keep only the information the customer needs. */
+
+.checkout-dialog .dialog-heading > div,
+.checkout-inline .dialog-heading > div {
+  display: none !important;
+}
+
+.checkout-dialog .dialog-heading,
+.checkout-inline .dialog-heading {
+  justify-content: flex-end !important;
+  margin-bottom: 4px !important;
+}
+
+/* Remove movie/order description but keep the amount visible. */
+.checkout-dialog .checkout-summary > div,
+.checkout-inline .checkout-summary > div {
+  display: none !important;
+}
+
+.checkout-dialog .checkout-summary,
+.checkout-inline .checkout-summary {
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 13px 14px !important;
+  margin-bottom: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--border)) !important;
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface)) !important;
+}
+
+.checkout-dialog .checkout-summary::before,
+.checkout-inline .checkout-summary::before {
+  content: "ТӨЛӨХ ДҮН";
+  display: block;
+  margin-right: 12px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.checkout-dialog .checkout-summary > strong,
+.checkout-inline .checkout-summary > strong {
+  color: var(--accent) !important;
+  font-size: 25px !important;
+  line-height: 1 !important;
+}
+
+/* The 'Дансаар шилжүүлэх' label is redundant. */
+.checkout-dialog .bank-details > h3,
+.checkout-inline .bank-details > h3 {
+  display: none !important;
+}
+
+.checkout-dialog .bank-details,
+.checkout-inline .bank-details {
+  margin-top: 0 !important;
+  padding-top: 4px !important;
+}
+
+.checkout-dialog .bank-details dl,
+.checkout-inline .bank-details dl {
+  margin-top: 0 !important;
+}
+
+/* Make the transfer reference impossible to miss. */
+.checkout-dialog .reference-section,
+.checkout-inline .reference-section {
+  position: relative;
+  margin-top: 16px !important;
+  padding: 15px !important;
+  border: 2px solid #f59e0b !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(180deg, rgba(245,158,11,.13), rgba(127,29,29,.12)),
+    var(--surface) !important;
+  box-shadow:
+    0 0 0 3px rgba(245,158,11,.08),
+    0 12px 30px rgba(0,0,0,.22) !important;
+}
+
+.checkout-dialog .reference-section h3,
+.checkout-inline .reference-section h3 {
+  margin: 0 0 10px !important;
+  font-size: 0 !important;
+  line-height: 1.35 !important;
+}
+
+.checkout-dialog .reference-section h3::after,
+.checkout-inline .reference-section h3::after {
+  content: "⚠️ ГҮЙЛГЭЭНИЙ УТГА — ЗААВАЛ ЭНЭ КОДЫГ ЯГ ХЭВЭЭР БИЧНЭ";
+  display: block;
+  color: #fbbf24;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.4;
+  letter-spacing: .01em;
+  text-align: center;
+}
+
+.checkout-dialog .copy-reference,
+.checkout-inline .copy-reference {
+  min-height: 64px !important;
+  border: 2px solid #ef4444 !important;
+  background: rgba(127,29,29,.24) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05) !important;
+}
+
+.checkout-dialog .copy-reference strong,
+.checkout-inline .copy-reference strong {
+  color: #fde68a !important;
+  font-size: 27px !important;
+  letter-spacing: .16em !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+}
+
+.checkout-dialog .copy-reference span,
+.checkout-inline .copy-reference span {
+  color: #fbbf24 !important;
+  font-weight: 800 !important;
+}
+
+.checkout-dialog .reference-section p,
+.checkout-inline .reference-section p {
+  color: #fecaca !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  margin: 10px 0 0 !important;
+}
+
+@media (max-width: 600px) {
+  .checkout-dialog .checkout-summary,
+  .checkout-inline .checkout-summary {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .checkout-dialog .checkout-summary::before,
+  .checkout-inline .checkout-summary::before {
+    margin-right: 4px;
+  }
+
+  .checkout-dialog .reference-section,
+  .checkout-inline .reference-section {
+    padding: 13px !important;
+  }
+
+  .checkout-dialog .reference-section h3::after,
+  .checkout-inline .reference-section h3::after {
+    font-size: 13px;
+  }
+
+  .checkout-dialog .copy-reference strong,
+  .checkout-inline .copy-reference strong {
+    font-size: 25px !important;
+  }
+}
