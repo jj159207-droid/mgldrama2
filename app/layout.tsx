@@ -5,8 +5,9 @@ import "./globals.css";
 import "./chat.css";
 import "./install.css";
 import "./appearance.css";
+import "./cinematic3d.css";
 
-export const viewport: Viewport = { themeColor: "#090d13" };
+export const viewport: Viewport = { themeColor: "#05070c" };
 
 export const metadata: Metadata = {
   title: "ТАЗА САЙТ",
