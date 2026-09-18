@@ -30,6 +30,7 @@ const DEFAULT_BANK_ACCOUNT = {
   bank: "Хаан банк",
   number: "5403972086",
   name: "Т.Жаргалбаяр",
+  ibn: "IBN-MN95000 500",
 };
 const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
@@ -146,7 +147,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       const bank=String(data?.bankName||DEFAULT_bankAccount.bank).trim();
       const number=String(data?.bankAccount||DEFAULT_bankAccount.number).trim();
       const name=String(data?.accountName||DEFAULT_bankAccount.name).trim();
-      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name});
+      const ibn=String(data?.bankIbn||DEFAULT_bankAccount.ibn).trim();
+      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name,ibn:ibn||DEFAULT_bankAccount.ibn});
     }).catch(()=>{});
     return()=>{alive=false;};
   },[]);
@@ -261,26 +263,6 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     });
   };
 
-  const walletBanks=[
-    {key:"khan",name:"ХААН Банк",scheme:"khanbank",androidPackage:"com.khanbank.retail",iosId:"1555908766"},
-    {key:"socialpay",name:"SocialPay / Голомт",scheme:"socialpay-payment",androidPackage:"mn.egolomt.socialpay",iosId:"1152919460"},
-    {key:"tdb",name:"ХХБ / TDB",scheme:"tdbbank",androidPackage:"mn.tdb.pay",iosId:"1458831706"},
-  ] as const;
-
-  const openWalletBank=(bank:(typeof walletBanks)[number])=>{
-    if(!orderReady)return;
-    const amount=selectedTopup;
-    const paymentText=`Данс: ${bankAccount.number}\nЭзэмшигч: ${bankAccount.name}\nДүн: ${amount.toLocaleString()}₮\nГүйлгээний утга: ${refCode}`;
-    try{navigator.clipboard?.writeText(paymentText).catch(()=>{});}catch{}
-    const ua=navigator.userAgent||"";
-    if(/Android/i.test(ua)){
-      const fallback=encodeURIComponent(`https://play.google.com/store/apps/details?id=${bank.androidPackage}`);
-      window.location.href=`intent://q#Intent;scheme=${bank.scheme};package=${bank.androidPackage};S.browser_fallback_url=${fallback};end`;
-      return;
-    }
-    window.location.href=`${bank.scheme}://q`;
-  };
-
   const handleSmsFound=async(foundRef:string)=>{
     setShowSms(false);setPaymentError("");
     if(foundRef!==refCode){setPaymentError("Энэ захиалгын гүйлгээний кодыг оруулна уу.");return;}
@@ -327,17 +309,11 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
     {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
       {isWalletTopup && <div className="wallet-transfer-head"><span>Шилжүүлэх сонгосон дүн</span><strong>{selectedTopup.toLocaleString()}₮</strong></div>}
-      <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span>Дансны дугаар<strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+      <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span>Дансны дугаар <em className="bank-ibn">{bankAccount.ibn}</em><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
       <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
     </div>}
     <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
-    {isWalletTopup ? <section className="wallet-bank-picker" aria-label="Гүйлгээ хийх банк сонгох">
-      <h3>Гүйлгээ хийх банкаа сонгоно уу</h3>
-      <p>Банк дээр дарахад апп нээгдэнэ. Данс, дүн, гүйлгээний утгыг мөн clipboard-д хуулна.</p>
-      <div className="wallet-bank-grid">
-        {walletBanks.map(bank=><button type="button" key={bank.key} disabled={!orderReady} onClick={()=>openWalletBank(bank)}><strong>{bank.name}</strong><span>Апп нээх</span></button>)}
-      </div>
-    </section> : <>
+    {!isWalletTopup && <>
       <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
       <button className="secondary-button checkout-back" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
     </>}
@@ -1478,6 +1454,7 @@ function AdminSettingsTab() {
   const [bankName,setBankName]=useState(DEFAULT_BANK_ACCOUNT.bank);
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT.number);
   const [accountName,setAccountName]=useState(DEFAULT_BANK_ACCOUNT.name);
+  const [bankIbn,setBankIbn]=useState(DEFAULT_BANK_ACCOUNT.ibn);
   const [saved,setSaved]=useState(false);
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
@@ -1490,6 +1467,7 @@ function AdminSettingsTab() {
       setBankName(data?.bankName||DEFAULT_BANK_ACCOUNT.bank);
       setBankAccount(data?.bankAccount||DEFAULT_BANK_ACCOUNT.number);
       setAccountName(data?.accountName||DEFAULT_BANK_ACCOUNT.name);
+      setBankIbn(data?.bankIbn||DEFAULT_BANK_ACCOUNT.ibn);
     }).catch(()=>{}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[]);
@@ -1499,14 +1477,16 @@ function AdminSettingsTab() {
     const bank=bankName.trim();
     const number=bankAccount.trim();
     const owner=accountName.trim();
+    const ibn=bankIbn.trim();
     if(messenger&&!safeUrl(messenger)){alert("Зөв HTTPS Messenger холбоос оруулна уу.");return;}
     if(bank.length<2){alert("Банкны нэрийг оруулна уу.");return;}
     if(!/^[A-Za-z0-9 -]{6,40}$/.test(number)){alert("Дансны дугаараа зөв оруулна уу.");return;}
     if(owner.length<2){alert("Данс эзэмшигчийн нэрийг оруулна уу.");return;}
+    if(!/^[A-Za-z0-9 -]{3,80}$/.test(ibn)){alert("IBN мэдээллийг зөв оруулна уу.");return;}
     saveBusy.current=true;setSaving(true);setSaved(false);
     try{
-      const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankName:bank,bankAccount:number,accountName:owner})});
-      setMessengerUrl(data?.messengerUrl||"");setBankName(data.bankName);setBankAccount(data.bankAccount);setAccountName(data.accountName);
+      const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankName:bank,bankAccount:number,accountName:owner,bankIbn:ibn})});
+      setMessengerUrl(data?.messengerUrl||"");setBankName(data.bankName);setBankAccount(data.bankAccount);setAccountName(data.accountName);setBankIbn(data.bankIbn||DEFAULT_BANK_ACCOUNT.ibn);
       setSaved(true);window.dispatchEvent(new Event("kinoSettingsChanged"));
     }catch{}finally{saveBusy.current=false;setSaving(false);}
   };
@@ -1521,8 +1501,10 @@ function AdminSettingsTab() {
       <input value={accountName} maxLength={100} onChange={(e:any)=>setAccountName(e.target.value)} placeholder="Данс эзэмшигч" style={{...inputSt,marginBottom:12}}/>
       <label style={lbl}>💳 Дансны дугаар</label>
       <input value={bankAccount} maxLength={40} autoComplete="off" onChange={(e:any)=>setBankAccount(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="5403972086" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:17}}/>
+      <label style={lbl}>🏷️ Дансны дугаарын ард харагдах IBN</label>
+      <input value={bankIbn} maxLength={80} autoComplete="off" onChange={(e:any)=>setBankIbn(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="IBN-MN95000 500" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:15}}/>
       <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:16}}>
-        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:4}}>{bankAccount||"—"}</strong>
+        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><div style={{fontSize:12,color:C.muted,marginTop:4}}>Дансны дугаар {bankIbn||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:3}}>{bankAccount||"—"}</strong>
       </div>
       <label style={lbl}>💬 Messenger холбоос</label>
       <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Жишээ: https://m.me/таны_хуудас_нэр</div>
