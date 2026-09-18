@@ -1,4 +1,4 @@
-# Кино сайт — 2026-09-12.1
+# Кино сайт — худалдахад бэлэн мастер хувилбар\n\nШинэ клиентэд суулгах хамгийн хялбар зам: **SELLABLE-KIT-MN.md**.\n\n- **MAKE-CLIENT-PACKAGE.cmd** — нууцгүй цэвэр ZIP гаргана.\n- **CLIENT-SETUP.cmd** — шинэ клиентын нэр, домэйн, Supabase, банк, админы нууцыг тохируулна.\n- **CLIENT-CHECK.cmd** — хүлээлгэн өгөхийн өмнөх config шалгалт.\n- **supabase/CLIENT-FRESH-INSTALL.sql** — шинэ хоосон Supabase project-д нэг удаа ажиллуулах SQL.\n- **CLIENT-HANDOVER-CHECKLIST-MN.md** — клиентэд хүлээлгэн өгөх checklist.\n\n> Клиент бүр тусдаа Supabase/Vercel/нууц түлхүүртэй байна. Өмнөх клиентын .env.local-ийг хуулж ашиглахгүй.\n\n# Кино сайт — 2026-09-12.1
 
 Одоогийн төсөлдөө суулгах болон HTTPS-д бэлдэх үндсэн заавар: **HTTPS-READY-MN.md**.
 
