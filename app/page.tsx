@@ -2,7 +2,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/domain";\nimport { SITE_NAME } from "@/lib/site-config";
+import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/domain";
+import { SITE_NAME } from "@/lib/site-config";
 
 import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
 import PosterUpload from "@/app/components/PosterUpload";
