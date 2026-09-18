@@ -17,18 +17,19 @@ export async function POST(req:NextRequest) {
   const lookup=()=>db(`pending_payments?ref_code=eq.${parsed.ref}&select=id,user_id,amount,status,plan,created_at,confirmed_at`);
   const [payment]=await lookup();
   if(!payment)throw new ApiError(404,'Захиалга олдсонгүй.');
-  if(!Number.isFinite(Number(payment.amount))||Number(payment.amount)<=0||parsed.amount!==Number(payment.amount))throw new ApiError(400,'Шилжүүлсэн дүн захиалгын дүнтэй таарахгүй байна.');
   if(payment.plan==='wallet_topup'){
+    if(!Number.isSafeInteger(parsed.amount)||parsed.amount<5000||parsed.amount>200000)throw new ApiError(400,'Цэнэглэх дүн 5,000₮-өөс бага байж болохгүй.');
     const [wallet]=await db('rpc/kino_wallet_confirm_topup','POST',{
       p_payment:Number(payment.id),
       p_ref:parsed.ref,
-      p_amount:Number(payment.amount),
+      p_amount:parsed.amount,
       p_allow_expired:false,
     });
     const balance=Number(wallet?.balance || 0);
     if(!Number.isSafeInteger(balance)||balance<0)throw new ApiError(502,'Wallet үлдэгдэл баталгаажаагүй.');
-    return json({ok:true,ref:parsed.ref,wallet:true,walletBalance:balance,alreadyConfirmed:wallet?.result==='already_confirmed'});
+    return json({ok:true,ref:parsed.ref,wallet:true,walletBalance:balance,creditedAmount:parsed.amount,alreadyConfirmed:wallet?.result==='already_confirmed'});
   }
+  if(!Number.isFinite(Number(payment.amount))||Number(payment.amount)<=0||parsed.amount!==Number(payment.amount))throw new ApiError(400,'Шилжүүлсэн дүн захиалгын дүнтэй таарахгүй байна.');
   // Retries acknowledge the original result without moving its expiry forward.
   if(payment.status==='confirmed')return json({ok:true,alreadyConfirmed:true,ref:parsed.ref});
   if(payment.status!=='pending')throw new ApiError(409,'Захиалга хүчингүй болсон. Админ шалгана уу.');
