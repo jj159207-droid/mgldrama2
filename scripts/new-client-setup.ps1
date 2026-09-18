@@ -82,6 +82,16 @@ $lines = @(
 
 Set-Content -LiteralPath ".env.local" -Value $lines -Encoding utf8
 
+# Update the installable app/PWA name for this client.
+$manifestPath = Join-Path (Get-Location) "public\manifest.json"
+if (Test-Path $manifestPath) {
+  $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+  $manifest.name = $siteName
+  $manifest.short_name = $shortName
+  $manifest.description = $description
+  $manifest | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+}
+
 Write-Host ""
 Write-Host ".env.local uuslee." -ForegroundColor Green
 Write-Host "ADMIN PASSWORD (ene clientiinх):" -ForegroundColor Yellow
