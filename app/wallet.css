@@ -63,3 +63,125 @@
     padding: 9px 10px;
   }
 }
+
+
+.wallet-topup-checkout .checkout-summary {
+  display: none !important;
+}
+
+.wallet-topup-checkout .wallet-topup-box {
+  margin: 0 0 14px;
+  padding: 15px;
+  border: 2px solid color-mix(in srgb, var(--accent) 58%, #fff 8%);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 40%),
+    color-mix(in srgb, var(--surface) 94%, #000);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    0 10px 26px rgba(0,0,0,.28);
+}
+
+.wallet-topup-checkout .wallet-topup-box h2 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(17px, 4.6vw, 22px);
+  font-weight: 950;
+  line-height: 1.28;
+  text-align: center;
+}
+
+.wallet-topup-checkout .wallet-topup-warning {
+  margin: 8px 0 12px;
+  color: #fca5a5;
+  font-size: 13px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.wallet-topup-checkout .wallet-topup-choices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 8px;
+}
+
+.wallet-topup-checkout .wallet-topup-choices button {
+  min-height: 50px;
+  padding: 9px 6px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 12px;
+  background: var(--surface-raised, #17202c);
+  color: #f8fafc;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.wallet-topup-checkout .wallet-topup-choices button.selected {
+  border-color: #fbbf24;
+  background: linear-gradient(180deg, #f7c84d, #d89516);
+  color: #171005;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 0 0 2px rgba(251,191,36,.12),
+    0 6px 16px rgba(0,0,0,.22);
+}
+
+.wallet-topup-checkout .wallet-topup-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.035);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.wallet-topup-checkout .wallet-topup-selected strong {
+  color: #fbbf24;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.wallet-topup-checkout .wallet-spend-note,
+.wallet-topup-checkout .wallet-credit-note {
+  margin: 10px 0 0;
+  line-height: 1.55;
+  text-align: center;
+}
+
+.wallet-topup-checkout .wallet-spend-note {
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.wallet-topup-checkout .wallet-spend-note strong {
+  color: #86efac;
+  font-size: 15px;
+}
+
+.wallet-topup-checkout .wallet-credit-note {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+@media (max-width: 390px) {
+  .wallet-topup-checkout .wallet-topup-box {
+    padding: 13px 10px;
+  }
+
+  .wallet-topup-checkout .wallet-topup-choices {
+    gap: 5px;
+  }
+
+  .wallet-topup-checkout .wallet-topup-choices button {
+    min-height: 46px;
+    font-size: 13px;
+  }
+}
