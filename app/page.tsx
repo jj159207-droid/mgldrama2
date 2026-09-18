@@ -261,6 +261,26 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     });
   };
 
+  const walletBanks=[
+    {key:"khan",name:"ХААН Банк",scheme:"khanbank",androidPackage:"com.khanbank.retail",iosId:"1555908766"},
+    {key:"socialpay",name:"SocialPay / Голомт",scheme:"socialpay-payment",androidPackage:"mn.egolomt.socialpay",iosId:"1152919460"},
+    {key:"tdb",name:"ХХБ / TDB",scheme:"tdbbank",androidPackage:"mn.tdb.pay",iosId:"1458831706"},
+  ] as const;
+
+  const openWalletBank=(bank:(typeof walletBanks)[number])=>{
+    if(!orderReady)return;
+    const amount=selectedTopup;
+    const paymentText=`Данс: ${bankAccount.number}\nЭзэмшигч: ${bankAccount.name}\nДүн: ${amount.toLocaleString()}₮\nГүйлгээний утга: ${refCode}`;
+    try{navigator.clipboard?.writeText(paymentText).catch(()=>{});}catch{}
+    const ua=navigator.userAgent||"";
+    if(/Android/i.test(ua)){
+      const fallback=encodeURIComponent(`https://play.google.com/store/apps/details?id=${bank.androidPackage}`);
+      window.location.href=`intent://q#Intent;scheme=${bank.scheme};package=${bank.androidPackage};S.browser_fallback_url=${fallback};end`;
+      return;
+    }
+    window.location.href=`${bank.scheme}://q`;
+  };
+
   const handleSmsFound=async(foundRef:string)=>{
     setShowSms(false);setPaymentError("");
     if(foundRef!==refCode){setPaymentError("Энэ захиалгын гүйлгээний кодыг оруулна уу.");return;}
@@ -311,8 +331,16 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
     </div>}
     <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
-    <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
-    <button className="secondary-button checkout-back" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
+    {isWalletTopup ? <section className="wallet-bank-picker" aria-label="Гүйлгээ хийх банк сонгох">
+      <h3>Гүйлгээ хийх банкаа сонгоно уу</h3>
+      <p>Банк дээр дарахад апп нээгдэнэ. Данс, дүн, гүйлгээний утгыг мөн clipboard-д хуулна.</p>
+      <div className="wallet-bank-grid">
+        {walletBanks.map(bank=><button type="button" key={bank.key} disabled={!orderReady} onClick={()=>openWalletBank(bank)}><strong>{bank.name}</strong><span>Апп нээх</span></button>)}
+      </div>
+    </section> : <>
+      <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
+      <button className="secondary-button checkout-back" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
+    </>}
     {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
   </>;
   return inline ? <div className={`checkout-inline${isWalletTopup ? " wallet-topup-checkout" : ""}`}>{checkout}</div> : <CinemaDialog title="Төлбөр төлөх" onClose={onClose} className={`checkout-dialog${isWalletTopup ? " wallet-topup-checkout" : ""}`}>{checkout}</CinemaDialog>;
