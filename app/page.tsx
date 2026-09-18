@@ -2017,9 +2017,8 @@ export default function Home() {
     const startedAt=playRequest.current;
     setWatching(true);setWatchError("");
     if(adminAuth && !user){
-      try {if(await playFilm(film))setPayFilm(null);}
-      catch(error){setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");}
-      finally{setWatching(false);}
+      setWatchError("Админ горимоос кино төлбөргүй нээхийг хаасан. Хэрэглэгчийн урсгалыг шалгахын тулд админ горимоос гарна уу.");
+      setWatching(false);
       return;
     }
     let viewer=user;
