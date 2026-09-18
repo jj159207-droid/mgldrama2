@@ -1,14 +1,14 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
 export const plans: Record<string, number> = {
-  erotic_3day:8000,gadaad_3day:8000,hyatad_3day:8000,
-  erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,all_1month:20000,
+  erotic_3day:8000,gadaad_3day:8000,hyatad_3day:8000,oros_3day:8000,
+  erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,oros_1month:12500,all_1month:20000,
   wallet_topup:5000,
 };
 export function planLabel(plan: string): string {
   const names: Record<string,string> = {
-    erotic_3day:'Эротик · 3 хоног', gadaad_3day:'Гадаад · 3 хоног', hyatad_3day:'Хятад · 3 хоног',
-    erotic_1month:'Эротик · 30 хоног', gadaad_1month:'Гадаад · 30 хоног', hyatad_1month:'Хятад · 30 хоног',
+    erotic_3day:'Эротик · 3 хоног', gadaad_3day:'Гадаад · 3 хоног', hyatad_3day:'Хятад · 3 хоног', oros_3day:'Орос · 3 хоног',
+    erotic_1month:'Эротик · 30 хоног', gadaad_1month:'Гадаад · 30 хоног', hyatad_1month:'Хятад · 30 хоног', oros_1month:'Орос · 30 хоног',
     all_1month:'Бүх багц · 1 сар', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'Сарын багц', '1month':'Сарын багц', '3day':'3 хоногийн багц', '1year':'Жилийн багц', single:'Нэг кино',
   };
   return names[plan] || plan;
@@ -28,8 +28,8 @@ export function accessFromPayments(payments: Row[], now = Date.now()): Record<st
     const expiry = paymentExpiry(p); if (expiry <= now) continue;
     const plan = String(p.plan || 'single');
     if (['monthly','1month','3day','1year'].includes(plan)) add('monthly', expiry);
-    else if (plan === 'all_1month') for (const cat of ['erotic','gadaad','hyatad']) add(`cat_${cat}`,expiry);
-    else if (/^(erotic|gadaad|hyatad)_(3day|1month)$/.test(plan)) add(`cat_${plan.split('_')[0]}`, expiry);
+    else if (plan === 'all_1month') for (const cat of ['erotic','gadaad','hyatad','oros']) add(`cat_${cat}`,expiry);
+    else if (/^(erotic|gadaad|hyatad|oros)_(3day|1month)$/.test(plan)) add(`cat_${plan.split('_')[0]}`, expiry);
     else if (plan === 'single' && p.film_id) add(`film_${p.film_id}`, expiry);
   }
   return access;
@@ -38,7 +38,7 @@ export function canWatch(film: Row, payments: Row[], now = Date.now()): boolean 
   if (film.free === true || film.locked === false) return true;
   const access = accessFromPayments(payments,now);
   const cat = String(film.badge || '').split('|')[1] || 'Эротик';
-  const key = ({'Эротик':'erotic','Гадаад':'gadaad','Хятад':'hyatad'} as Record<string,string>)[cat];
+  const key = ({'Эротик':'erotic','Гадаад':'gadaad','Хятад':'hyatad','Орос':'oros'} as Record<string,string>)[cat];
   return (access.monthly || 0) > now || (access[`film_${film.id}`] || 0) > now || (access[`cat_${key}`] || 0) > now;
 }
 export function safeUrl(value: unknown, image = false): string {
