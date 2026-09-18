@@ -1818,6 +1818,10 @@ export default function Home() {
   useEffect(() => { setMounted(true); trackSiteEvent("visit"); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
   const [walletBalance, setWalletBalance] = useState(0);
+  useEffect(() => {
+    document.documentElement.dataset.tazaWalletBalance = String(walletBalance);
+    window.dispatchEvent(new CustomEvent("tazaWalletBalanceChanged",{detail:walletBalance}));
+  }, [walletBalance]);
   const accessOwner = useRef<number | null>(null);
   const deviceRequest = useRef<Promise<any> | null>(null);
 
