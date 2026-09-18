@@ -550,3 +550,96 @@
     animation: none !important;
   }
 }
+
+
+/* Final homepage emphasis: obvious raised 3D package CTAs + visible pulse. */
+.cinema-site .cinematic-package-cta,
+.cinema-site .catalog-plan-banner,
+.cinema-site .package-banner-action .primary-button {
+  border: 2px solid color-mix(in srgb, var(--accent) 86%, white 14%) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.09), transparent 34%),
+    linear-gradient(145deg, #171d27, #070a0f) !important;
+  transform: translateY(-2px) perspective(700px) rotateX(1.5deg) !important;
+  box-shadow:
+    inset 0 3px 0 rgba(255,255,255,.20),
+    inset 0 -5px 0 rgba(0,0,0,.55),
+    0 7px 0 color-mix(in srgb, var(--accent) 46%, #05070a 54%),
+    0 15px 25px rgba(0,0,0,.58),
+    0 0 20px color-mix(in srgb, var(--accent) 30%, transparent) !important;
+  animation: taza-package-pop-final 1.65s ease-in-out infinite !important;
+  will-change: transform, filter, box-shadow;
+}
+
+@keyframes taza-package-pop-final {
+  0%, 100% {
+    transform: translateY(-1px) perspective(700px) rotateX(1deg) scale(1) !important;
+    filter: brightness(1);
+    box-shadow:
+      inset 0 3px 0 rgba(255,255,255,.18),
+      inset 0 -5px 0 rgba(0,0,0,.55),
+      0 6px 0 color-mix(in srgb, var(--accent) 40%, #05070a 60%),
+      0 14px 24px rgba(0,0,0,.56),
+      0 0 16px color-mix(in srgb, var(--accent) 25%, transparent) !important;
+  }
+  50% {
+    transform: translateY(-4px) perspective(700px) rotateX(2deg) scale(1.018) !important;
+    filter: brightness(1.18);
+    box-shadow:
+      inset 0 3px 0 rgba(255,255,255,.30),
+      inset 0 -5px 0 rgba(0,0,0,.46),
+      0 8px 0 color-mix(in srgb, var(--accent) 62%, #05070a 38%),
+      0 20px 34px rgba(0,0,0,.62),
+      0 0 38px color-mix(in srgb, var(--accent) 58%, transparent) !important;
+  }
+}
+
+.cinema-site .cinematic-package-cta:active,
+.cinema-site .catalog-plan-banner:active,
+.cinema-site .package-banner-action .primary-button:active {
+  transform: translateY(5px) scale(.99) !important;
+  animation-play-state: paused !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.13),
+    inset 0 -1px 0 rgba(0,0,0,.35),
+    0 1px 0 color-mix(in srgb, var(--accent) 36%, #05070a 64%),
+    0 5px 10px rgba(0,0,0,.5) !important;
+}
+
+/* Remove carousel dots entirely. */
+.cinema-site .cinematic-hero-dots {
+  display: none !important;
+}
+
+/* Bigger green live balance in the circled area. */
+.cinema-site .cinematic-wallet-balance {
+  margin: 8px auto 0 !important;
+  gap: 8px !important;
+  color: #39e879 !important;
+  font-size: clamp(15px, 1.8vw, 20px) !important;
+  font-weight: 900 !important;
+  letter-spacing: .01em;
+  text-shadow:
+    0 0 8px rgba(57,232,121,.35),
+    0 2px 8px rgba(0,0,0,.9) !important;
+}
+
+.cinema-site .cinematic-wallet-balance strong {
+  color: #39e879 !important;
+  font-size: 1.12em !important;
+  font-weight: 950 !important;
+  text-shadow:
+    0 0 12px rgba(57,232,121,.55),
+    0 2px 8px rgba(0,0,0,.9) !important;
+}
+
+@media (max-width: 760px) {
+  .cinema-site .cinematic-wallet-balance {
+    margin-top: 4px !important;
+    font-size: clamp(14px, 4.15vw, 17px) !important;
+  }
+
+  .cinema-site .cinematic-package-cta {
+    margin-top: 10px !important;
+  }
+}
