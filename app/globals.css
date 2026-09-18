@@ -221,3 +221,37 @@
 /* The logo keeps its original artwork; five deliberate taps reveal sign-in. */
 .brand-logo-button{display:grid;place-items:center;flex-shrink:0;width:44px;height:44px;padding:0;border:0;background:transparent;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;border-radius:10px}
 .brand-logo-button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+
+.footer-brand-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-admin-entry {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .footer-admin-entry {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .footer-admin-entry .brand-logo-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .footer-admin-entry .brand-symbol {
+    width: 27px;
+    height: 29px;
+    border-radius: 7px;
+  }
+
+  .footer-admin-entry .brand-symbol svg {
+    width: 16px;
+    height: 16px;
+  }
+}
