@@ -136,7 +136,8 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const isWalletTopup=film.plan==="wallet_topup";
-  const [selectedTopup,setSelectedTopup]=useState<number>(()=>[5000,10000,20000].includes(Number(film.topupAmount))?Number(film.topupAmount):5000);
+  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):5000);
+  const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup);
   const transferPanelRef=useRef<HTMLDivElement>(null);
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT);
@@ -298,14 +299,14 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       <h2>Киноны дансаа 5,000₮ ба түүнээс дээш дүнгээр цэнэглэнэ үү</h2>
       <p className="wallet-topup-warning">5,000₮-өөс бага дүнгээр цэнэглэлт орохгүй.</p>
       <div className="wallet-topup-choices" role="group" aria-label="Цэнэглэх дүн">
-        {[5000,10000,20000].map(amount=><button key={amount} type="button" className={selectedTopup===amount?"selected":""} aria-pressed={selectedTopup===amount} onClick={()=>setSelectedTopup(amount)}>{amount.toLocaleString()}₮</button>)}
+        {topupChoices.map(amount=><button key={amount} type="button" className={selectedTopup===amount?"selected":""} aria-pressed={selectedTopup===amount} onClick={()=>setSelectedTopup(amount)}>{amount.toLocaleString()}₮</button>)}
       </div>
       <div className="wallet-topup-selected">Сонгосон цэнэглэлт <strong>{selectedTopup.toLocaleString()}₮</strong></div>
-      <p className="wallet-spend-note">Нэг кино үзэх бүрт таны цэнэглэсэн данснаас <strong>2,000₮</strong> хасагдана.</p>
+      <p className="wallet-spend-note">{film.returnPlan ? <>Сонгосон <strong>{planLabel(film.returnPlan)}</strong> багцыг кино сайтын дансны үлдэгдлээр авна.</> : <>Нэг кино үзэх бүрт таны цэнэглэсэн данснаас <strong>2,000₮</strong> хасагдана.</>}</p>
       <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮ ба түүнээс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
     </section>}
     <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
-    {isWalletTopup && !showTransferDetails && <div className="wallet-topup-preview"><span className="wallet-current-balance">Таны кино сайтын дансны үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></div>}
+    {isWalletTopup && !showTransferDetails && <div className="wallet-topup-preview"><span className="wallet-current-balance">Таны кино сайтын дансны үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span>{film.returnPlan ? <><span>Багцын үнэ <strong>{Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0).toLocaleString()}₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд багц авбал <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)).toLocaleString()}₮ үлдэнэ</strong></span></> : <><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></>}</div>}
     {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
     {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
       {isWalletTopup && <div className="wallet-transfer-head wallet-transfer-head-note"><span>5,000₮-өөс дээш дүнгээр цэнэглэнэ үү</span></div>}
@@ -1917,6 +1918,19 @@ export default function Home() {
     throw new Error("Үлдэгдлээс киноны эрх нээж чадсангүй.");
   };
 
+  const purchasePlanWithWallet = async (plan: string, viewerId: number) => {
+    const data=await requestJson("/api/wallet",{method:"POST",body:JSON.stringify({action:"purchase_plan",plan})},true);
+    const balance=Number(data?.balance || 0),price=Number(data?.price || Number(PLAN_PRICES[plan]||0));
+    if(accessOwner.current===viewerId && Number.isSafeInteger(balance) && balance>=0)setWalletBalance(balance);
+    const result=String(data?.result || "");
+    if(result==="purchased" || result==="owned"){
+      await syncAccessFromDB(viewerId);
+      return {ok:true,result,balance,price};
+    }
+    if(result==="insufficient")return {ok:false,result,balance,price};
+    throw new Error("Кино сайтын дансны үлдэгдлээс багц авч чадсангүй.");
+  };
+
   const watchFilm = async (film: FilmDetails) => {
     const startedAt=playRequest.current;
     setWatching(true);setWatchError("");
@@ -1968,7 +1982,17 @@ export default function Home() {
     if(payFilm.plan==="wallet_topup"){
       await syncWalletFromDB(owner);
       if(!current())return;
+      const returnPlan=typeof payFilm.returnPlan==="string"?payFilm.returnPlan:"";
       const film=payFilm.returnFilm as FilmDetails | undefined;
+      if(returnPlan){
+        const wallet=await purchasePlanWithWallet(returnPlan,owner);
+        if(!current())return;
+        if(!wallet.ok)throw new Error(`Багц авахад үлдэгдэл хүрэлцэхгүй байна. Одоогийн үлдэгдэл ${wallet.balance.toLocaleString()}₮.`);
+        setPayFilm(null);
+        if(film)await playFilm(film,()=>accessOwner.current===owner);
+        else setPage("home");
+        return;
+      }
       if(!film){setPayFilm(null);setPage("home");return;}
       const wallet=await purchaseWithWallet(film,owner);
       if(!current())return;
@@ -1995,10 +2019,32 @@ export default function Home() {
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     try {
-      if(!user && !adminAuth)await ensureDeviceUser();
-      if(adminAuth && !user){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
-      openPlanCheckout(plan,sourceFilm);
-    } catch(error) {setAppError(error instanceof Error?error.message:"Төхөөрөмжийг таньж чадсангүй.");}
+      let viewer=user;
+      if(!viewer && !adminAuth)viewer=await ensureDeviceUser();
+      if(adminAuth && !viewer){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
+      if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+      if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup")return;
+      if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
+      const viewerId=Number(viewer.id);
+      const wallet=await purchasePlanWithWallet(plan,viewerId);
+      if(accessOwner.current!==viewerId)return;
+      if(wallet.ok){
+        setPayFilm(null);
+        if(sourceFilm)await playFilm(sourceFilm,()=>accessOwner.current===viewerId);
+        else setPage("home");
+        return;
+      }
+      const needed=Math.max(0,wallet.price-wallet.balance);
+      const topupAmount=Math.max(5000,Math.ceil(needed/1000)*1000);
+      if(sourceFilm)setPage("film");
+      else navigateTo("payment");
+      setPayFilm({
+        id:0,title:"Үлдэгдэл цэнэглэх",price:topupAmount,topupAmount,
+        monthly:true,plan:"wallet_topup",locked:true,
+        returnPlan:plan,returnPrice:wallet.price,returnFilm:sourceFilm,
+        walletBefore:wallet.balance
+      });
+    } catch(error) {setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
   };
   const openContact = async () => {
     try {
