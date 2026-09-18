@@ -21,7 +21,7 @@ export function relatedFilms<T extends CatalogFilm>(films: T[], selected: Catalo
 
 export function filmPlans(film: CatalogFilm) {
   const category = filmCategory(film);
-  const key = ({"Эротик":"erotic", "Хятад":"hyatad", "Гадаад":"gadaad"} as Record<string,string>)[category];
+  const key = ({"Эротик":"erotic", "Хятад":"hyatad", "Гадаад":"gadaad", "Орос":"oros"} as Record<string,string>)[category];
   if (!key) return [];
   return [{id:`${key}_3day`, days:3}, {id:`${key}_1month`, days:30}].map(plan => ({...plan, category, price:plans[plan.id]}));
 }
