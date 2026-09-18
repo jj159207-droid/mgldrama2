@@ -97,7 +97,7 @@ export default function FilmLanding(props:Props) {
           <h1 id="selected-film-title">{film.title}</h1>
           <button className="film-hero-watch" onClick={watch} disabled={busy}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4v16l13-8Z"/></svg>
-            {props.watching ? "Шалгаж байна…" : "Үзэх"}
+            {props.watching ? "Шалгаж байна…" : "Киног бүтэн үзэх"}
           </button>
         </div>
       </div>
