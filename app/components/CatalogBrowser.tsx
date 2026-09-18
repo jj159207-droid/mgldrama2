@@ -23,7 +23,7 @@ export default function CatalogBrowser<T extends CatalogFilm>({
 
   return <div className="catalog-browser">
     <div className="category-tabs" role="group" aria-label="Киноны ангилал">
-      {CATEGORIES.map(category => <button type="button" key={category} aria-pressed={state.category === category} className={state.category === category ? "active" : ""} onClick={() => change(category)}>{category}{category === "Эротик" && <span className="age-label">18+</span>}</button>)}
+      {CATEGORIES.map(category => <button type="button" key={category} aria-pressed={state.category === category} className={state.category === category ? "active" : ""} onClick={() => change(category)}>{category}{category === "Эротик" && <span className="age-label">21+</span>}</button>)}
     </div>
     {loading && <p className="sr-only" role="status">Кинонуудыг ачааллаж байна…</p>}
     {error && <div className="catalog-error" role="alert"><div><h2>Кинонуудыг ачаалж чадсангүй</h2><p>{error}</p>{films.length > 0 && <p>Өмнө ачаалсан жагсаалтыг харуулж байна.</p>}</div><button type="button" className="secondary-button" onClick={onRetry} disabled={loading}>{loading ? "Шалгаж байна…" : "Дахин оролдох"}</button></div>}
