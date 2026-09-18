@@ -2,7 +2,8 @@
 
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { dbAll } from "@/lib/client";\nimport { SITE_NAME } from "@/lib/site-config";
+import { dbAll } from "@/lib/client";
+import { SITE_NAME } from "@/lib/site-config";
 
 type HeroFilm = {
   id: number;
