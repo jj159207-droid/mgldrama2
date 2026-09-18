@@ -1331,7 +1331,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const existingPreview = f.preview_url || (f.url && f.url.includes("|||") ? f.url.split("|||")[1] : "");
   const [title, setTitle] = useState(f.title);
   const [description, setDescription] = useState(f.description || "");
-  const [price, setPrice] = useState(String(f.price ?? 5000));
+  const [price, setPrice] = useState(String(f.price ?? 2000));
   const [op, setOp] = useState(String(f.op ?? 6000));
   const [url, setUrl] = useState(mainUrl);
   const [img, setImg] = useState(f.img || "");
@@ -1490,7 +1490,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
   const unreadCount = useChatUnread("admin");
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
 
-  const empty = { title: "", description: "", views: 0, op: 6000, price: 5000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
+  const empty = { title: "", description: "", views: 0, op: 6000, price: 2000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
