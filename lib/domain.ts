@@ -3,12 +3,13 @@ export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !
 export const plans: Record<string, number> = {
   erotic_3day:8000,gadaad_3day:8000,hyatad_3day:8000,
   erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,all_1month:20000,
+  wallet_topup:5000,
 };
 export function planLabel(plan: string): string {
   const names: Record<string,string> = {
     erotic_3day:'Эротик · 3 хоног', gadaad_3day:'Гадаад · 3 хоног', hyatad_3day:'Хятад · 3 хоног',
     erotic_1month:'Эротик · 30 хоног', gadaad_1month:'Гадаад · 30 хоног', hyatad_1month:'Хятад · 30 хоног',
-    all_1month:'Бүх багц · 1 сар', monthly:'Сарын багц', '1month':'Сарын багц', '3day':'3 хоногийн багц', '1year':'Жилийн багц', single:'Нэг кино',
+    all_1month:'Бүх багц · 1 сар', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'Сарын багц', '1month':'Сарын багц', '3day':'3 хоногийн багц', '1year':'Жилийн багц', single:'Нэг кино',
   };
   return names[plan] || plan;
 }
