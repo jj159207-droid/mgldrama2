@@ -27,7 +27,7 @@ function heroPackageLabel(film: HeroFilm) {
   return `${language} · ${category} багц`;
 }
 
-function Carousel({ films, onOpenPlans }: { films: HeroFilm[]; onOpenPlans: () => void }) {
+function Carousel({ films, onOpenPlans, walletBalance }: { films: HeroFilm[]; onOpenPlans: () => void; walletBalance: number }) {
   const [active, setActive] = useState(0);
   const [failed, setFailed] = useState<Record<number, true>>({});
   const swipe = useRef({ startX: 0, moved: false });
@@ -145,6 +145,11 @@ function Carousel({ films, onOpenPlans }: { films: HeroFilm[]; onOpenPlans: () =
         </div>
       )}
 
+      <div className="cinematic-wallet-balance" aria-live="polite">
+        <span>Таны кино сайтын үлдэгдэл</span>
+        <strong>{walletBalance.toLocaleString("mn-MN")}₮</strong>
+      </div>
+
       <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label="60 кино 8000 төгрөгийн үзэх багц сонгох">
         <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
@@ -159,6 +164,19 @@ function Carousel({ films, onOpenPlans }: { films: HeroFilm[]; onOpenPlans: () =
 export default function CinematicHeroMount() {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [films, setFilms] = useState<HeroFilm[]>([]);
+  const [walletBalance, setWalletBalance] = useState(0);
+
+  useEffect(() => {
+    const readBalance = (value?: unknown) => {
+      const raw = value ?? document.documentElement.dataset.tazaWalletBalance ?? "0";
+      const next = Number(raw);
+      if (Number.isSafeInteger(next) && next >= 0) setWalletBalance(next);
+    };
+    readBalance();
+    const onBalance = (event: Event) => readBalance((event as CustomEvent).detail);
+    window.addEventListener("tazaWalletBalanceChanged", onBalance);
+    return () => window.removeEventListener("tazaWalletBalanceChanged", onBalance);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -201,6 +219,6 @@ export default function CinematicHeroMount() {
     window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"erotic",duration:"1month"}}));
   }, []);
 
-  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} /> : null, [films, openPlans]);
+  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} walletBalance={walletBalance} /> : null, [films, openPlans, walletBalance]);
   return target && content ? createPortal(content, target) : null;
 }
