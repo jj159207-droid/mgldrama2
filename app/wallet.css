@@ -405,3 +405,17 @@
   font-weight: 800;
   letter-spacing: .01em;
 }
+
+
+.wallet-topup-checkout .account-label-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.wallet-topup-checkout .account-label-line .bank-ibn {
+  margin-left: 0;
+  white-space: nowrap;
+}
