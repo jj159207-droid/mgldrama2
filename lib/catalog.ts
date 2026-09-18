@@ -1,4 +1,4 @@
-export const CATEGORIES = ["Бүгд", "Гадаад", "Хятад", "Эротик"] as const;
+export const CATEGORIES = ["Бүгд", "Гадаад", "Хятад", "Орос", "Эротик"] as const;
 export type Category = typeof CATEGORIES[number];
 export type CatalogFilm = {
   id: number;
