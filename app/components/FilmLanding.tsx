@@ -120,7 +120,7 @@ export default function FilmLanding(props:Props) {
         <span><strong>{priceLabel}</strong></span>
         <span>◉ {Number(film.views || 0).toLocaleString("mn-MN")}</span>
         <span>{language}</span>
-        <span>{category}{category === "Эротик" ? " · 18+" : ""}</span>
+        <span>{category}{category === "Эротик" ? " · 21+" : ""}</span>
       </div>
 
       {!film.free && film.locked !== false && <p className="film-wallet-balance"><span>Таны кино сайтын дансны үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
