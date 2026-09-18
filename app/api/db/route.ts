@@ -100,7 +100,7 @@ async function handler(req:NextRequest) {
   if(table==='pending_payments'&&admin&&req.method==='PATCH'&&b){
     if(!['confirmed','revoked'].includes(String(b.status))||Object.keys(b).some(k=>!['status','confirmed_at'].includes(k)))throw new ApiError(400,'Захиалгыг зөвхөн баталгаажуулах эсвэл эрхийг хасах боломжтой.');
     const refFilter=query.get('ref_code'),idFilter=query.get('id');
-    const targetFilter=refFilter?.startsWith('eq.')?`ref_code=${encodeURIComponent(refFilter.slice(3))}`:idFilter?.startsWith('eq.')?`id=${encodeURIComponent(idFilter.slice(3))}`:'';
+    const targetFilter=refFilter?.startsWith('eq.')?`ref_code=eq.${encodeURIComponent(refFilter.slice(3))}`:idFilter?.startsWith('eq.')?`id=eq.${encodeURIComponent(idFilter.slice(3))}`:'';
     if(targetFilter){
       const [target]=await db(`pending_payments?${targetFilter}&select=id,ref_code,plan,amount,status&limit=1`);
       if(target?.plan==='wallet_topup'){
