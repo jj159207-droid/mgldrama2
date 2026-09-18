@@ -14,6 +14,7 @@ import "./payment-cleanup.css";
 import "./catalog-card-tuning.css";
 import "./catalog-trailer-tuning.css";
 import "./film-price-blink.css";
+import "./wallet.css";
 
 export const viewport: Viewport = { themeColor: "#05070c" };
 
