@@ -9,7 +9,7 @@ function validateFilm(b:Row) {
   if(Object.keys(b).some(k=>!fields.includes(k)))throw new ApiError(400,'Киноны талбар буруу.');
   if('title'in b && (typeof b.title!=='string'||!b.title.trim()))throw new ApiError(400,'Гарчиг оруулна уу.');
   if('description' in b && (typeof b.description!=='string'||b.description.length>4000))throw new ApiError(400,'Киноны тайлбар 4000 хүртэл тэмдэгт байна.');
-  if('badge' in b && (typeof b.badge!=='string' || !['Эротик','Гадаад','Хятад'].includes(b.badge.split('|')[1] || 'Эротик')))throw new ApiError(400,'Киноны ангиллыг сонгоно уу. Бүгд нь киноны ангилал биш.');
+  if('badge' in b && (typeof b.badge!=='string' || !['Эротик','Гадаад','Хятад','Орос'].includes(b.badge.split('|')[1] || 'Эротик')))throw new ApiError(400,'Киноны ангиллыг сонгоно уу. Бүгд нь киноны ангилал биш.');
   for(const k of ['views','op','price'])if(k in b && (typeof b[k]!=='number'||!Number.isSafeInteger(b[k])||Number(b[k])<0))throw new ApiError(400,'Үнэ болон үзсэн тоо 0 эсвэл эерэг бүхэл тоо байна.');
   for(const k of ['free','locked'])if(k in b && typeof b[k]!=='boolean')throw new ApiError(400,'Киноны төлөв буруу.');
   for(const k of ['url','preview_url'])if(b[k] && (typeof b[k]!=='string'||String(b[k]).split('|||').some(u=>u && !safeUrl(u))))throw new ApiError(400,'Зөв HTTPS видео холбоос оруулна уу.');
