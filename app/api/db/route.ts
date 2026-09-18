@@ -49,7 +49,10 @@ async function handler(req:NextRequest) {
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
-        if(plan==='single') {
+        if(plan==='wallet_topup') {
+          amount=Number(b.amount);
+          if(!Number.isSafeInteger(amount)||amount<5000||amount>200000||amount%1000!==0)throw new ApiError(400,'Цэнэглэх дүн 5,000₮-өөс багагүй, 1,000₮-ийн алхамтай байна.');
+        }else if(plan==='single') {
           filmId=Number(b.film_id);if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
           const [film]=await db(`films?id=eq.${filmId}&select=id,price,free,locked`);
           if(!film || film.free===true || film.locked===false)throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
@@ -96,6 +99,23 @@ async function handler(req:NextRequest) {
   if(table==='pending_payments'&&admin&&req.method==='DELETE')throw new ApiError(405,'Гүйлгээний кодын түүхийг устгахгүй. Захиалгын эрхийг хасах үйлдлийг ашиглана уу.');
   if(table==='pending_payments'&&admin&&req.method==='PATCH'&&b){
     if(!['confirmed','revoked'].includes(String(b.status))||Object.keys(b).some(k=>!['status','confirmed_at'].includes(k)))throw new ApiError(400,'Захиалгыг зөвхөн баталгаажуулах эсвэл эрхийг хасах боломжтой.');
+    const refFilter=query.get('ref_code'),idFilter=query.get('id');
+    const targetFilter=refFilter?.startsWith('eq.')?`ref_code=${encodeURIComponent(refFilter.slice(3))}`:idFilter?.startsWith('eq.')?`id=${encodeURIComponent(idFilter.slice(3))}`:'';
+    if(targetFilter){
+      const [target]=await db(`pending_payments?${targetFilter}&select=id,ref_code,plan,amount,status&limit=1`);
+      if(target?.plan==='wallet_topup'){
+        if(b.status==='revoked')throw new ApiError(400,'Цэнэглэгдсэн үлдэгдлийг эрх хасах товчоор буцаахгүй. Wallet гүйлгээг шалгана уу.');
+        if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
+        if(target.status!=='pending')throw new ApiError(409,'Цэнэглэлтийн төлөв өөрчлөгдсөн байна.');
+        await db('rpc/kino_wallet_confirm_topup','POST',{
+          p_payment:Number(target.id),
+          p_ref:String(target.ref_code),
+          p_amount:Number(target.amount),
+          p_allow_expired:true,
+        });
+        return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
+      }
+    }
     b={status:b.status};
   }
   if(table==='pending_payments'&&admin&&req.method==='POST'&&b) {
