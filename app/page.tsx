@@ -443,11 +443,13 @@ function Poster({ film }: any) {
 }
 function FilmCard({ film, onClick, expiry }: any) {
   const available = film.free || film.locked === false || !!expiry;
-  return <article className="movie-card">
+  const isErotic = decodeCat(film.badge) === "Эротик";
+  return <article className={`movie-card${isErotic ? " erotic-card" : ""}`}>
     <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — дэлгэрэнгүй үзэх`}>
       <div className="movie-poster">
         <Poster key={film.img || "no-image"} film={film} />
         <span className="movie-badge">{decodeBadge(film.badge)}</span>
+        {isErotic && <span className="movie-age21">+21</span>}
         {film.free && <span className="movie-free">Үнэгүй</span>}
         <span className="movie-play"><UiIcon name="play" size={25} /></span>
       </div>
