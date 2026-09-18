@@ -21,7 +21,7 @@ export const viewport: Viewport = { themeColor: "#05070c" };
 
 export const metadata: Metadata = {
   title: "ТАЗА САЙТ",
-  description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+  description: "Монгол, гадаад, хятад, орос кино үзэх сайт. Нэг дор бүгд.",
   manifest: "/manifest.json",
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   appleWebApp: {
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "ТАЗА САЙТ",
-    description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+    description: "Монгол, гадаад, хятад, орос кино үзэх сайт. Нэг дор бүгд.",
     ...(process.env.SITE_URL ? {url:process.env.SITE_URL} : {}),
     siteName: "ТАЗА САЙТ",
     images: [
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "ТАЗА САЙТ",
-    description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+    description: "Монгол, гадаад, хятад, орос кино үзэх сайт. Нэг дор бүгд.",
     images: ["/cinema-cover.webp"],
   },
   ...(process.env.SITE_URL ? {metadataBase:new URL(process.env.SITE_URL)} : {}),
