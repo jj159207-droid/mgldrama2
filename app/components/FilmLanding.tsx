@@ -123,7 +123,7 @@ export default function FilmLanding(props:Props) {
         <span>{category}{category === "Эротик" ? " · 18+" : ""}</span>
       </div>
 
-      {!film.free && film.locked !== false && <p className="film-wallet-balance"><span>Үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
+      {!film.free && film.locked !== false && <p className="film-wallet-balance"><span>Таны кино сайтын дансны үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
 
       {description && <div className="detail-summary">
         <p id="film-description" className={`detail-description${descriptionExpanded ? " expanded" : ""}`}>{description}</p>
