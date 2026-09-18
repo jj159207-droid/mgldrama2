@@ -14,7 +14,7 @@ export function filmShareUrl(siteUrl: string, id: number): string {
   if (!Number.isSafeInteger(id) || id <= 0 || !["https:", "http:"].includes(site.protocol)) {
     throw new Error("Киноны холбоос үүсгэж чадсангүй.");
   }
-  return `${site.origin}/?film=${id}`;
+  return `${site.origin}/${id}`;
 }
 
 // Keep attribution parameters in the visitor's address while changing films.
