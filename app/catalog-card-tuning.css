@@ -102,7 +102,10 @@
   display: block !important;
   margin: 0 !important;
   border-radius: 13px !important;
-  filter: saturate(1.12) contrast(1.08) brightness(.94) !important;
+  filter: saturate(1.07) contrast(1.055) brightness(1.015) !important;
+  image-rendering: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 /* Glass + cinematic depth over the image. */
@@ -394,13 +397,10 @@
 }
 
 
-/* Slight privacy blur for erotic catalog artwork only.
- * Titles/prices/badges stay outside .poster-art, so they remain crisp.
- */
+/* Erotic artwork now uses the same clean, unblurred rendering as every other movie. */
 .cinema-site .movie-card.erotic-card .movie-poster .poster-art {
-  filter: blur(1.15px) brightness(.90) saturate(.96);
-  transform: scale(1.012);
-  transform-origin: center;
+  filter: none !important;
+  transform: none !important;
 }
 
 .cinema-site .movie-age21 {
@@ -432,8 +432,8 @@
 
 @media (max-width: 760px) {
   .cinema-site .movie-card.erotic-card .movie-poster .poster-art {
-    filter: blur(1px) brightness(.91) saturate(.97);
-    transform: scale(1.01);
+    filter: none !important;
+    transform: none !important;
   }
 
   .cinema-site .movie-age21 {
@@ -603,4 +603,21 @@
   .cinema-site .cinematic-package-cta {
     margin-top: 10px !important;
   }
+}
+
+
+/* Final image quality pass: clean, unblurred posters with natural contrast. */
+.cinema-site .movie-poster .poster-art,
+.cinema-site .movie-card.erotic-card .movie-poster .poster-art {
+  filter: none !important;
+  transform: none !important;
+}
+
+.cinema-site .movie-poster .poster-art > img,
+.cinema-site .movie-poster img,
+.cinema-site .movie-poster .trailer-poster-frame {
+  filter: saturate(1.07) contrast(1.055) brightness(1.015) !important;
+  image-rendering: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
