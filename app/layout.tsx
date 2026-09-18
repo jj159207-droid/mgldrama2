@@ -21,7 +21,7 @@ export const viewport: Viewport = { themeColor: "#05070c" };
 export const metadata: Metadata = {
   title: SITE_NAME,
   description: SITE_DESCRIPTION,
-  manifest: "/manifest.webmanifest",
+  manifest: "/manifest.json",
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   appleWebApp: {
     capable: true,
