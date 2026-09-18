@@ -8,6 +8,7 @@ const DEFAULTS={
  bankName:String(process.env.BANK_NAME||'Хаан банк').trim(),
  bankAccount:String(process.env.BANK_ACCOUNT||'5403972086').trim(),
  accountName:String(process.env.BANK_ACCOUNT_NAME||'Т.Жаргалбаяр').trim(),
+ bankIbn:String(process.env.BANK_IBN||'IBN-MN95000 500').trim(),
 };
 const clean=(value:unknown,max:number)=>typeof value==='string'?value.trim().replace(/\s+/g,' ').slice(0,max):'';
 const validAccount=(value:string)=>/^[A-Za-z0-9 -]{6,40}$/.test(value);
@@ -22,7 +23,8 @@ function normalize(settings:Record<string,unknown>){
  const rawAccount=clean(settings.bankAccount,40);
  const bankAccount=validAccount(rawAccount)?rawAccount:DEFAULTS.bankAccount;
  const accountName=clean(settings.accountName,100)||DEFAULTS.accountName;
- return {messengerUrl,bankName,bankAccount,accountName};
+ const bankIbn=clean(settings.bankIbn,80)||DEFAULTS.bankIbn;
+ return {messengerUrl,bankName,bankAccount,accountName,bankIbn};
 }
 export async function GET() {
  try { const {settings}=await storedSettings(); return json(normalize(settings)); }
@@ -38,7 +40,7 @@ export async function PUT(req:NextRequest) {
   if(!(await session(req))?.admin)throw new ApiError(403,'Админы эрх шаардлагатай.');
   const b=await bodyJson(req,4096);
   const has=(key:string)=>Object.prototype.hasOwnProperty.call(b,key);
-  const legacyMessengerOnly=has('messengerUrl')&&!has('bankName')&&!has('bankAccount')&&!has('accountName');
+  const legacyMessengerOnly=has('messengerUrl')&&!has('bankName')&&!has('bankAccount')&&!has('accountName')&&!has('bankIbn');
   const {found,settings:stored}=await storedSettings();
   const current=normalize(stored);
   const messengerRaw=has('messengerUrl')?clean(b.messengerUrl,2000):current.messengerUrl;
@@ -47,13 +49,15 @@ export async function PUT(req:NextRequest) {
   const bankName=has('bankName')?clean(b.bankName,80):current.bankName;
   const bankAccount=has('bankAccount')?clean(b.bankAccount,40):current.bankAccount;
   const accountName=has('accountName')?clean(b.accountName,100):current.accountName;
+  const bankIbn=has('bankIbn')?clean(b.bankIbn,80):current.bankIbn;
   if(bankName.length<2)throw new ApiError(400,'Банкны нэрийг зөв оруулна уу.');
   if(!validAccount(bankAccount))throw new ApiError(400,'Дансны дугаар 6–40 тэмдэгт, зөвхөн үсэг/тоо байх ёстой.');
   if(accountName.length<2)throw new ApiError(400,'Данс эзэмшигчийн нэрийг зөв оруулна уу.');
+  if(!/^[A-Za-z0-9 -]{3,80}$/.test(bankIbn))throw new ApiError(400,'IBN мэдээллийг зөв оруулна уу.');
   // Preserve the historical messenger-only payload on a brand-new install, while
   // merging it with stored payment details once richer settings exist.
-  const saved=legacyMessengerOnly&&!found?{messengerUrl}:{messengerUrl,bankName,bankAccount,accountName};
+  const saved=legacyMessengerOnly&&!found?{messengerUrl}:{messengerUrl,bankName,bankAccount,accountName,bankIbn};
   await db('rpc/kino_save_settings','POST',{settings_value:JSON.stringify(saved)});
-  return json({messengerUrl,bankName,bankAccount,accountName});
+  return json({messengerUrl,bankName,bankAccount,accountName,bankIbn});
  }catch(e){return fail(e);}
 }
