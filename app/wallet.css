@@ -348,3 +348,23 @@
     animation: none !important;
   }
 }
+
+
+/* Immediate wallet checkout cleanup */
+.wallet-topup-checkout .wallet-transfer-panel {
+  margin-top: 4px !important;
+}
+
+.film-reference-page .detail-payment {
+  margin-top: 10px !important;
+}
+
+.film-reference-page .detail-payment > .checkout-inline {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .film-reference-page .detail-payment {
+    margin-top: 8px !important;
+  }
+}
