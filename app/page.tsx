@@ -309,7 +309,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
     {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
       {isWalletTopup && <div className="wallet-transfer-head"><span>Шилжүүлэх сонгосон дүн</span><strong>{selectedTopup.toLocaleString()}₮</strong></div>}
-      <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span>Дансны дугаар <em className="bank-ibn">{bankAccount.ibn}</em><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+      <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span><span className="account-label-line">Дансны дугаар <em className="bank-ibn">{bankAccount.ibn}</em></span><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
       <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
     </div>}
     <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
@@ -540,6 +540,18 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
   const selectedCount = countFor(category);
   useEffect(() => { if (autoOpen) setOpen(true); }, [autoOpen]);
   useEffect(() => {
+    const openPreset=(event:Event)=>{
+      const detail=(event as CustomEvent<{category?:string;duration?:string}>).detail || {};
+      if(detail.category==="erotic"){
+        setCategory("erotic");
+        setDuration(detail.duration==="1month"?"1month":"3day");
+        setOpen(true);
+      }
+    };
+    window.addEventListener("kinoOpenPlanPreset",openPreset as EventListener);
+    return()=>window.removeEventListener("kinoOpenPlanPreset",openPreset as EventListener);
+  }, []);
+  useEffect(() => {
     if (open) dialogRef.current?.showModal(); else dialogRef.current?.close();
   }, [open]);
   const close = () => {setOpen(false);onAutoClose?.();};
@@ -612,7 +624,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand">ТАЗА САЙТ</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">ТАЗА САЙТ</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
   </div>;
 }
