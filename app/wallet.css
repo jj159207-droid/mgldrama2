@@ -426,3 +426,31 @@
   margin-left: 0;
   white-space: nowrap;
 }
+
+
+/* Minimal single-movie topup screen. */
+.wallet-topup-checkout .wallet-topup-simple-message {
+  margin: 0 0 14px;
+  padding: 16px 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  background: rgba(255,255,255,.025);
+  text-align: center;
+}
+
+.wallet-topup-checkout .wallet-topup-simple-message p {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.wallet-topup-checkout .wallet-topup-simple-message p + p {
+  margin-top: 5px;
+  color: #cbd5e1;
+}
+
+.wallet-topup-checkout .wallet-topup-simple-message + .checkout-summary {
+  display: none !important;
+}
