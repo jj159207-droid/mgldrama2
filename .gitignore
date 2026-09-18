@@ -44,3 +44,4 @@ next-env.d.ts
 
 .vercel
 .env*.local
+\n# resale/client packaging\n/client-packages/\n/LOCAL-ADMIN-PASSWORD.txt\n
