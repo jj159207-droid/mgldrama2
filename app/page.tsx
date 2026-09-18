@@ -34,6 +34,22 @@ const DEFAULT_BANK_ACCOUNT = {
 };
 const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
+function analyticsSource(): "facebook" | "direct" | "other" {
+  if (typeof window === "undefined") return "direct";
+  const ref = document.referrer.toLowerCase();
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("fbclid") || ref.includes("facebook.com") || ref.includes("messenger.com")) return "facebook";
+  return ref ? "other" : "direct";
+}
+
+function trackSiteEvent(event:"visit"|"film_open"|"watch_click"|"play_start", filmId?:number) {
+  if (typeof window === "undefined") return;
+  void requestJson("/api/analytics",{
+    method:"POST",
+    body:JSON.stringify({event,film_id:filmId||null,source:analyticsSource()}),
+  },true).catch(()=>{});
+}
+
 function genUserId(id: number) { return "#" + String(id).padStart(6, "0"); }
 function genRef(): string {
   const values = new Uint32Array(1);
@@ -1533,6 +1549,68 @@ function AdminSettingsTab() {
   </div>;
 }
 
+function AdminAnalyticsTab() {
+  const [days,setDays]=useState(30);
+  const [data,setData]=useState<any>(null);
+  const [loading,setLoading]=useState(true);
+  const load=useCallback(async()=>{
+    setLoading(true);
+    try{setData(await requestJson(`/api/analytics?days=${days}`,{},true));}
+    catch{setData(null);}
+    finally{setLoading(false);}
+  },[days]);
+  useEffect(()=>{void load();},[load]);
+
+  const today=data?.today||{};
+  const period=data?.period||{};
+  const topFilms=Array.isArray(data?.topFilms)?data.topFilms:[];
+  const stat=(label:string,value:any,note?:string)=><div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"12px 10px"}}>
+    <div style={{fontSize:10,color:C.muted,lineHeight:1.35}}>{label}</div>
+    <div style={{fontSize:22,fontWeight:900,color:C.gold,marginTop:3}}>{Number(value||0).toLocaleString()}</div>
+    {note&&<div style={{fontSize:9,color:C.muted,marginTop:2}}>{note}</div>}
+  </div>;
+
+  return <div style={{padding:"0 14px"}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+      <div style={{fontSize:15,fontWeight:800,color:C.txt}}>📊 Сайтын статистик</div>
+      <button type="button" onClick={load} disabled={loading} style={{marginLeft:"auto",background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:8,padding:"7px 10px",color:C.muted,fontSize:12}}>{loading?"…":"🔄 Шинэчлэх"}</button>
+    </div>
+
+    <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Өнөөдөр</div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginBottom:16}}>
+      {stat("Давтагдашгүй хэрэглэгч",today.uniqueVisitors,"Нэг төхөөрөмжийг нэг хүн гэж тооцно")}
+      {stat("Сайт руу орсон",today.visits,"Refresh/дахин оролт тусдаа")}
+      {stat("Кино нээсэн",today.filmOpens)}
+      {stat("Үзэх дарсан",today.watchClicks)}
+      {stat("Кино тоглож эхэлсэн",today.playStarts)}
+      {stat("Facebook / Messenger-ээс",today.facebookVisits)}
+    </div>
+
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+      <div style={{fontSize:12,fontWeight:800,color:C.txt}}>Хугацааны нийлбэр</div>
+      <select value={days} onChange={e=>setDays(Number(e.target.value))} style={{...inputSt,marginLeft:"auto",width:"auto",padding:"7px 10px",fontSize:12}}>
+        <option value={7}>7 хоног</option><option value={30}>30 хоног</option><option value={90}>90 хоног</option>
+      </select>
+    </div>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7,marginBottom:18}}>
+      {stat("Хэрэглэгч",period.uniqueVisitors)}
+      {stat("Үзэх дарсан",period.watchClicks)}
+      {stat("Тоглосон",period.playStarts)}
+    </div>
+
+    <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Хамгийн их сонирхсон кино</div>
+    {loading&&!data?<div style={{padding:30,textAlign:"center",color:C.muted}}>Ачааллаж байна…</div>
+      : topFilms.length===0?<div style={{padding:20,textAlign:"center",color:C.muted,background:C.card,borderRadius:10}}>Одоогоор статистик цуглараагүй байна.</div>
+      : <div style={{display:"flex",flexDirection:"column",gap:7}}>
+        {topFilms.map((row:any,index:number)=><div key={row.film_id} style={{display:"grid",gridTemplateColumns:"28px minmax(0,1fr) auto",alignItems:"center",gap:8,background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"9px 10px"}}>
+          <div style={{fontSize:12,fontWeight:900,color:C.gold}}>#{index+1}</div>
+          <div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:750,color:C.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.title}</div><div style={{fontSize:9,color:C.muted,marginTop:2}}>Нээсэн {Number(row.opens||0).toLocaleString()} · Тоглосон {Number(row.play_starts||0).toLocaleString()}</div></div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:900,color:C.green}}>{Number(row.watch_clicks||0).toLocaleString()}</div><div style={{fontSize:9,color:C.muted}}>Үзэх</div></div>
+        </div>)}
+      </div>}
+  </div>;
+}
+
 function AppearancePreview({films}: {films:any[]}) {
   const [catalogState,setCatalogState]=useState<CatalogState>({...INITIAL_CATALOG});
   const noop=()=>{};
@@ -1540,7 +1618,7 @@ function AppearancePreview({films}: {films:any[]}) {
 }
 
 function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "settings" | "appearance">("list");
+  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "analytics" | "settings" | "appearance">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1608,6 +1686,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
         <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📋 Жагсаалт</button>
         <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🧾 Захиалга</button>
         <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>👥 Гишүүд</button>
+        <button onClick={() => setTab("analytics")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "analytics" ? C.gold : C.card2, color: tab === "analytics" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📊 Статистик</button>
         <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>➕ Нэмэх</button>
         <button onClick={() => { setTab("sms"); window.dispatchEvent(new Event("kinoChatChanged")); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11, position: "relative" }}>
           💬 Холбогдох
@@ -1622,6 +1701,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
       {tab === "orders" && <AdminOrdersTab />}
       {tab === "settings" && <AdminSettingsTab />}
       {tab === "members" && <AdminMembersTab />}
+      {tab === "analytics" && <AdminAnalyticsTab />}
       {tab === "sms" && <AdminChatInbox announcements={<AdminAnnouncements />} />}
 
       {tab === "add" && (
@@ -1730,7 +1810,7 @@ export default function Home() {
   const chatUnread = useChatUnread(user?.id || null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { setMounted(true); trackSiteEvent("visit"); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
   const [walletBalance, setWalletBalance] = useState(0);
   const accessOwner = useRef<number | null>(null);
@@ -1875,6 +1955,7 @@ export default function Home() {
         const film=Array.isArray(rows)?rows.find(row=>Number(row.id)===filmTarget.id):null;
         if(!film)throw new RequestError("Кино олдсонгүй. Холбоос хуучирсан эсвэл кино хасагдсан байж болно.",404);
         setSelectedFilm(film);
+        trackSiteEvent("film_open",Number(film.id));
       } catch(error) {
         if(current())setFilmError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
       } finally {if(current())setFilmOpening(false);}
@@ -1892,6 +1973,7 @@ export default function Home() {
     // Details, inline payment and playback share one movie history entry.
     // Native Back reaches home; Forward restores details without autoplay.
     window.history.replaceState({page:"film",tazaFilmHome:true},"");
+    trackSiteEvent("play_start",Number(f.id));
     setCurFilm(current);setPage("video");return true;
   };
   const handleFilm = (f: FilmDetails) => {
@@ -1973,6 +2055,7 @@ export default function Home() {
   };
   const continueFilm = () => {
     if(!selectedFilm || filmOpening || watching || !authReady)return;
+    trackSiteEvent("watch_click",Number(selectedFilm.id));
     void watchFilm(selectedFilm);
   };
   const handlePaid = async (stillActive = () => true) => {
