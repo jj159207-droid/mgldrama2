@@ -858,7 +858,7 @@ function AdminMembersTab() {
   // Хугацаа дуусаагүй эрхүүдийг шүүх
   const now = Date.now();
   const isActive = (p: any) => paymentExpiry({...p,status:"confirmed"}) > now;
-  const activePayments = allPayments.filter(isActive);
+  const activePayments = allPayments.filter(p => p.plan !== "wallet_topup" && isActive(p));
 
   const paymentsAllBag = activePayments.filter(p => ["all_1month","monthly","1month","3day","1year"].includes(p.plan));
   const paymentsMonthly = activePayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
@@ -1011,14 +1011,14 @@ function AdminMembersTab() {
                 {/* Идэвхтэй эрхүүд */}
                 {userPayments.filter((p: any) => {
                   const expiry = paymentExpiry({...p,status:"confirmed"});
-                  return expiry > now;
+                  return p.plan !== "wallet_topup" && expiry > now;
                 }).length > 0 && (
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 11, color: C.muted, marginBottom: 6 }}>✅ Идэвхтэй эрхүүд:</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                       {userPayments.filter((p: any) => {
                         const expiry = paymentExpiry({...p,status:"confirmed"});
-                        return expiry > now;
+                        return p.plan !== "wallet_topup" && expiry > now;
                       }).map((p: any) => {
                         const expiry = paymentExpiry({...p,status:"confirmed"});
                         const remaining = Math.ceil((expiry - now) / (60*60*1000));
