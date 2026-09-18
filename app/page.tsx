@@ -286,7 +286,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       </div>
       <div className="wallet-topup-selected">Сонгосон цэнэглэлт <strong>{selectedTopup.toLocaleString()}₮</strong></div>
       <p className="wallet-spend-note">Нэг кино үзэх бүрт таны цэнэглэсэн данснаас <strong>2,000₮</strong> хасагдана.</p>
-      <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮-өөс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
+      <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮ ба түүнээс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
     </section>}
     <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
     {isWalletTopup && <div className="wallet-topup-preview"><span>Одоогийн үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></div>}
