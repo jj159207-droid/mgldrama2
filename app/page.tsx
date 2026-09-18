@@ -729,7 +729,7 @@ function AdminOrdersTab() {
       });
       await load();
     } catch(e) {
-      alert("Баталгаажуулахад алдаа гарлаа");
+      alert(e instanceof Error ? e.message : "Баталгаажуулахад алдаа гарлаа");
     } finally {
       setConfirming(null);
     }
