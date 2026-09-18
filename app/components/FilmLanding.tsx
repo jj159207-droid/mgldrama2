@@ -15,6 +15,7 @@ type Props = {
   watchError: string;
   authReady: boolean;
   available: boolean;
+  walletBalance: number;
   relatedLoading: boolean;
   relatedError: string;
   payment: ReactNode;
@@ -84,6 +85,7 @@ export default function FilmLanding(props:Props) {
         <div className="detail-summary"><p id="film-description" className={`detail-description${descriptionExpanded ? " expanded" : ""}`}>{description}</p>{description.length > 64 && <button className="detail-description-toggle" aria-expanded={descriptionExpanded} aria-controls="film-description" onClick={()=>setDescriptionExpanded(!descriptionExpanded)}>{descriptionExpanded ? "Хураах" : "Дэлгэрэнгүй"}</button>}</div>
         <div className="detail-language"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M6 15h5m2 0h5M6 11h3m2 0h7"/></svg><span>{film.badge?.split("|")[0] || "Хэлтэй"}</span></div>
         <p className="film-landing-price"><strong className="film-landing-price-value">{priceLabel}</strong><span>{film.free || film.locked === false ? "Шууд үзэх боломжтой" : "3 хоног үзэх эрх"}</span></p>
+        {!film.free && film.locked !== false && <p className="film-wallet-balance"><span>Үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
       </div>
       <div className="detail-watch"><button className="primary-button film-continue" onClick={watch} disabled={busy}><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4v16l13-8Z"/></svg>{props.watching ? "Үзэх эрхийг шалгаж байна…" : "Бүтэн үзэх"}</button>{props.available && <p className="film-landing-note">Танд энэ киног үзэх эрх байна.</p>}{props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}</div>
     </section>
