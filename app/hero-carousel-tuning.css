@@ -42,7 +42,10 @@
   object-position: center !important;
   margin: 0 !important;
   display: block !important;
-  filter: saturate(1.12) contrast(1.08) brightness(.94) !important;
+  filter: saturate(1.07) contrast(1.055) brightness(1.015) !important;
+  image-rendering: auto;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
 }
 
 .cinematic-hero-card.is-current .cinematic-hero-frame {
