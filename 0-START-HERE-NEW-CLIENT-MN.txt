@@ -1,0 +1,43 @@
+ШИНЭ КЛИЕНТ СУУЛГАХ — 8 АЛХАМ
+
+1. MAKE-CLIENT-PACKAGE.cmd дээр 2 дар.
+   -> client-packages дотор цэвэр ZIP гарна.
+
+2. Шинэ клиентэд ТУСДАА Supabase project үүсгэ.
+
+3. Supabase > SQL Editor дээр:
+   supabase/CLIENT-FRESH-INSTALL.sql
+   файлыг бүтнээр нь Run хийнэ.
+
+4. Цэвэр ZIP-ээ задлаад CLIENT-SETUP.cmd дээр 2 дар.
+
+5. Дэлгэц дээр асуусан:
+   - сайтын нэр
+   - домэйн
+   - Supabase URL/key
+   - банк/данс
+   - Messenger
+   - SMS
+   мэдээллийг бөглө.
+
+6. CLIENT-CHECK.cmd ажиллуул.
+   FAIL = 0 байх ёстой.
+
+7. Vercel дээр шинэ project үүсгээд .env.local-ийн утгуудыг
+   Environment Variables хэсэгт оруулж Deploy хийнэ.
+   .env.local файлыг GitHub/ZIP/chat руу БҮҮ явуул.
+
+8. Утаснаас бодитоор шалга:
+   - сайт нээгдэж байна
+   - кино/трейлер тоглож байна
+   - банк зөв
+   - төлбөрийн код зөв
+   - эрх зөв нээгдэж байна
+   - админ ажиллаж байна
+
+ДЭЛГЭРЭНГҮЙ: SELLABLE-KIT-MN.md
+ХҮЛЭЭЛГЭН ӨГӨХ: CLIENT-HANDOVER-CHECKLIST-MN.md
+
+ХАМГИЙН ЧУХАЛ:
+Клиент бүр тусдаа Supabase, Vercel, ADMIN_PASSWORD,
+service key, SMS secret, банкны данстай байна.
