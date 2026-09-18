@@ -368,3 +368,18 @@
     margin-top: 8px !important;
   }
 }
+
+
+/* Simple text-only wallet banner */
+.wallet-topup-checkout .wallet-open-transfer-simple {
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: 17px !important;
+  font-weight: 950 !important;
+  letter-spacing: .01em !important;
+}
+
+.wallet-topup-checkout .wallet-open-transfer-simple::before,
+.wallet-topup-checkout .wallet-open-transfer-simple::after {
+  content: none !important;
+}
