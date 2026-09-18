@@ -1,0 +1,65 @@
+/* Prepaid wallet UI for low-price single-movie purchases. */
+
+.film-destination .film-wallet-balance {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 7px 0 0;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.film-destination .film-wallet-balance strong {
+  color: #86efac;
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.checkout-dialog .wallet-topup-preview,
+.checkout-inline .wallet-topup-preview {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(134,239,172,.28);
+  border-radius: 12px;
+  background: rgba(22,101,52,.10);
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.checkout-dialog .wallet-topup-preview > span,
+.checkout-inline .wallet-topup-preview > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.checkout-dialog .wallet-topup-preview strong,
+.checkout-inline .wallet-topup-preview strong {
+  color: #86efac;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .film-destination .film-wallet-balance {
+    padding: 7px 10px;
+    font-size: 11px;
+  }
+
+  .checkout-inline .wallet-topup-preview {
+    margin-top: -2px;
+    padding: 9px 10px;
+  }
+}
