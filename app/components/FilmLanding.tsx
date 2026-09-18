@@ -72,7 +72,7 @@ export default function FilmLanding(props:Props) {
   const packages = filmPlans(film);
   const preview = trailerUrl(film);
   const busy = props.watching || !props.authReady;
-  const description = film.description?.trim() || "Киноны тайлбар удахгүй нэмэгдэнэ.";
+  const description = film.description?.trim() || "";
   const priceLabel = film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
 
@@ -125,14 +125,13 @@ export default function FilmLanding(props:Props) {
 
       {!film.free && film.locked !== false && <p className="film-wallet-balance"><span>Үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
 
-      <div className="detail-summary">
+      {description && <div className="detail-summary">
         <p id="film-description" className={`detail-description${descriptionExpanded ? " expanded" : ""}`}>{description}</p>
         {description.length > 90 && <button className="detail-description-toggle" aria-expanded={descriptionExpanded} aria-controls="film-description" onClick={()=>setDescriptionExpanded(!descriptionExpanded)}>{descriptionExpanded ? "Хураах" : "Дэлгэрэнгүй"}</button>}
-      </div>
+      </div>}
     </section>
 
-    {props.payment && <section id="film-payment" className="detail-payment" aria-labelledby="film-payment-title">
-      <div className="detail-section-heading"><span className="eyebrow">ҮЗЭХ ЭРХ</span><h2 id="film-payment-title">Төлбөр, шилжүүлэг</h2></div>
+    {props.payment && <section id="film-payment" className="detail-payment" aria-label="Данс цэнэглэх">
       {props.payment}
     </section>}
 
