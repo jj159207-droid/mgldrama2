@@ -566,7 +566,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
       <fieldset className="package-fieldset"><legend>1. Ямар кино үзэх вэ?</legend><div className="package-choices">
         {categories.map(c => <label key={c.key} className={`package-choice ${category === c.key ? "selected" : ""}`}>
           <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);if(c.key === "all")setDuration("1month");}} />
-          <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">18+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
+          <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">21+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
         </label>)}
       </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, орос, эротик — дөрвөн ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
       <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
@@ -619,7 +619,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
     <main className="catalog-shell">
       <section className="package-banner" aria-labelledby="package-banner-title">
         <img src="/cinema-cover.webp" className="package-banner-art" alt="" fetchPriority="high" />
-        <div className="package-banner-copy"><span className="package-banner-label"><UiIcon name="film" size={18} /> КИНО БАГЦ</span><h1 id="package-banner-title">Олон киног нэг багцаар</h1><p>Гадаад · Хятад · Орос · Эротик 18+</p><span className="package-banner-detail">Нэг ангиллын бүх кино · 3 хоног</span></div>
+        <div className="package-banner-copy"><span className="package-banner-label"><UiIcon name="film" size={18} /> КИНО БАГЦ</span><h1 id="package-banner-title">Олон киног нэг багцаар</h1><p>Гадаад · Хятад · Орос · Эротик 21+</p><span className="package-banner-detail">Нэг ангиллын бүх кино · 3 хоног</span></div>
         <div className="package-banner-action"><div className="package-banner-price"><strong>{PLAN_PRICES.gadaad_3day.toLocaleString()}₮</strong><span>-өөс эхлэн</span></div><button type="button" className="primary-button" onClick={openPlans}>Багц сонгох<UiIcon name="arrow" size={18} /></button></div>
       </section>
       {!preview && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
@@ -738,7 +738,7 @@ function AdminOrdersTab() {
 
   const filtered = orders.filter((o: any) => {
     if (filter === "all") { }
-    else if (filter === "monthly") { if (!o.plan || o.plan === "single") return false; }
+    else if (filter === "monthly") { if (!o.plan || o.plan === "single" || o.plan === "wallet_topup") return false; }
     else { if (o.status !== filter) return false; }
     if (search.trim()) {
       const s = search.trim().toLowerCase();
@@ -752,7 +752,7 @@ function AdminOrdersTab() {
   const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + Number(o.amount || 0), 0);
   const pendingCount = orders.filter(o => o.status === "pending").length;
   const confirmedCount = orders.filter(o => o.status === "confirmed").length;
-  const monthlyCount = orders.filter(o => o.plan && o.plan !== "single" && o.status === "confirmed").length;
+  const monthlyCount = orders.filter(o => o.plan && o.plan !== "single" && o.plan !== "wallet_topup" && o.status === "confirmed").length;
 
   const filters: { key: typeof filter; label: string }[] = [
     { key: "all", label: `Бүгд ${orders.length}` },
@@ -914,6 +914,7 @@ function AdminMembersTab() {
   const paymentsMonthly = activePayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
   const payments3Day = activePayments.filter(p => p.plan && p.plan.endsWith("_3day"));
   const paymentsFilm = activePayments.filter(p => !p.plan || p.plan === "single");
+  const revocableUserPayments = userPayments.filter((p:any) => p.plan !== "wallet_topup" && isActive(p));
   const totalWithAccess = new Set(activePayments.map(p => p.user_id)).size;
 
   const currentPayments = filterTab === "allbag" ? paymentsAllBag : filterTab === "monthly" ? paymentsMonthly : filterTab === "3day" ? payments3Day : paymentsFilm;
@@ -948,9 +949,7 @@ function AdminMembersTab() {
     if (!grantUser) return;
     setGranting(true);
     const ref_code = genRef();
-    const is3day = plan.endsWith("_3day");
     const isSingle = plan === "single";
-    const prices: any = { "all_1month": 20000, "erotic_1month": 12500, "gadaad_1month": 12500, "hyatad_1month": 12500, "erotic_3day": 8000, "gadaad_3day": 8000, "hyatad_3day": 8000, "single": 0 };
     await dbFetch("pending_payments", {
       method: "POST",
       body: JSON.stringify({
@@ -1178,11 +1177,11 @@ function AdminMembersTab() {
                 <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>🚫 Идэвхтэй эрхүүд:</div>
                 {loadingUserPayments ? (
                   <div style={{ textAlign: "center", color: C.muted, padding: 16 }}>Ачааллаж байна...</div>
-                ) : userPayments.length === 0 ? (
+                ) : revocableUserPayments.length === 0 ? (
                   <div style={{ textAlign: "center", color: C.muted, padding: 14, background: C.card, borderRadius: 10 }}>Идэвхтэй эрх байхгүй</div>
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {userPayments.map((p: any) => (
+                    {revocableUserPayments.map((p: any) => (
                       <div key={p.ref_code} style={{ background: C.card, border: `0.5px solid ${C.bd}`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <div>
                           <div style={{ fontSize: 12, fontWeight: 700, color: C.txt }}>{planLabel(p.plan)}</div>
