@@ -228,7 +228,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     };
     const start=async()=>{
       try{
-        const rows=await dbFetch("pending_payments",{method:"POST",body:JSON.stringify({ref_code:refCode,film_id:film.id||null,plan:film.plan||(film.monthly?"monthly":"single")})},true);
+        const rows=await dbFetch("pending_payments",{method:"POST",body:JSON.stringify({ref_code:refCode,film_id:film.id||null,plan:film.plan||(film.monthly?"monthly":"single"),...(film.plan==="wallet_topup"?{amount:Number(film.topupAmount||film.price||5000)}:{})})},true);
         if(!Array.isArray(rows)||!rows.length)throw new Error("Захиалга үүссэнгүй.");
         const amount=Number(rows[0].amount),created=Date.parse(rows[0].created_at);
         if(!Number.isSafeInteger(amount)||amount<=0||!Number.isFinite(created))throw new Error("Захиалгын дүн эсвэл хугацаа буруу байна.");
@@ -276,7 +276,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const checkout = <>
     <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>
     {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
-    <div className="checkout-summary"><div><strong>{film.title}</strong><span>{film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+    <div className="checkout-summary"><div><strong>{film.plan==="wallet_topup" ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{film.plan==="wallet_topup" ? `Доод цэнэглэлт · дараа нь «${film.returnFilm?.title || "кино"}» эрх автоматаар нээгдэнэ` : film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+    {film.plan==="wallet_topup" && <div className="wallet-topup-preview"><span>Одоогийн үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span><span>Киноны үнэ <strong>{Number(film.returnFilm?.price||0).toLocaleString()}₮</strong></span><span>Цэнэглэсний дараах үлдэгдэл <strong>{Math.max(0,Number(film.walletBefore||0)+Number(orderAmount||film.topupAmount||film.price||5000)-Number(film.returnFilm?.price||0)).toLocaleString()}₮</strong></span></div>}
     <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span>Дансны дугаар<strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
     <section className="reference-section"><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Кодоо зөв бичсэнээр таны төлбөрийг захиалгатай тулгана." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
     <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
@@ -1672,6 +1673,7 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
+  const [walletBalance, setWalletBalance] = useState(0);
   const accessOwner = useRef<number | null>(null);
   const deviceRequest = useRef<Promise<any> | null>(null);
 
@@ -1679,6 +1681,12 @@ export default function Home() {
   const syncAccessFromDB = async (userId: number) => {
     const data=await requestJson("/api/access",{},true);
     if(accessOwner.current===userId)setAccessMap(data.access || {});
+  };
+  const syncWalletFromDB = async (userId: number) => {
+    const data=await requestJson("/api/wallet",{},true);
+    const balance=Number(data?.balance || 0);
+    if(accessOwner.current===userId && Number.isSafeInteger(balance) && balance>=0)setWalletBalance(balance);
+    return balance;
   };
 
   const ensureDeviceUser = async () => {
@@ -1688,7 +1696,7 @@ export default function Home() {
     const pending=requestJson("/api/device",{method:"POST",body:"{}"},true).then(async data=>{
       if(!data?.user?.id)throw new Error("Төхөөрөмжийг таньж чадсангүй. Дахин оролдоно уу.");
       accessOwner.current=data.user.id;setUser(data.user);
-      try{await syncAccessFromDB(data.user.id);}catch{}
+      try{await Promise.all([syncAccessFromDB(data.user.id),syncWalletFromDB(data.user.id)]);}catch{}
       return data.user;
     });
     deviceRequest.current=pending;
@@ -1701,7 +1709,7 @@ export default function Home() {
     requestJson("/api/auth", {}, true).then(data=>{
       if(!active)return;
       if(data?.admin){setAdminAuth(true);}
-      else if(data?.user){accessOwner.current=data.user.id;setUser(data.user);void syncAccessFromDB(data.user.id).catch(()=>{});}
+      else if(data?.user){accessOwner.current=data.user.id;setUser(data.user);void Promise.all([syncAccessFromDB(data.user.id),syncWalletFromDB(data.user.id)]).catch(()=>{});}
     }).catch(()=>{}).finally(()=>{if(active)setAuthReady(true);});
     return()=>{active=false;};
   }, []);
@@ -1713,7 +1721,7 @@ export default function Home() {
     const refresh=async()=>{
       if(busy || cancelled || document.hidden)return;
       busy=true;
-      try { await syncAccessFromDB(user.id); } catch {} finally {busy=false;}
+      try { await Promise.all([syncAccessFromDB(user.id),syncWalletFromDB(user.id)]); } catch {} finally {busy=false;}
     };
     window.addEventListener("focus",refresh);
     window.addEventListener("online",refresh);
@@ -1838,6 +1846,19 @@ export default function Home() {
     setFilmTarget({kind:"film",id:Number(f.id)});setPage("film");
     window.scrollTo?.({top:0,behavior:"instant"});
   };
+  const purchaseWithWallet = async (film: FilmDetails, viewerId: number) => {
+    const data=await requestJson("/api/wallet",{method:"POST",body:JSON.stringify({action:"purchase",film_id:film.id})},true);
+    const balance=Number(data?.balance || 0),price=Number(data?.price || Number(film.price||0));
+    if(accessOwner.current===viewerId && Number.isSafeInteger(balance) && balance>=0)setWalletBalance(balance);
+    const result=String(data?.result || "");
+    if(result==="purchased" || result==="owned" || result==="free"){
+      await syncAccessFromDB(viewerId);
+      return {ok:true,result,balance,price};
+    }
+    if(result==="insufficient")return {ok:false,result,balance,price};
+    throw new Error("Үлдэгдлээс киноны эрх нээж чадсангүй.");
+  };
+
   const watchFilm = async (film: FilmDetails) => {
     const startedAt=playRequest.current;
     setWatching(true);setWatchError("");
@@ -1858,8 +1879,22 @@ export default function Home() {
         if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
       } catch(error) {
         if(!current())return;
-        if(error instanceof RequestError && error.status===403){setPayFilm({...film,returnFilm:film});setPage("film");}
-        else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
+        if(error instanceof RequestError && error.status===403){
+          try{
+            const wallet=await purchaseWithWallet(film,viewerId);
+            if(accessOwner.current!==viewerId)return;
+            if(wallet.ok){
+              if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
+            }else{
+              const needed=Math.max(0,wallet.price-wallet.balance);
+              const topupAmount=Math.max(5000,Math.ceil(needed/1000)*1000);
+              setPayFilm({id:0,title:"Үлдэгдэл цэнэглэх",price:topupAmount,topupAmount,monthly:true,plan:"wallet_topup",locked:true,returnFilm:film,walletBefore:wallet.balance});
+              setPage("film");
+            }
+          }catch(walletError){
+            setWatchError(walletError instanceof Error?walletError.message:"Үлдэгдлийг шалгаж чадсангүй.");
+          }
+        } else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
       }
     } catch(error) {setWatchError(error instanceof Error?error.message:"Төхөөрөмжийг таньж чадсангүй. Дахин оролдоно уу.");}
     finally{setWatching(false);}
@@ -1872,6 +1907,17 @@ export default function Home() {
     if(!payFilm || !user || !stillActive())return;
     const owner=user.id;
     const current=()=>stillActive()&&accessOwner.current===owner;
+    if(payFilm.plan==="wallet_topup"){
+      await syncWalletFromDB(owner);
+      if(!current())return;
+      const film=payFilm.returnFilm as FilmDetails | undefined;
+      if(!film){setPayFilm(null);setPage("home");return;}
+      const wallet=await purchaseWithWallet(film,owner);
+      if(!current())return;
+      if(!wallet.ok)throw new Error(`Үлдэгдэл хүрэлцэхгүй байна. Одоогийн үлдэгдэл ${wallet.balance.toLocaleString()}₮.`);
+      if(await playFilm(film,()=>accessOwner.current===owner))setPayFilm(null);
+      return;
+    }
     await syncAccessFromDB(owner);
     if(!current())return;
     const film=payFilm.returnFilm || (payFilm.monthly?null:payFilm);
@@ -1913,7 +1959,7 @@ export default function Home() {
   const handleLogin = (u: any) => {
     setAdminAuth(false);
     accessOwner.current=u.id;setUser(u);
-    void syncAccessFromDB(u.id).catch(()=>{});setShowLoginModal(false);
+    void Promise.all([syncAccessFromDB(u.id),syncWalletFromDB(u.id)]).catch(()=>{});setShowLoginModal(false);
     const action=pendingActionRef.current;pendingActionRef.current=null;
     if(action?.kind==="watch"){void watchFilm(action.film);return;}
     if(action?.kind==="plan"){openPlanCheckout(action.plan,action.film);return;}
@@ -1924,7 +1970,7 @@ export default function Home() {
     playRequest.current++;
     try {
       await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"logout"})});
-      accessOwner.current=null;setUser(null);setAdminAuth(false);setAccessMap({});navigateTo("home");void loadFilms();
+      accessOwner.current=null;setUser(null);setAdminAuth(false);setAccessMap({});setWalletBalance(0);navigateTo("home");void loadFilms();
     } catch {} // Keep the signed-in state visible if server-side logout failed.
   };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
@@ -1936,9 +1982,9 @@ export default function Home() {
 
 
       {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={() => setShowLoginModal(true)} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
-      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
+      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
-      {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({}); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}
+      {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
