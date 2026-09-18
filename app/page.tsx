@@ -638,11 +638,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       </div>
     </div></header>
     <main className="catalog-shell">
-      <section className="package-banner" aria-labelledby="package-banner-title">
-        <img src="/cinema-cover.webp" className="package-banner-art" alt="" fetchPriority="high" />
-        <div className="package-banner-copy"><span className="package-banner-label"><UiIcon name="film" size={18} /> КИНО БАГЦ</span><h1 id="package-banner-title">Олон киног нэг багцаар</h1><p>Гадаад · Хятад · Орос · Эротик 21+</p><span className="package-banner-detail">Нэг ангиллын бүх кино · 3 хоног</span></div>
-        <div className="package-banner-action"><div className="package-banner-price"><strong>{PLAN_PRICES.gadaad_3day.toLocaleString()}₮</strong><span>-өөс эхлэн</span></div><button type="button" className="primary-button" onClick={openPlans}>Багц сонгох<UiIcon name="arrow" size={18} /></button></div>
-      </section>
+      <section className="package-banner hero-mount-host" aria-label="Онцлох кинонууд" />
       {!preview && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
