@@ -136,7 +136,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const isWalletTopup=film.plan==="wallet_topup";
   const [selectedTopup,setSelectedTopup]=useState<number>(()=>[5000,10000,20000].includes(Number(film.topupAmount))?Number(film.topupAmount):5000);
-  const [showTransferDetails]=useState(true);
+  const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup);
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT);
   useEffect(()=>{
     let alive=true;
@@ -291,6 +291,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     </section>}
     <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
     {isWalletTopup && <div className="wallet-topup-preview"><span>Одоогийн үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></div>}
+    {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={()=>setShowTransferDetails(true)}>Данс цэнэглэх</button>}
     {(!isWalletTopup || showTransferDetails) && <div className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
       {isWalletTopup && <div className="wallet-transfer-head"><span>Шилжүүлэх сонгосон дүн</span><strong>{selectedTopup.toLocaleString()}₮</strong></div>}
       <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span>Дансны дугаар<strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
