@@ -198,9 +198,8 @@ export default function CinematicHeroMount() {
   }, [target, films.length]);
 
   const openPlans = useCallback(() => {
-    const button = target?.querySelector<HTMLButtonElement>(".package-banner-action .primary-button");
-    button?.click();
-  }, [target]);
+    window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"erotic",duration:"1month"}}));
+  }, []);
 
   const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} /> : null, [films, openPlans]);
   return target && content ? createPortal(content, target) : null;
