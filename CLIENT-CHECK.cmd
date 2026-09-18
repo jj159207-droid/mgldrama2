@@ -1,6 +1,0 @@
-@echo off
-setlocal
-cd /d "%~dp0"
-call npm run client:check
-echo.
-pause

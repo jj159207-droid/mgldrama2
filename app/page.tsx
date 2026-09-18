@@ -3,7 +3,6 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/domain";
-import { SITE_NAME } from "@/lib/site-config";
 
 import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
 import PosterUpload from "@/app/components/PosterUpload";
@@ -28,9 +27,9 @@ import { filmNavigationUrl, prepareFilmHistory, readFilmDestination, type FilmDe
 // ДАНСНЫ МЭДЭЭЛЭЛ
 // ══════════════════════════════════════════════
 const DEFAULT_BANK_ACCOUNT = {
-  bank: "Тохируулаагүй",
-  number: "000000",
-  name: "Тохируулаагүй",
+  bank: "Хаан банк",
+  number: "5403972086",
+  name: "Т.Жаргалбаяр",
 };
 const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
@@ -398,7 +397,7 @@ function Poster({ film }: any) {
   const [failed, setFailed] = useState(false);
   return <div className="poster-art">
     <div className="poster-fallback" aria-hidden="true">
-      <span className="poster-wordmark">{SITE_NAME}</span>
+      <span className="poster-wordmark">ТАЗА САЙТ</span>
       <strong>{film.title}</strong>
       <span>{decodeCat(film.badge)} · {decodeBadge(film.badge)}</span>
     </div>
@@ -560,7 +559,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
   return <div className="cinema-site">
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
     <header className="site-header"><div className="header-inner">
-      <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label={`${SITE_NAME} нүүр`}>{SITE_NAME}</a></div>
+      <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label="ТАЗА САЙТ нүүр">ТАЗА САЙТ</a></div>
       <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>Үзэх багц</button><button onClick={onContact}>Холбогдох<ChatBadge count={chatUnread} /></button></nav>
       <div className="header-actions">
       {user && !user.guest ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></> : !user ? <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button> : null}
@@ -578,7 +577,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand">{SITE_NAME}</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand">ТАЗА САЙТ</span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
   </div>;
 }
@@ -1462,7 +1461,7 @@ function AdminSettingsTab() {
       <label style={lbl}>👤 Данс эзэмшигчийн нэр</label>
       <input value={accountName} maxLength={100} onChange={(e:any)=>setAccountName(e.target.value)} placeholder="Данс эзэмшигч" style={{...inputSt,marginBottom:12}}/>
       <label style={lbl}>💳 Дансны дугаар</label>
-      <input value={bankAccount} maxLength={40} autoComplete="off" onChange={(e:any)=>setBankAccount(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="Дансны дугаар" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:17}}/>
+      <input value={bankAccount} maxLength={40} autoComplete="off" onChange={(e:any)=>setBankAccount(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="5403972086" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:17}}/>
       <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:16}}>
         <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:4}}>{bankAccount||"—"}</strong>
       </div>
@@ -1947,7 +1946,7 @@ export default function Home() {
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
       {showLoginModal && !user && mounted && createPortal(
         <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingActionRef.current=null;setWatching(false);setWatchError("");setShowLoginModal(false);}} className="login-dialog">
-          <div className="dialog-heading"><div><span className="eyebrow">{SITE_NAME}</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");setShowLoginModal(false);}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
+          <div className="dialog-heading"><div><span className="eyebrow">ТАЗА САЙТ</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");setShowLoginModal(false);}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
           {selectedFilm && <p className="login-note">Үргэлжлүүлэх кино: <strong>{selectedFilm.title}</strong></p>}
           <p className="login-note">Утасны дугаар, PIN кодоороо нэвтэрнэ үү.</p>
           <LoginModal onLogin={(u:any)=>{handleLogin(u);setShowLoginModal(false);}}/>

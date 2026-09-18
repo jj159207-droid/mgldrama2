@@ -3,7 +3,6 @@
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dbAll } from "@/lib/client";
-import { SITE_NAME } from "@/lib/site-config";
 
 type HeroFilm = {
   id: number;
@@ -115,7 +114,7 @@ function Carousel({ films, onOpenPlans }: { films: HeroFilm[]; onOpenPlans: () =
                     onError={() => setFailed(value => ({ ...value, [film.id]: true }))}
                   />
                 ) : (
-                  <span className="cinematic-hero-fallback" aria-hidden="true">{SITE_NAME}</span>
+                  <span className="cinematic-hero-fallback" aria-hidden="true">ТАЗА САЙТ</span>
                 )}
                 <span className="cinematic-hero-package">◉ {heroPackageLabel(film)}</span>
                 <span className="cinematic-hero-shade" aria-hidden="true" />

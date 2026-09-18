@@ -5,9 +5,9 @@ export const runtime='nodejs';
 
 const DEFAULTS={
  messengerUrl:safeUrl(process.env.MESSENGER_URL),
- bankName:String(process.env.BANK_NAME||'Тохируулаагүй').trim(),
- bankAccount:String(process.env.BANK_ACCOUNT||'000000').trim(),
- accountName:String(process.env.BANK_ACCOUNT_NAME||'Тохируулаагүй').trim(),
+ bankName:String(process.env.BANK_NAME||'Хаан банк').trim(),
+ bankAccount:String(process.env.BANK_ACCOUNT||'5403972086').trim(),
+ accountName:String(process.env.BANK_ACCOUNT_NAME||'Т.Жаргалбаяр').trim(),
 };
 const clean=(value:unknown,max:number)=>typeof value==='string'?value.trim().replace(/\s+/g,' ').slice(0,max):'';
 const validAccount=(value:string)=>/^[A-Za-z0-9 -]{6,40}$/.test(value);
