@@ -448,3 +448,105 @@
     top: 34px !important;
   }
 }
+
+
+/* Homepage package CTAs: raised 3D surface + slow glow pulse. */
+.cinema-site .cinematic-package-cta,
+.cinema-site .catalog-plan-banner,
+.cinema-site .package-banner-action .primary-button {
+  position: relative;
+  transform-style: preserve-3d;
+  isolation: isolate;
+  border-width: 1px !important;
+  border-color: color-mix(in srgb, var(--accent) 72%, white 10%) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.16),
+    inset 0 -3px 0 rgba(0,0,0,.34),
+    0 5px 0 color-mix(in srgb, var(--accent) 34%, #05070a 66%),
+    0 12px 24px rgba(0,0,0,.42),
+    0 0 20px color-mix(in srgb, var(--accent) 16%, transparent) !important;
+  animation: taza-package-3d-glow 2.6s ease-in-out infinite;
+}
+
+.cinema-site .cinematic-package-cta::after,
+.cinema-site .catalog-plan-banner::after,
+.cinema-site .package-banner-action .primary-button::after {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto;
+  height: 42%;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.12), transparent);
+  opacity: .65;
+}
+
+.cinema-site .cinematic-package-cta:hover,
+.cinema-site .cinematic-package-cta:focus-visible,
+.cinema-site .catalog-plan-banner:hover,
+.cinema-site .catalog-plan-banner:focus-visible,
+.cinema-site .package-banner-action .primary-button:hover,
+.cinema-site .package-banner-action .primary-button:focus-visible {
+  transform: translateY(-2px) scale(1.01) !important;
+  filter: brightness(1.08);
+}
+
+.cinema-site .cinematic-package-cta:active,
+.cinema-site .catalog-plan-banner:active,
+.cinema-site .package-banner-action .primary-button:active {
+  transform: translateY(4px) scale(.995) !important;
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.12),
+    inset 0 -1px 0 rgba(0,0,0,.26),
+    0 1px 0 color-mix(in srgb, var(--accent) 30%, #05070a 70%),
+    0 5px 12px rgba(0,0,0,.38) !important;
+  animation-play-state: paused;
+}
+
+.cinema-site .catalog-plan-banner .banner-cta,
+.cinema-site .cinematic-package-cta strong {
+  text-shadow:
+    0 1px 0 rgba(255,255,255,.22),
+    0 3px 8px rgba(0,0,0,.45);
+}
+
+@keyframes taza-package-3d-glow {
+  0%, 100% {
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,.15),
+      inset 0 -3px 0 rgba(0,0,0,.34),
+      0 5px 0 color-mix(in srgb, var(--accent) 34%, #05070a 66%),
+      0 12px 24px rgba(0,0,0,.42),
+      0 0 16px color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,.24),
+      inset 0 -3px 0 rgba(0,0,0,.30),
+      0 6px 0 color-mix(in srgb, var(--accent) 42%, #05070a 58%),
+      0 16px 30px rgba(0,0,0,.48),
+      0 0 34px color-mix(in srgb, var(--accent) 36%, transparent);
+  }
+}
+
+@media (max-width: 760px) {
+  .cinema-site .cinematic-package-cta,
+  .cinema-site .catalog-plan-banner,
+  .cinema-site .package-banner-action .primary-button {
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,.15),
+      inset 0 -3px 0 rgba(0,0,0,.32),
+      0 4px 0 color-mix(in srgb, var(--accent) 32%, #05070a 68%),
+      0 9px 18px rgba(0,0,0,.40),
+      0 0 18px color-mix(in srgb, var(--accent) 16%, transparent) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-site .cinematic-package-cta,
+  .cinema-site .catalog-plan-banner,
+  .cinema-site .package-banner-action .primary-button {
+    animation: none !important;
+  }
+}
