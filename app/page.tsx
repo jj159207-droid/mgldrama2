@@ -137,7 +137,8 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const isWalletTopup=film.plan==="wallet_topup";
   const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):5000);
-  const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).sort((a,b)=>a-b);
+  const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
+  const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup);
   const transferPanelRef=useRef<HTMLDivElement>(null);
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT);
