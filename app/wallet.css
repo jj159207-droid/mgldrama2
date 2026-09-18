@@ -383,3 +383,15 @@
 .wallet-topup-checkout .wallet-open-transfer-simple::after {
   content: none !important;
 }
+
+
+/* Keep the revealed bank/ref block inside the phone viewport. */
+.wallet-topup-checkout .wallet-transfer-panel {
+  scroll-margin-top: 12px;
+}
+
+@media (max-width: 760px) {
+  .wallet-topup-checkout .wallet-transfer-panel {
+    max-width: 100%;
+  }
+}
