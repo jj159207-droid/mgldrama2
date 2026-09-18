@@ -14,10 +14,21 @@ export async function POST(req:NextRequest) {
   if(allowed && String(b.sender||'').trim()!==allowed)throw new ApiError(403,'Банкны SMS илгээгч таарахгүй байна.');
   const parsed=typeof b.text==='string'&&b.text.length<=2000?parseBankSms(b.text):null;
   if(!parsed)throw new ApiError(400,'Орлогын дүн болон 6 оронтой Utga код шаардлагатай.');
-  const lookup=()=>db(`pending_payments?ref_code=eq.${parsed.ref}&select=id,user_id,amount,status,created_at,confirmed_at`);
+  const lookup=()=>db(`pending_payments?ref_code=eq.${parsed.ref}&select=id,user_id,amount,status,plan,created_at,confirmed_at`);
   const [payment]=await lookup();
   if(!payment)throw new ApiError(404,'Захиалга олдсонгүй.');
   if(!Number.isFinite(Number(payment.amount))||Number(payment.amount)<=0||parsed.amount!==Number(payment.amount))throw new ApiError(400,'Шилжүүлсэн дүн захиалгын дүнтэй таарахгүй байна.');
+  if(payment.plan==='wallet_topup'){
+    const [wallet]=await db('rpc/kino_wallet_confirm_topup','POST',{
+      p_payment:Number(payment.id),
+      p_ref:parsed.ref,
+      p_amount:Number(payment.amount),
+      p_allow_expired:false,
+    });
+    const balance=Number(wallet?.balance || 0);
+    if(!Number.isSafeInteger(balance)||balance<0)throw new ApiError(502,'Wallet үлдэгдэл баталгаажаагүй.');
+    return json({ok:true,ref:parsed.ref,wallet:true,walletBalance:balance,alreadyConfirmed:wallet?.result==='already_confirmed'});
+  }
   // Retries acknowledge the original result without moving its expiry forward.
   if(payment.status==='confirmed')return json({ok:true,alreadyConfirmed:true,ref:parsed.ref});
   if(payment.status!=='pending')throw new ApiError(409,'Захиалга хүчингүй болсон. Админ шалгана уу.');
