@@ -1,0 +1,362 @@
+/* Movie detail page matching the approved mobile reference. */
+
+.film-reference-page {
+  --detail-glow: color-mix(in srgb, var(--accent) 32%, transparent);
+}
+
+.film-reference-page .film-showcase {
+  display: block;
+}
+
+.film-reference-page .film-hero-media {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #05070b;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow:
+    0 20px 44px rgba(0,0,0,.44),
+    0 0 0 1px rgba(255,255,255,.025) inset;
+}
+
+.film-reference-page .film-hero-media .detail-poster {
+  aspect-ratio: 16 / 10;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.film-reference-page .film-hero-media .detail-poster::after {
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.04) 38%, rgba(0,0,0,.28) 66%, rgba(0,0,0,.92) 100%);
+}
+
+.film-reference-page .film-hero-media .detail-poster img,
+.film-reference-page .film-hero-media .detail-poster-video,
+.film-reference-page .film-hero-media .detail-poster-video > .trailer-poster-frame {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.film-reference-page .film-hero-media .detail-trailer {
+  min-height: 0;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+}
+
+.film-reference-page .film-hero-media .detail-trailer video,
+.film-reference-page .film-hero-media .detail-trailer iframe {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+}
+
+.film-reference-page .film-hero-media .trailer-close {
+  position: absolute;
+  z-index: 6;
+  top: 10px;
+  right: 10px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border-color: rgba(255,255,255,.24);
+  background: rgba(4,7,12,.72);
+  color: #fff;
+  font-size: 11px;
+  backdrop-filter: blur(10px);
+}
+
+.film-reference-page .film-hero-media::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: auto 0 0;
+  height: 42%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(2,4,8,.88));
+}
+
+.film-reference-page .film-hero-overlay {
+  position: absolute;
+  z-index: 5;
+  left: 16px;
+  right: 16px;
+  bottom: 15px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.film-reference-page .film-hero-overlay h1 {
+  min-width: 0;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(24px,4.8vw,44px);
+  font-weight: 950;
+  line-height: 1.04;
+  letter-spacing: -.035em;
+  text-transform: uppercase;
+  text-shadow: 0 3px 16px rgba(0,0,0,.95);
+  overflow-wrap: anywhere;
+}
+
+.film-reference-page .film-hero-watch {
+  min-width: 112px;
+  min-height: 42px;
+  padding: 9px 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(255,255,255,.36);
+  border-radius: 5px;
+  background: rgba(248,245,248,.92);
+  color: #141419;
+  font-size: 14px;
+  font-weight: 900;
+  box-shadow: 0 8px 22px rgba(0,0,0,.30);
+}
+
+.film-reference-page .film-landing-note,
+.film-reference-page .detail-watch-error {
+  margin-top: 8px;
+}
+
+.film-reference-page .detail-related-primary {
+  margin-top: 18px;
+}
+
+.film-reference-page .detail-related-primary > h2 {
+  margin: 0 0 11px;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+.film-reference-page .detail-related-primary .related-grid {
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 10px;
+}
+
+.film-reference-page .detail-related-primary .related-film {
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.film-reference-page .detail-related-primary .related-film:hover {
+  background: transparent;
+}
+
+.film-reference-page .detail-related-primary .related-poster {
+  aspect-ratio: 2 / 3;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,.07);
+  box-shadow: 0 8px 18px rgba(0,0,0,.28);
+}
+
+.film-reference-page .detail-related-primary .related-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.film-reference-page .detail-related-primary .related-film > div:last-child {
+  padding: 6px 1px 0;
+}
+
+.film-reference-page .detail-related-primary .related-film h3 {
+  display: -webkit-box;
+  margin: 0;
+  color: #e8edf4;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.film-reference-page .film-detail-info {
+  display: grid;
+  gap: 12px;
+  margin-top: 17px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.film-reference-page .film-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 12px;
+  color: #aab4c2;
+  font-size: 12px;
+}
+
+.film-reference-page .film-detail-meta span {
+  white-space: nowrap;
+}
+
+.film-reference-page .film-detail-meta strong {
+  color: #f8fafc;
+  font-weight: 900;
+}
+
+.film-reference-page .film-detail-info .detail-description {
+  color: #b5beca;
+  font-size: 13px;
+  line-height: 1.55;
+  -webkit-line-clamp: 3;
+}
+
+.film-reference-page .film-detail-info .detail-description-toggle {
+  min-height: 36px;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.film-reference-page .film-wallet-balance {
+  margin: 0;
+}
+
+@media (min-width: 761px) {
+  .film-reference-page .film-hero-media {
+    width: min(920px,100%);
+    margin: 0 auto;
+  }
+
+  .film-reference-page .detail-related-primary,
+  .film-reference-page .film-detail-info,
+  .film-reference-page .detail-payment,
+  .film-reference-page .detail-packages {
+    width: min(920px,100%);
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .film-reference-page {
+    width: 100%;
+    padding: 0 0 max(20px,env(safe-area-inset-bottom));
+  }
+
+  .film-reference-page .detail-top {
+    width: calc(100% - 24px);
+    margin: 8px auto 8px;
+  }
+
+  .film-reference-page .detail-brand {
+    font-size: 0;
+  }
+
+  .film-reference-page .detail-brand .brand-symbol {
+    width: 28px;
+    height: 30px;
+  }
+
+  .film-reference-page .film-showcase,
+  .film-reference-page .detail-related-primary,
+  .film-reference-page .film-detail-info,
+  .film-reference-page .detail-payment,
+  .film-reference-page .detail-packages {
+    width: calc(100% - 20px);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .film-reference-page .film-showcase {
+    margin-top: 0;
+  }
+
+  .film-reference-page .film-hero-media {
+    border-radius: 9px;
+  }
+
+  .film-reference-page .film-hero-media .detail-poster,
+  .film-reference-page .film-hero-media .detail-trailer video,
+  .film-reference-page .film-hero-media .detail-trailer iframe {
+    aspect-ratio: 1.18 / 1;
+  }
+
+  .film-reference-page .film-hero-overlay {
+    left: 13px;
+    right: 13px;
+    bottom: 12px;
+    gap: 10px;
+  }
+
+  .film-reference-page .film-hero-overlay h1 {
+    font-size: clamp(22px,7vw,31px);
+    max-width: 72%;
+  }
+
+  .film-reference-page .film-hero-watch {
+    min-width: 96px;
+    min-height: 38px;
+    padding: 7px 13px;
+    font-size: 13px;
+  }
+
+  .film-reference-page .detail-related-primary {
+    margin-top: 15px;
+  }
+
+  .film-reference-page .detail-related-primary > h2 {
+    font-size: 15px;
+    margin-bottom: 9px;
+  }
+
+  .film-reference-page .detail-related-primary .related-grid {
+    gap: 7px;
+  }
+
+  .film-reference-page .detail-related-primary .related-film h3 {
+    font-size: 10.5px;
+  }
+
+  .film-reference-page .film-detail-info {
+    margin-top: 14px;
+    padding-top: 10px;
+  }
+
+  .film-reference-page .film-detail-meta {
+    gap: 4px 10px;
+    font-size: 10.5px;
+  }
+
+  .film-reference-page .film-detail-info .detail-description {
+    font-size: 11.5px;
+    line-height: 1.5;
+  }
+
+  .film-reference-page .detail-payment,
+  .film-reference-page .detail-packages {
+    margin-top: 18px;
+  }
+}
+
+@media (max-width: 390px) {
+  .film-reference-page .film-hero-overlay h1 {
+    font-size: 20px;
+  }
+
+  .film-reference-page .film-hero-watch {
+    min-width: 86px;
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film-reference-page .film-hero-media * {
+    scroll-behavior: auto;
+  }
+}
