@@ -535,8 +535,8 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
   const [category, setCategory] = useState("gadaad");
   const [duration, setDuration] = useState("3day");
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const categories = [{key:"gadaad",label:"Гадаад"},{key:"hyatad",label:"Хятад"},{key:"erotic",label:"Эротик"},{key:"all",label:"Бүх ангилал"}];
-  const countFor = (key: string) => films.filter(f => key === "all" ? ["Гадаад","Хятад","Эротик"].includes(decodeCat(f.badge)) : decodeCat(f.badge) === categories.find(c => c.key === key)?.label).length;
+  const categories = [{key:"gadaad",label:"Гадаад"},{key:"hyatad",label:"Хятад"},{key:"oros",label:"Орос"},{key:"erotic",label:"Эротик"},{key:"all",label:"Бүх ангилал"}];
+  const countFor = (key: string) => films.filter(f => key === "all" ? ["Гадаад","Хятад","Орос","Эротик"].includes(decodeCat(f.badge)) : decodeCat(f.badge) === categories.find(c => c.key === key)?.label).length;
   const plan = category === "all" ? "all_1month" : `${category}_${duration}`;
   const price = PLAN_PRICES[plan];
   const selectedCount = countFor(category);
@@ -566,7 +566,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
           <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);if(c.key === "all")setDuration("1month");}} />
           <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">18+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
         </label>)}
-      </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, эротик — гурван ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
+      </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, орос, эротик — дөрвөн ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
       <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
         {(category === "all" ? ["1month"] : ["3day","1month"]).map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
           <input type="radio" name="package-duration" value={d} checked={duration === d} onChange={() => setDuration(d)} />
@@ -589,7 +589,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       const h = Math.ceil((accessMap["monthly"] - now) / 3600000);
       return h > 24 ? `👑 ${Math.ceil(h/24)} хоног үлдсэн` : `👑 ${h}ц үлдсэн`;
     }
-    const catMap: any = { "Эротик": "cat_erotic", "Гадаад": "cat_gadaad", "Хятад": "cat_hyatad" };
+    const catMap: any = { "Эротик": "cat_erotic", "Гадаад": "cat_gadaad", "Хятад": "cat_hyatad", "Орос": "cat_oros" };
     if (category && catMap[category] && accessMap?.[catMap[category]] && accessMap[catMap[category]] > now) {
       const h = Math.ceil((accessMap[catMap[category]] - now) / 3600000);
       return h > 24 ? `✅ ${Math.ceil(h/24)} хоног үлдсэн` : `✅ ${h}ц үлдсэн`;
@@ -617,7 +617,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
     <main className="catalog-shell">
       <section className="package-banner" aria-labelledby="package-banner-title">
         <img src="/cinema-cover.webp" className="package-banner-art" alt="" fetchPriority="high" />
-        <div className="package-banner-copy"><span className="package-banner-label"><UiIcon name="film" size={18} /> КИНО БАГЦ</span><h1 id="package-banner-title">Олон киног нэг багцаар</h1><p>Гадаад · Хятад · Эротик 18+</p><span className="package-banner-detail">Нэг ангиллын бүх кино · 3 хоног</span></div>
+        <div className="package-banner-copy"><span className="package-banner-label"><UiIcon name="film" size={18} /> КИНО БАГЦ</span><h1 id="package-banner-title">Олон киног нэг багцаар</h1><p>Гадаад · Хятад · Орос · Эротик 18+</p><span className="package-banner-detail">Нэг ангиллын бүх кино · 3 хоног</span></div>
         <div className="package-banner-action"><div className="package-banner-price"><strong>{PLAN_PRICES.gadaad_3day.toLocaleString()}₮</strong><span>-өөс эхлэн</span></div><button type="button" className="primary-button" onClick={openPlans}>Багц сонгох<UiIcon name="arrow" size={18} /></button></div>
       </section>
       {!preview && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
@@ -1121,6 +1121,7 @@ function AdminMembersTab() {
                     ["erotic_1month", "🔞 Эротик · 1 сар"],
                     ["gadaad_1month", "🌍 Гадаад · 1 сар"],
                     ["hyatad_1month", "🇨🇳 Хятад · 1 сар"],
+                    ["oros_1month", "🇷🇺 Орос · 1 сар"],
                   ].map(([plan, label]) => (
                     <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
                       style={{ background: "#2a0550", border: `0.5px solid #a855f7`, borderRadius: 10, padding: "12px 14px", color: "#e9d5ff", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
@@ -1141,6 +1142,7 @@ function AdminMembersTab() {
                     ["erotic_3day", "🔞 Эротик · 3 хоног"],
                     ["gadaad_3day", "🌍 Гадаад · 3 хоног"],
                     ["hyatad_3day", "🇨🇳 Хятад · 3 хоног"],
+                    ["oros_3day", "🇷🇺 Орос · 3 хоног"],
                   ].map(([plan, label]) => (
                     <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
                       style={{ background: "#061220", border: `0.5px solid #38bdf8`, borderRadius: 10, padding: "12px 14px", color: "#7dd3fc", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
@@ -1443,6 +1445,7 @@ function EditFilmPanel({ f, onDone }: any) {
             <option>Эротик</option>
             <option>Гадаад</option>
             <option>Хятад</option>
+            <option>Орос</option>
           </select>
         </div>
       </div>
@@ -1637,6 +1640,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
                   <option>Эротик</option>
                   <option>Гадаад</option>
                   <option>Хятад</option>
+                  <option>Орос</option>
                 </select>
               </div>
               <div><label style={lbl}>Хуучин үнэ ₮</label><input style={inputSt} value={form.op} onChange={set("op")} type="number" min="0" step="1" /></div>
@@ -1790,7 +1794,7 @@ export default function Home() {
     const now = Date.now();
     if (accessMap["monthly"] && accessMap["monthly"] > now) return true;
     if (accessMap[`film_${filmId}`] && accessMap[`film_${filmId}`] > now) return true;
-    const catMap: any = { "Эротик": "cat_erotic", "Гадаад": "cat_gadaad", "Хятад": "cat_hyatad" };
+    const catMap: any = { "Эротик": "cat_erotic", "Гадаад": "cat_gadaad", "Хятад": "cat_hyatad", "Орос": "cat_oros" };
     if (category && catMap[category] && accessMap[catMap[category]] && accessMap[catMap[category]] > now) return true;
     return false;
   };
