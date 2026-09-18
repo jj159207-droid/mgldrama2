@@ -3,7 +3,7 @@ import Image from "next/image";
 import { safeUrl } from "@/lib/domain";
 import { filmCategory } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, relatedFilms, trailerUrl, type FilmDetails } from "@/lib/film-details";
-import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
+import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";\nimport { SITE_NAME } from "@/lib/site-config";
 
 type Props = {
   film: FilmDetails | null;
@@ -31,7 +31,7 @@ function FilmImage({film, priority = false}: {film:FilmDetails; priority?:boolea
   const src = safeUrl(film.img || "", true);
   // Posters are already resized by the upload service; retain their original CDN URL.
   return src && !failed ? <Image unoptimized src={src} alt={film.title} fill sizes={priority ? "(max-width: 760px) 54vw, 540px" : "(max-width: 760px) 33vw, 360px"} preload={priority} onError={()=>setFailed(true)} />
-    : <><span className="detail-poster-fallback" aria-hidden="true"><span>ТАЗА САЙТ</span><strong>{film.title}</strong></span><TrailerPosterFrame film={film} className="detail-poster-video" /></>;
+    : <><span className="detail-poster-fallback" aria-hidden="true"><span>{SITE_NAME}</span><strong>{film.title}</strong></span><TrailerPosterFrame film={film} className="detail-poster-video" /></>;
 }
 
 function Trailer({film, onClose}: {film:FilmDetails; onClose:()=>void}) {
@@ -67,7 +67,7 @@ export default function FilmLanding(props:Props) {
   const description = film.description?.trim() || "Киноны тайлбар удахгүй нэмэгдэнэ.";
   const priceLabel = film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   return <main className="film-destination catalog-shell">
-    <nav className="detail-top" aria-label="Киноны навигац"><button className="icon-button film-back" onClick={onBack} aria-label="Нүүр рүү буцах"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8"/></svg></button><span className="detail-brand"><span className="brand-symbol" aria-hidden="true">▶</span>ТАЗА САЙТ</span><span aria-hidden="true"/></nav>
+    <nav className="detail-top" aria-label="Киноны навигац"><button className="icon-button film-back" onClick={onBack} aria-label="Нүүр рүү буцах"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8"/></svg></button><span className="detail-brand"><span className="brand-symbol" aria-hidden="true">▶</span>{SITE_NAME}</span><span aria-hidden="true"/></nav>
     <section className={`film-landing${previewOpen ? " preview-playing" : ""}`} aria-labelledby="selected-film-title">
       <div className="detail-media">
         {previewOpen ? <Trailer film={film} onClose={()=>setPreviewOpen(false)} /> : <>
