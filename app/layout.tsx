@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import AgeGate from "@/app/components/AgeGate";
 import CinematicHeroMount from "@/app/components/CinematicHeroMount";
-import CatalogCardTuning from "@/app/components/CatalogCardTuning";
+import CatalogCardTuning from "@/app/components/CatalogCardTuning";\nimport { SITE_DESCRIPTION, SITE_NAME } from "@/lib/site-config";
 import "./globals.css";
 import "./chat.css";
 import "./install.css";
@@ -18,26 +18,26 @@ import "./film-price-blink.css";
 export const viewport: Viewport = { themeColor: "#05070c" };
 
 export const metadata: Metadata = {
-  title: "ТАЗА САЙТ",
-  description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+  title: SITE_NAME,
+  description: SITE_DESCRIPTION,
   manifest: "/manifest.json",
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "ТАЗА САЙТ",
+    title: SITE_NAME,
   },
   openGraph: {
     title: "ТАЗА САЙТ",
-    description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+    description: SITE_DESCRIPTION,
     ...(process.env.SITE_URL ? {url:process.env.SITE_URL} : {}),
-    siteName: "ТАЗА САЙТ",
+    siteName: SITE_NAME,
     images: [
       {
         url: "/cinema-cover.webp",
         width: 1200,
         height: 630,
-        alt: "ТАЗА САЙТ",
+        alt: SITE_NAME,
       },
     ],
     locale: "mn_MN",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "ТАЗА САЙТ",
-    description: "Монгол, гадаад, хятад кино үзэх сайт. Нэг дор бүгд.",
+    description: SITE_DESCRIPTION,
     images: ["/cinema-cover.webp"],
   },
   ...(process.env.SITE_URL ? {metadataBase:new URL(process.env.SITE_URL)} : {}),
