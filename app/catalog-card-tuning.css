@@ -450,160 +450,121 @@
 }
 
 
-/* Homepage package CTAs: raised 3D surface + slow glow pulse. */
+/* Homepage package CTA: obvious 3D depth with a real visible pulse. */
+.cinema-site .hero-mount-host:not(.has-cinematic-carousel) {
+  display: none !important;
+}
+
 .cinema-site .cinematic-package-cta,
-.cinema-site .catalog-plan-banner,
-.cinema-site .package-banner-action .primary-button {
+.cinema-site .catalog-plan-banner {
   position: relative;
-  transform-style: preserve-3d;
   isolation: isolate;
-  border-width: 1px !important;
-  border-color: color-mix(in srgb, var(--accent) 72%, white 10%) !important;
+  transform-style: preserve-3d;
+  border: 2px solid color-mix(in srgb, var(--accent) 88%, white 12%);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.10), transparent 34%),
+    linear-gradient(145deg, #171d27, #070a0f);
+  transform: translateY(-2px) perspective(700px) rotateX(2deg);
   box-shadow:
-    inset 0 2px 0 rgba(255,255,255,.16),
-    inset 0 -3px 0 rgba(0,0,0,.34),
-    0 5px 0 color-mix(in srgb, var(--accent) 34%, #05070a 66%),
-    0 12px 24px rgba(0,0,0,.42),
-    0 0 20px color-mix(in srgb, var(--accent) 16%, transparent) !important;
-  animation: taza-package-3d-glow 2.6s ease-in-out infinite;
+    inset 0 3px 0 rgba(255,255,255,.22),
+    inset 0 -5px 0 rgba(0,0,0,.55),
+    0 7px 0 color-mix(in srgb, var(--accent) 48%, #05070a 52%),
+    0 17px 28px rgba(0,0,0,.62),
+    0 0 22px color-mix(in srgb, var(--accent) 32%, transparent);
+  animation: taza-package-pop 1.45s ease-in-out infinite;
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+  will-change: transform, filter, box-shadow;
+}
+
+.cinema-site .cinematic-package-cta::before,
+.cinema-site .catalog-plan-banner::before {
+  content: "";
+  position: absolute;
+  inset: 2px 2px auto;
+  height: 44%;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.16), transparent);
+  opacity: .85;
 }
 
 .cinema-site .cinematic-package-cta::after,
-.cinema-site .catalog-plan-banner::after,
-.cinema-site .package-banner-action .primary-button::after {
+.cinema-site .catalog-plan-banner::after {
   content: "";
   position: absolute;
-  inset: 1px 1px auto;
-  height: 42%;
+  inset: -5px;
   z-index: -1;
-  pointer-events: none;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255,255,255,.12), transparent);
-  opacity: .65;
+  pointer-events: none;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 32%, transparent);
+  opacity: .35;
+  animation: taza-package-halo 1.45s ease-in-out infinite;
+}
+
+.cinema-site .cinematic-package-cta strong,
+.cinema-site .catalog-plan-banner strong,
+.cinema-site .catalog-plan-banner .banner-cta {
+  text-shadow: 0 1px 0 rgba(255,255,255,.20), 0 3px 9px rgba(0,0,0,.5);
 }
 
 .cinema-site .cinematic-package-cta:hover,
 .cinema-site .cinematic-package-cta:focus-visible,
 .cinema-site .catalog-plan-banner:hover,
-.cinema-site .catalog-plan-banner:focus-visible,
-.cinema-site .package-banner-action .primary-button:hover,
-.cinema-site .package-banner-action .primary-button:focus-visible {
-  transform: translateY(-2px) scale(1.01) !important;
-  filter: brightness(1.08);
+.cinema-site .catalog-plan-banner:focus-visible {
+  transform: translateY(-5px) perspective(700px) rotateX(2deg) scale(1.018);
+  filter: brightness(1.14);
 }
 
 .cinema-site .cinematic-package-cta:active,
-.cinema-site .catalog-plan-banner:active,
-.cinema-site .package-banner-action .primary-button:active {
-  transform: translateY(4px) scale(.995) !important;
+.cinema-site .catalog-plan-banner:active {
+  transform: translateY(5px) scale(.99);
+  animation-play-state: paused;
   box-shadow:
     inset 0 2px 0 rgba(255,255,255,.12),
-    inset 0 -1px 0 rgba(0,0,0,.26),
-    0 1px 0 color-mix(in srgb, var(--accent) 30%, #05070a 70%),
-    0 5px 12px rgba(0,0,0,.38) !important;
-  animation-play-state: paused;
-}
-
-.cinema-site .catalog-plan-banner .banner-cta,
-.cinema-site .cinematic-package-cta strong {
-  text-shadow:
-    0 1px 0 rgba(255,255,255,.22),
-    0 3px 8px rgba(0,0,0,.45);
-}
-
-@keyframes taza-package-3d-glow {
-  0%, 100% {
-    box-shadow:
-      inset 0 2px 0 rgba(255,255,255,.15),
-      inset 0 -3px 0 rgba(0,0,0,.34),
-      0 5px 0 color-mix(in srgb, var(--accent) 34%, #05070a 66%),
-      0 12px 24px rgba(0,0,0,.42),
-      0 0 16px color-mix(in srgb, var(--accent) 12%, transparent);
-  }
-  50% {
-    box-shadow:
-      inset 0 2px 0 rgba(255,255,255,.24),
-      inset 0 -3px 0 rgba(0,0,0,.30),
-      0 6px 0 color-mix(in srgb, var(--accent) 42%, #05070a 58%),
-      0 16px 30px rgba(0,0,0,.48),
-      0 0 34px color-mix(in srgb, var(--accent) 36%, transparent);
-  }
-}
-
-@media (max-width: 760px) {
-  .cinema-site .cinematic-package-cta,
-  .cinema-site .catalog-plan-banner,
-  .cinema-site .package-banner-action .primary-button {
-    box-shadow:
-      inset 0 2px 0 rgba(255,255,255,.15),
-      inset 0 -3px 0 rgba(0,0,0,.32),
-      0 4px 0 color-mix(in srgb, var(--accent) 32%, #05070a 68%),
-      0 9px 18px rgba(0,0,0,.40),
-      0 0 18px color-mix(in srgb, var(--accent) 16%, transparent) !important;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cinema-site .cinematic-package-cta,
-  .cinema-site .catalog-plan-banner,
-  .cinema-site .package-banner-action .primary-button {
-    animation: none !important;
-  }
-}
-
-
-/* Final homepage emphasis: obvious raised 3D package CTAs + visible pulse. */
-.cinema-site .cinematic-package-cta,
-.cinema-site .catalog-plan-banner,
-.cinema-site .package-banner-action .primary-button {
-  border: 2px solid color-mix(in srgb, var(--accent) 86%, white 14%) !important;
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.09), transparent 34%),
-    linear-gradient(145deg, #171d27, #070a0f) !important;
-  transform: translateY(-2px) perspective(700px) rotateX(1.5deg) !important;
-  box-shadow:
-    inset 0 3px 0 rgba(255,255,255,.20),
-    inset 0 -5px 0 rgba(0,0,0,.55),
-    0 7px 0 color-mix(in srgb, var(--accent) 46%, #05070a 54%),
-    0 15px 25px rgba(0,0,0,.58),
-    0 0 20px color-mix(in srgb, var(--accent) 30%, transparent) !important;
-  animation: taza-package-pop-final 1.65s ease-in-out infinite !important;
-  will-change: transform, filter, box-shadow;
-}
-
-@keyframes taza-package-pop-final {
-  0%, 100% {
-    transform: translateY(-1px) perspective(700px) rotateX(1deg) scale(1) !important;
-    filter: brightness(1);
-    box-shadow:
-      inset 0 3px 0 rgba(255,255,255,.18),
-      inset 0 -5px 0 rgba(0,0,0,.55),
-      0 6px 0 color-mix(in srgb, var(--accent) 40%, #05070a 60%),
-      0 14px 24px rgba(0,0,0,.56),
-      0 0 16px color-mix(in srgb, var(--accent) 25%, transparent) !important;
-  }
-  50% {
-    transform: translateY(-4px) perspective(700px) rotateX(2deg) scale(1.018) !important;
-    filter: brightness(1.18);
-    box-shadow:
-      inset 0 3px 0 rgba(255,255,255,.30),
-      inset 0 -5px 0 rgba(0,0,0,.46),
-      0 8px 0 color-mix(in srgb, var(--accent) 62%, #05070a 38%),
-      0 20px 34px rgba(0,0,0,.62),
-      0 0 38px color-mix(in srgb, var(--accent) 58%, transparent) !important;
-  }
-}
-
-.cinema-site .cinematic-package-cta:active,
-.cinema-site .catalog-plan-banner:active,
-.cinema-site .package-banner-action .primary-button:active {
-  transform: translateY(5px) scale(.99) !important;
-  animation-play-state: paused !important;
-  box-shadow:
-    inset 0 2px 0 rgba(255,255,255,.13),
     inset 0 -1px 0 rgba(0,0,0,.35),
     0 1px 0 color-mix(in srgb, var(--accent) 36%, #05070a 64%),
-    0 5px 10px rgba(0,0,0,.5) !important;
+    0 5px 10px rgba(0,0,0,.5);
+}
+
+@keyframes taza-package-pop {
+  0%,100% {
+    transform: translateY(-2px) perspective(700px) rotateX(2deg) scale(1);
+    filter: brightness(1);
+    box-shadow:
+      inset 0 3px 0 rgba(255,255,255,.20),
+      inset 0 -5px 0 rgba(0,0,0,.55),
+      0 7px 0 color-mix(in srgb, var(--accent) 46%, #05070a 54%),
+      0 16px 27px rgba(0,0,0,.60),
+      0 0 20px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  50% {
+    transform: translateY(-5px) perspective(700px) rotateX(2deg) scale(1.025);
+    filter: brightness(1.22);
+    box-shadow:
+      inset 0 3px 0 rgba(255,255,255,.32),
+      inset 0 -5px 0 rgba(0,0,0,.46),
+      0 9px 0 color-mix(in srgb, var(--accent) 66%, #05070a 34%),
+      0 22px 36px rgba(0,0,0,.66),
+      0 0 44px color-mix(in srgb, var(--accent) 62%, transparent);
+  }
+}
+
+@keyframes taza-package-halo {
+  0%,100% { opacity:.24; transform:scale(.99); }
+  50% { opacity:.78; transform:scale(1.035); }
+}
+
+@media (max-width:760px) {
+  .cinema-site .cinematic-package-cta,
+  .cinema-site .catalog-plan-banner {
+    border-width: 1.5px;
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,.20),
+      inset 0 -4px 0 rgba(0,0,0,.52),
+      0 6px 0 color-mix(in srgb, var(--accent) 48%, #05070a 52%),
+      0 14px 22px rgba(0,0,0,.58),
+      0 0 22px color-mix(in srgb, var(--accent) 34%, transparent);
+  }
 }
 
 /* Remove carousel dots entirely. */
