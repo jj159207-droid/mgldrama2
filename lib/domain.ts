@@ -48,10 +48,27 @@ export function safeUrl(value: unknown, image = false): string {
   try { const u = new URL(text); return u.protocol === 'https:' && !u.username && !u.password ? u.href : ''; } catch { return ''; }
 }
 export function parseBankSms(text: string): {ref: string; amount: number} | null {
-  // Exactly one explicitly labelled amount and reference. Never use account balance.
-  const refs=[...text.matchAll(/(?:\bUtga|Утга)[:\s]+(\d{6})(?!\d)/gi)];
-  const amounts=[...text.matchAll(/(?:\bORLOGO|Орлого)\s*:\s*(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(?:MNT\b|₮|төг(?:рөг)?)/gi)];
-  if(refs.length!==1||amounts.length!==1)return null;
-  const amount=Number(amounts[0][1].replaceAll(',','')+'.'+(amounts[0][2]||'0'));
-  return Number.isFinite(amount)&&amount>0 ? {ref:refs[0][1],amount} : null;
+  // Accept the common Khan/Mongolian variants while still requiring an explicitly
+  // labelled incoming amount and a labelled six-digit transfer reference.
+  const normalized=String(text||'')
+    .normalize('NFKC')
+    .replace(/\u00a0/g,' ')
+    .replace(/[：﹕]/g,':')
+    .replace(/[，]/g,',');
+
+  const refMatches=[...normalized.matchAll(/(?:Гүйлгээний\s*утга|Guilgeenii\s*utga|Утга|\bUtga)\s*[:=\-]?\s*(\d{6})(?!\d)/giu)];
+  const refs=[...new Set(refMatches.map(match=>match[1]))];
+  if(refs.length!==1)return null;
+
+  const amountMatches=[...normalized.matchAll(/(?:\bORLOGO|Орлого|Орлогын\s*дүн)\s*[:=\-]?\s*\+?\s*(\d{1,3}(?:(?:,|\s)\d{3})+|\d+)(?:\.(\d{1,2}))?\s*(?:MNT\b|₮|төг(?:рөг)?)/giu)];
+  const amounts=amountMatches.map(match=>{
+    const whole=match[1].replace(/[\s,]/g,'');
+    const value=Number(whole+'.'+(match[2]||'0'));
+    return value;
+  }).filter(value=>Number.isFinite(value)&&value>0);
+  const uniqueAmounts=[...new Set(amounts)];
+  if(uniqueAmounts.length!==1)return null;
+
+  const amount=uniqueAmounts[0];
+  return Number.isSafeInteger(amount) ? {ref:refs[0],amount} : null;
 }
