@@ -3,7 +3,8 @@ import Image from "next/image";
 import { safeUrl } from "@/lib/domain";
 import { filmCategory } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, relatedFilms, trailerUrl, type FilmDetails } from "@/lib/film-details";
-import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";\nimport { SITE_NAME } from "@/lib/site-config";
+import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
+import { SITE_NAME } from "@/lib/site-config";
 
 type Props = {
   film: FilmDetails | null;
