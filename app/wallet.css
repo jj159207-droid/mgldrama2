@@ -291,27 +291,34 @@
   margin-right: 0 !important;
 }
 
-/* Make the six-digit transfer reference flash so it is very hard to miss. */
+/* Soft grey pulse for the six-digit transfer reference. */
 .wallet-topup-checkout .wallet-reference-blink {
   animation: wallet-reference-panel-pulse 1.05s ease-in-out infinite;
 }
 
 .wallet-topup-checkout .wallet-reference-blink .copy-reference {
+  border-color: #64748b !important;
+  background: rgba(100,116,139,.10) !important;
   animation: wallet-reference-code-pulse 1.05s ease-in-out infinite;
+}
+
+.wallet-topup-checkout .wallet-reference-blink .copy-reference strong,
+.wallet-topup-checkout .wallet-reference-blink .copy-reference span {
+  color: #cbd5e1 !important;
 }
 
 @keyframes wallet-reference-panel-pulse {
   0%, 100% {
-    border-color: #f59e0b;
+    border-color: #64748b;
     box-shadow:
-      0 0 0 3px rgba(245,158,11,.08),
+      0 0 0 3px rgba(100,116,139,.08),
       0 12px 30px rgba(0,0,0,.22);
   }
   50% {
-    border-color: #fde047;
+    border-color: #cbd5e1;
     box-shadow:
-      0 0 0 5px rgba(253,224,71,.14),
-      0 0 28px rgba(245,158,11,.38),
+      0 0 0 5px rgba(203,213,225,.12),
+      0 0 24px rgba(148,163,184,.28),
       0 12px 30px rgba(0,0,0,.26);
   }
 }
@@ -319,11 +326,11 @@
 @keyframes wallet-reference-code-pulse {
   0%, 100% {
     transform: scale(1);
-    filter: brightness(1);
+    filter: brightness(.92);
   }
   50% {
-    transform: scale(1.025);
-    filter: brightness(1.28);
+    transform: scale(1.02);
+    filter: brightness(1.16);
   }
 }
 
