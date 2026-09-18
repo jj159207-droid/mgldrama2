@@ -20,7 +20,7 @@ export const viewport: Viewport = { themeColor: "#05070c" };
 export const metadata: Metadata = {
   title: SITE_NAME,
   description: SITE_DESCRIPTION,
-  manifest: "/manifest.json",
+  manifest: "/manifest.webmanifest",
   icons: { icon: "/icon-192.png", apple: "/icon-192.png" },
   appleWebApp: {
     capable: true,
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     title: SITE_NAME,
   },
   openGraph: {
-    title: "ТАЗА САЙТ",
+    title: SITE_NAME,
     description: SITE_DESCRIPTION,
     ...(process.env.SITE_URL ? {url:process.env.SITE_URL} : {}),
     siteName: SITE_NAME,
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ТАЗА САЙТ",
+    title: SITE_NAME,
     description: SITE_DESCRIPTION,
     images: ["/cinema-cover.webp"],
   },
