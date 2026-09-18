@@ -18,6 +18,7 @@ export async function POST(req:NextRequest) {
     if(typeof b.password!=='string'||!equalSecret(b.password,key))throw new ApiError(401,'Нууц үг буруу байна.');
     const s=await issueSession(req,null,true);return setSessionCookie(json({admin:true}),s.token,s.age);
   }
+  const previous=await session(req);
   const phone=String(b.phone || ''),pin=String(b.pin || '');
   if(!/^\d{8}$/.test(phone)||!/^\d{4}$/.test(pin))throw new ApiError(400,'8 оронтой утас, 4 оронтой PIN оруулна уу.');
   if(!['login','register'].includes(String(b.action)))throw new ApiError(400,'Үйлдэл буруу.');
@@ -33,6 +34,12 @@ export async function POST(req:NextRequest) {
     if(!String(existing.pin).startsWith('scrypt:'))await db(`users?id=eq.${existing.id}`,'PATCH',{pin:pinHash(pin),failed_attempts:0,locked_until:null});
   }
   if(!user || typeof user.id!=='number')throw new ApiError(502,'Бүртгэлийг баталгаажуулж чадсангүй.');
+  if(previous?.userId && previous.userId!==user.id){
+    const [guest]=await db(`users?id=eq.${previous.userId}&select=id,is_guest&limit=1`);
+    if(guest?.is_guest===true){
+      await db('rpc/kino_merge_guest_account','POST',{p_guest:previous.userId,p_user:user.id});
+    }
+  }
   const s=await issueSession(req,user.id,false);return setSessionCookie(json({user:publicUser(user)}),s.token,s.age);
  }catch(e){return fail(e);}
 }
