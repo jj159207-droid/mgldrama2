@@ -392,3 +392,59 @@
     transition: none !important;
   }
 }
+
+
+/* Slight privacy blur for erotic catalog artwork only.
+ * Titles/prices/badges stay outside .poster-art, so they remain crisp.
+ */
+.cinema-site .movie-card.erotic-card .movie-poster .poster-art {
+  filter: blur(1.15px) brightness(.90) saturate(.96);
+  transform: scale(1.012);
+  transform-origin: center;
+}
+
+.cinema-site .movie-age21 {
+  position: absolute !important;
+  z-index: 12 !important;
+  top: 9px !important;
+  right: 9px !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 5px 8px;
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: 999px;
+  background: rgba(185,28,28,.88);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: .02em;
+  box-shadow: 0 5px 14px rgba(0,0,0,.38);
+  backdrop-filter: blur(8px);
+  text-shadow: 0 1px 3px rgba(0,0,0,.75);
+}
+
+.cinema-site .movie-card.erotic-card .movie-free {
+  top: 38px !important;
+}
+
+@media (max-width: 760px) {
+  .cinema-site .movie-card.erotic-card .movie-poster .poster-art {
+    filter: blur(1px) brightness(.91) saturate(.97);
+    transform: scale(1.01);
+  }
+
+  .cinema-site .movie-age21 {
+    top: 7px !important;
+    right: 7px !important;
+    min-height: 21px;
+    padding: 4px 6px;
+    font-size: 8.5px;
+  }
+
+  .cinema-site .movie-card.erotic-card .movie-free {
+    top: 34px !important;
+  }
+}
