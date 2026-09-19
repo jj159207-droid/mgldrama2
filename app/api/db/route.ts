@@ -52,6 +52,9 @@ async function handler(req:NextRequest) {
         if(plan==='wallet_topup') {
           amount=Number(b.amount);
           if(!Number.isSafeInteger(amount)||amount<5000||amount>200000||amount%1000!==0)throw new ApiError(400,'Цэнэглэх дүн 5,000₮-өөс багагүй, 1,000₮-ийн алхамтай байна.');
+          const cutoff=new Date(Date.now()-24*3600000).toISOString();
+          const [recent]=await db(`pending_payments?user_id=eq.${s.userId}&plan=eq.wallet_topup&amount=eq.${amount}&status=eq.pending&created_at=gte.${encodeURIComponent(cutoff)}&order=created_at.desc&limit=1`);
+          if(recent)return json([recent]);
         }else if(plan==='single') {
           filmId=Number(b.film_id);if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
           const [film]=await db(`films?id=eq.${filmId}&select=id,price,free,locked`);
@@ -103,6 +106,7 @@ async function handler(req:NextRequest) {
     const targetFilter=refFilter?.startsWith('eq.')?`ref_code=eq.${encodeURIComponent(refFilter.slice(3))}`:idFilter?.startsWith('eq.')?`id=eq.${encodeURIComponent(idFilter.slice(3))}`:'';
     if(targetFilter){
       const [target]=await db(`pending_payments?${targetFilter}&select=id,ref_code,plan,amount,status&limit=1`);
+      if(target?.plan==='wallet_admin' && b.status==='revoked')throw new ApiError(400,'Админы нэмсэн wallet мөнгийг эрх хасах товчоор буцаахгүй. Тусдаа тохируулга ашиглана уу.');
       if(target?.plan==='wallet_topup'){
         if(b.status==='revoked')throw new ApiError(400,'Цэнэглэгдсэн үлдэгдлийг эрх хасах товчоор буцаахгүй. Wallet гүйлгээг шалгана уу.');
         if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
