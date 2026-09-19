@@ -52,15 +52,29 @@ async function handler(req:NextRequest) {
         if(plan==='wallet_topup') {
           amount=Number(b.amount);
           if(!Number.isSafeInteger(amount)||amount<5000||amount>200000||amount%1000!==0)throw new ApiError(400,'Цэнэглэх дүн 5,000₮-өөс багагүй, 1,000₮-ийн алхамтай байна.');
+
+          // Reuse the newest still-valid pending top-up for this user and amount.
+          // This avoids duplicate pending rows when the payment UI remounts/retries.
+          const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
+          const existing=await db(
+            `pending_payments?user_id=eq.${s.userId}&plan=eq.wallet_topup&amount=eq.${amount}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
+          );
+          if(existing.length)return json(existing);
+
+          const [conflict]=await db(`pending_payments?ref_code=eq.${ref}&select=id,user_id,plan,amount,status,created_at&limit=1`);
+          if(conflict)throw new ApiError(409,'Гүйлгээний код давхардлаа. Шинэ код үүсгэнэ үү.','REF_CONFLICT');
+
+          const [u]=await db(`users?id=eq.${s.userId}&select=phone`);
+          if(!u)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
+          const topup={ref_code:ref,film_id:null,amount,status:'pending',user_id:s.userId,phone:u.phone,plan:'wallet_topup'};
           try {
-            const rows=await db('rpc/kino_wallet_prepare_topup','POST',{
-              p_user:s.userId,
-              p_amount:amount,
-              p_ref:ref,
-            });
-            return json(rows);
+            return json(await db('pending_payments','POST',topup));
           } catch(error) {
-            if(error instanceof ApiError&&error.code==='P0409')throw new ApiError(409,'Гүйлгээний код давхардлаа. Шинэ код үүсгэнэ үү.','REF_CONFLICT');
+            if(error instanceof ApiError&&error.code==='23505'){
+              const [saved]=await db(`pending_payments?ref_code=eq.${ref}&select=*`);
+              if(saved&&String(saved.user_id)===String(s.userId)&&saved.plan==='wallet_topup'&&Number(saved.amount)===amount&&['pending','confirmed'].includes(String(saved.status)))return json([saved]);
+              throw new ApiError(409,'Гүйлгээний код давхардлаа. Шинэ код үүсгэнэ үү.','REF_CONFLICT');
+            }
             throw error;
           }
         }else if(plan==='single') {
