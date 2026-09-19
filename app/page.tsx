@@ -157,7 +157,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):5000);
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
-  const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup);
+  const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup || isSimpleMovieTopup);
   const transferPanelRef=useRef<HTMLDivElement>(null);
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT);
   useEffect(()=>{
@@ -314,38 +314,81 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   }
 
   const checkout = <>
-    {!isSimpleMovieTopup && <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>}
-    {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
-    {isSimpleMovieTopup && !showTransferDetails && <section className="wallet-topup-simple-message" aria-label="Киноны данс цэнэглэх">
-      <p>5,000₮-өөс дээш гүйлгээгээр киноны дансаа цэнэглэнэ.</p>
-      <p>1 киног 2,000₮-өөр үзнэ.</p>
-    </section>}
-    {isWalletTopup && !isSimpleMovieTopup && !showTransferDetails && <section className="wallet-topup-box" aria-label="Киноны данс цэнэглэх">
-      <h2>Киноны дансаа 5,000₮ ба түүнээс дээш дүнгээр цэнэглэнэ үү</h2>
-      <p className="wallet-topup-warning">5,000₮-өөс бага дүнгээр цэнэглэлт орохгүй.</p>
-      <div className="wallet-topup-choices" role="group" aria-label="Цэнэглэх дүн">
-        {topupChoices.map(amount=><button key={amount} type="button" className={selectedTopup===amount?"selected":""} aria-pressed={selectedTopup===amount} onClick={()=>setSelectedTopup(amount)}>{amount.toLocaleString()}₮</button>)}
+    {isSimpleMovieTopup ? <>
+      <div className="wallet-single-topbar">
+        <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>
+        <strong>Киноны данс цэнэглэх</strong>
+        <span />
       </div>
-      <div className="wallet-topup-selected">Сонгосон цэнэглэлт <strong>{selectedTopup.toLocaleString()}₮</strong></div>
-      <p className="wallet-spend-note">Сонгосон <strong>{planLabel(film.returnPlan)}</strong> багцыг кино сайтын дансны үлдэгдлээр авна.</p>
-      <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮ ба түүнээс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
-    </section>}
-    <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
-    {isWalletTopup && !isSimpleMovieTopup && !showTransferDetails && <div className="wallet-topup-preview"><span className="wallet-current-balance">Таны кино сайтын дансны үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span>{film.returnPlan ? <><span>Багцын үнэ <strong>{Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0).toLocaleString()}₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд багц авбал <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)).toLocaleString()}₮ үлдэнэ</strong></span></> : <><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></>}</div>}
-    {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>{isSimpleMovieTopup ? "Энд дарж кино дансаа цэнэглэнэ үү" : "Данс цэнэглэх"}</button>}
-    {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
-      {isWalletTopup && !isSimpleMovieTopup && <div className="wallet-transfer-head wallet-transfer-head-note"><span>5,000₮-өөс дээш дүнгээр цэнэглэнэ үү</span></div>}
-      <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span><span className="account-label-line">Дансны дугаар <em className="bank-ibn">{bankAccount.ibn}</em></span><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
-      <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
-    </div>}
-    {!isSimpleMovieTopup && <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>}
-    {!isWalletTopup && <>
-      <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
-      <button className="secondary-button checkout-back" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
+
+      {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
+
+      <section className="wallet-single-instructions" aria-label="Киноны данс цэнэглэх заавар">
+        <p>Та энэ данс руу <strong>5,000₮-өөс дээш</strong> гүйлгээ хийнэ.</p>
+        <p>Гүйлгээний утга дээр доорх <strong>6 оронтой кодыг</strong> бичнэ.</p>
+        <p>Энэ 6 оронтой код бол таны сайтын хаяг юм.</p>
+        <p>Та 1 киног <strong>2,000₮-өөр</strong> үзнэ.</p>
+        <p>Таны цэнэглэсэн үлдэгдэл хадгалагдаад байна.</p>
+      </section>
+
+      <section className="wallet-single-bank" aria-label="Банкны мэдээлэл">
+        <div className="wallet-single-row"><span>Банк</span><strong>{bankAccount.bank}</strong></div>
+        <div className="wallet-single-row"><span>IBN</span><strong>{bankAccount.ibn}</strong></div>
+        <div className="wallet-single-row"><span>Хүлээн авагч</span><strong>{bankAccount.name}</strong></div>
+      </section>
+
+      <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
+        <span><small>Дансны дугаар</small><strong>{bankAccount.number}</strong></span>
+        <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
+      </button>
+
+      <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
+        <span><small>Гүйлгээний утга · 6 оронтой код</small><strong>{orderReady ? refCode : "…"}</strong></span>
+        <b>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</b>
+      </button>
+
+      <div className="wallet-single-balance">
+        Таны кино сайтын дансны одоогийн үлдэгдэл
+        <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong>
+      </div>
+
+      <div className="wallet-single-wait" role="status">
+        <span className="status-ring" aria-hidden="true"/>
+        <div>
+          <strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Төлбөр шалгаж байна…" : "Төлбөрийн SMS хүлээж байна"}</strong>
+          <p>{autoStatus === "timeout" ? "Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу." : "Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ."}</p>
+        </div>
+      </div>
+    </> : <>
+      <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>
+      {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
+      {isWalletTopup && !showTransferDetails && <section className="wallet-topup-box" aria-label="Киноны данс цэнэглэх">
+        <h2>Киноны дансаа 5,000₮ ба түүнээс дээш дүнгээр цэнэглэнэ үү</h2>
+        <p className="wallet-topup-warning">5,000₮-өөс бага дүнгээр цэнэглэлт орохгүй.</p>
+        <div className="wallet-topup-choices" role="group" aria-label="Цэнэглэх дүн">
+          {topupChoices.map(amount=><button key={amount} type="button" className={selectedTopup===amount?"selected":""} aria-pressed={selectedTopup===amount} onClick={()=>setSelectedTopup(amount)}>{amount.toLocaleString()}₮</button>)}
+        </div>
+        <div className="wallet-topup-selected">Сонгосон цэнэглэлт <strong>{selectedTopup.toLocaleString()}₮</strong></div>
+        <p className="wallet-spend-note">Сонгосон <strong>{planLabel(film.returnPlan)}</strong> багцыг кино сайтын дансны үлдэгдлээр авна.</p>
+        <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮ ба түүнээс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
+      </section>}
+      <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+      {isWalletTopup && !showTransferDetails && <div className="wallet-topup-preview"><span className="wallet-current-balance">Таны кино сайтын дансны үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span>{film.returnPlan ? <><span>Багцын үнэ <strong>{Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0).toLocaleString()}₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд багц авбал <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)).toLocaleString()}₮ үлдэнэ</strong></span></> : <><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></>}</div>}
+      {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
+      {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
+        {isWalletTopup && <div className="wallet-transfer-head wallet-transfer-head-note"><span>5,000₮-өөс дээш дүнгээр цэнэглэнэ үү</span></div>}
+        <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span><span className="account-label-line">Дансны дугаар <em className="bank-ibn">{bankAccount.ibn}</em></span><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+        <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
+      </div>}
+      <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
+      {!isWalletTopup && <>
+        <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
+        <button className="secondary-button checkout-back" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
+      </>}
+      {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
     </>}
-    {showSms && <SmsVerifyModal onClose={() => setShowSms(false)} onFound={handleSmsFound} />}
   </>;
-  return inline ? <div className={`checkout-inline${isWalletTopup ? " wallet-topup-checkout" : ""}`}>{checkout}</div> : <CinemaDialog title="Төлбөр төлөх" onClose={onClose} className={`checkout-dialog${isWalletTopup ? " wallet-topup-checkout" : ""}`}>{checkout}</CinemaDialog>;
+  return inline ? <div className={`checkout-inline${isWalletTopup ? " wallet-topup-checkout" : ""}${isSimpleMovieTopup ? " wallet-single-fullscreen" : ""}`}>{checkout}</div> : <CinemaDialog title="Төлбөр төлөх" onClose={onClose} className={`checkout-dialog${isWalletTopup ? " wallet-topup-checkout" : ""}`}>{checkout}</CinemaDialog>;
 }
 
 // ══════════════════════════════════════════════
