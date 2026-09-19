@@ -1608,8 +1608,8 @@ function AdminAnalyticsTab() {
       {stat("Шинэ browser #",today.newBrowsers)}
       {stat("Сайт руу орсон",today.visits,"Refresh/дахин оролт тусдаа")}
       {stat("Кино нээсэн",today.filmOpens)}
-      {stat("Киног бүтэн үзэх дарсан",today.watchClicks)}
-      {stat("Кино тоглож эхэлсэн",today.playStarts)}
+      {stat("Киног бүтэн үзэх дарсан",today.watchClicks,`${Number(today.uniqueWatchers||0)} өөр browser`)}
+      {stat("Кино тоглож эхэлсэн",today.playStarts,`${Number(today.uniquePlayers||0)} өөр browser`)}
       {stat("Facebook / Messenger-ээс",today.facebookVisits)}
       {stat("Банкны цэнэглэлт",today.topupAmount,`${Number(today.topupCount||0)} амжилттай цэнэглэлт`,"₮")}
     </div>
@@ -1624,15 +1624,20 @@ function AdminAnalyticsTab() {
       {stat("Давтагдашгүй browser",period.uniqueVisitors)}
       {stat("Шинээр үүссэн browser #",period.newBrowsers)}
       {stat("Мөнгө хийсэн хэрэглэгч",period.payingUsers)}
+      {stat("Идэвхтэй эрхтэй",period.activeRightsUsers)}
       {stat("Банкны цэнэглэлт",period.topupAmount,`${Number(period.topupCount||0)} удаа`,"₮")}
+      {stat("Дундаж цэнэглэлт",period.avgTopupAmount,undefined,"₮")}
       {stat("Админы нэмсэн мөнгө",period.adminCreditAmount,"Борлуулалтын орлогод орохгүй","₮")}
       {stat("Wallet-аас зарцуулсан",period.spentAmount,undefined,"₮")}
+      {stat("Нийт wallet үлдэгдэл",period.walletBalanceOutstanding,"Бүх хэрэглэгчийн одоогийн нийлбэр","₮")}
       {stat("1 кино авсан",period.filmPurchases)}
       {stat("Багц авсан",period.packagePurchases)}
-      {stat("Pending цэнэглэлт",period.pendingTopups)}
+      {stat("Идэвхтэй pending",period.pendingTopups,"Хэрэглэгч+дүнгээр давхардлыг хассан")}
       {stat("Push идэвхжүүлсэн",period.pushEnabledUsers)}
-      {stat("Browser → Үзэх",period.visitorToWatchPct,undefined,"%")}
-      {stat("Үзэх → Тоглосон",period.watchToPlayPct,undefined,"%")}
+      {stat("SMS автоматаар баталсан",period.autoSmsConfirmed)}
+      {stat("SMS алдаа",period.smsFailures)}
+      {stat("Unique browser → Үзэх",period.visitorToWatchPct,undefined,"%")}
+      {stat("Unique Үзэх → Тоглосон",period.watchToPlayPct,undefined,"%")}
     </div>
 
     {daily.length>0&&<><div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Сүүлийн өдрүүд</div>
