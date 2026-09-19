@@ -19,7 +19,7 @@ export function ChatAdminActions({userId,phone,lastId,onChanged}: {userId:number
   const [films,setFilms] = useState<Film[]>([]), [access,setAccess] = useState<Record<string,number>>({}), [loaded,setLoaded] = useState(false);
   const [kind,setKind] = useState('single'), [category,setCategory] = useState('all'), [filmId,setFilmId] = useState(''), [search,setSearch] = useState('');
   const [pending,setPending] = useState<GrantRequest|null>(null), [attempted,setAttempted] = useState(false), [through,setThrough] = useState(0);
-  const [walletBalance,setWalletBalance] = useState(0), [walletAmount,setWalletAmount] = useState(''), [walletPending,setWalletPending] = useState<WalletRequest|null>(null);
+  const [walletBalance,setWalletBalance] = useState(0), [walletAmount,setWalletAmount] = useState(''), [walletPending,setWalletPending] = useState<WalletRequest|null>(null), [pushEnabled,setPushEnabled] = useState(false);
   const lock = useRef(false);
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function ChatAdminActions({userId,phone,lastId,onChanged}: {userId:number
     if(panel!=='wallet')return;
     const controller=new AbortController();
     void requestJson(`/api/chat/wallet?user=${userId}`,{signal:controller.signal},true).then(data=>{
-      if(!controller.signal.aborted)setWalletBalance(Number(data.balance||0));
+      if(!controller.signal.aborted){setWalletBalance(Number(data.balance||0));setPushEnabled(data.pushEnabled===true);}
     }).catch(e=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:'Үлдэгдэл ачаалсангүй.');});
     return()=>controller.abort();
   },[panel,userId]);
@@ -103,10 +103,10 @@ export function ChatAdminActions({userId,phone,lastId,onChanged}: {userId:number
 
     {panel==='wallet' && <div className="chat-action-panel" aria-label="Хэрэглэгчийн кино дансанд мөнгө нэмэх">
       <strong>{phone} · кино данс цэнэглэх</strong>
-      <p>Одоогийн үлдэгдэл: <b>{walletBalance.toLocaleString()}₮</b></p>
+      <p>Одоогийн үлдэгдэл: <b>{walletBalance.toLocaleString()}₮</b> · Push: <b>{pushEnabled?'асаалттай':'асаагаагүй'}</b></p>
       {walletPending ? <div className="chat-grant-confirm">
         <p><b>{walletPending.amount.toLocaleString()}₮</b> нэмэх үү?</p>
-        <p>Нэмсний дараах үлдэгдэл ойролцоогоор <b>{(walletBalance+walletPending.amount).toLocaleString()}₮</b>. Хэрэглэгчид чат болон push мэдэгдэл очно.</p>
+        <p>Нэмсний дараах үлдэгдэл ойролцоогоор <b>{(walletBalance+walletPending.amount).toLocaleString()}₮</b>. Чат мессеж заавал очно{pushEnabled?', push мэдэгдэл мөн очно.':', push мэдэгдэл авахыг хэрэглэгч асаагаагүй байна.'}</p>
         <button type="button" className="chat-primary" disabled={busy} onClick={()=>void creditWallet()}>{busy?'Нэмж байна…':'Баталгаажуулж мөнгө нэмэх'}</button>
         <button type="button" disabled={busy} onClick={()=>setWalletPending(null)}>Буцах</button>
       </div> : <>
@@ -121,7 +121,7 @@ export function ChatAdminActions({userId,phone,lastId,onChanged}: {userId:number
 
     {panel==='grant' && <div className="chat-action-panel" aria-label="Хэрэглэгчийн эрх нээх">
       <strong>{phone} хэрэглэгчид эрх нээх</strong>
-      {pending ? <div className="chat-grant-confirm"><p><b>{pending.label}</b></p><p>Эрх одооноос эхэлнэ. Хэрэглэгчид чат болон push мэдэгдэл очно.</p>
+      {pending ? <div className="chat-grant-confirm"><p><b>{pending.label}</b></p><p>Эрх одооноос эхэлнэ. Чат мессеж заавал очно. Push мэдэгдэл нь хэрэглэгч мэдэгдлээ асаасан үед очно.</p>
         <button type="button" className="chat-primary" disabled={busy} onClick={()=>void grant()}>{busy?'Эрх нээж байна…':attempted?'Дахин шалгаж нээх':'Баталгаажуулж эрх нээх'}</button>
         {!attempted && <button type="button" disabled={busy} onClick={()=>setPending(null)}>Буцах</button>}
       </div> : <>
