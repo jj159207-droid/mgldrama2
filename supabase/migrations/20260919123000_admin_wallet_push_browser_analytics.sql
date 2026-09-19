@@ -223,7 +223,7 @@ bounds as (
     greatest(1,least(coalesce(p_days,30),365))::int as days,
     c.reset_at,
     greatest(c.reset_at,now()-make_interval(days=>greatest(1,least(coalesce(p_days,30),365)))) as period_start,
-    greatest(c.reset_at,(timezone('Asia/Ulaanbaatar',now())::date at time zone 'Asia/Ulaanbaatar')) as today_start
+    greatest(c.reset_at,(date_trunc('day',now() at time zone 'Asia/Ulaanbaatar') at time zone 'Asia/Ulaanbaatar')) as today_start
   from cfg c
 ),
 period_events as (
@@ -242,18 +242,37 @@ top_films as (
   order by play_starts desc,watch_clicks desc,opens desc,e.film_id desc
   limit 20
 ),
-daily as (
-  select d::date as day_date,
-    (select count(distinct e.visitor_key) from public.site_events e where e.event_type='visit' and e.created_at>=d and e.created_at<d+interval '1 day')::bigint visitors,
-    (select count(*) from public.site_events e where e.event_type='watch_click' and e.created_at>=d and e.created_at<d+interval '1 day')::bigint watch_clicks,
-    (select count(*) from public.site_events e where e.event_type='play_start' and e.created_at>=d and e.created_at<d+interval '1 day')::bigint play_starts,
-    (select coalesce(sum(w.delta),0) from public.wallet_ledger w where w.kind='topup' and w.created_at>=d and w.created_at<d+interval '1 day')::bigint topup_amount
+daily_days as (
+  select d::date as day_date
   from bounds b,
   lateral generate_series(
-    date_trunc('day',greatest(b.period_start,now()-interval '29 days')),
-    date_trunc('day',now()),
+    greatest(
+      (b.period_start at time zone 'Asia/Ulaanbaatar')::date,
+      (now() at time zone 'Asia/Ulaanbaatar')::date - 29
+    ),
+    (now() at time zone 'Asia/Ulaanbaatar')::date,
     interval '1 day'
   ) d
+),
+daily as (
+  select x.day_date,
+    (select count(distinct e.visitor_key) from public.site_events e
+      where e.event_type='visit'
+        and e.created_at >= (x.day_date::timestamp at time zone 'Asia/Ulaanbaatar')
+        and e.created_at < ((x.day_date+1)::timestamp at time zone 'Asia/Ulaanbaatar'))::bigint visitors,
+    (select count(*) from public.site_events e
+      where e.event_type='watch_click'
+        and e.created_at >= (x.day_date::timestamp at time zone 'Asia/Ulaanbaatar')
+        and e.created_at < ((x.day_date+1)::timestamp at time zone 'Asia/Ulaanbaatar'))::bigint watch_clicks,
+    (select count(*) from public.site_events e
+      where e.event_type='play_start'
+        and e.created_at >= (x.day_date::timestamp at time zone 'Asia/Ulaanbaatar')
+        and e.created_at < ((x.day_date+1)::timestamp at time zone 'Asia/Ulaanbaatar'))::bigint play_starts,
+    (select coalesce(sum(w.delta),0) from public.wallet_ledger w
+      where w.kind='topup'
+        and w.created_at >= (x.day_date::timestamp at time zone 'Asia/Ulaanbaatar')
+        and w.created_at < ((x.day_date+1)::timestamp at time zone 'Asia/Ulaanbaatar'))::bigint topup_amount
+  from daily_days x
 )
 select jsonb_build_object(
   'days',(select days from bounds),
