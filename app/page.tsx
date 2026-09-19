@@ -43,7 +43,7 @@ function analyticsSource(): "facebook" | "direct" | "other" {
   return ref ? "other" : "direct";
 }
 
-function trackSiteEvent(event:"visit"|"film_open"|"watch_click"|"payment_open"|"play_start", filmId?:number) {
+function trackSiteEvent(event:"visit"|"film_open"|"watch_click"|"payment_open"|"play_start"|"bank_account_copy"|"ref_code_copy", filmId?:number) {
   if (typeof window === "undefined") return;
   void requestJson("/api/analytics",{
     method:"POST",
@@ -204,11 +204,17 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     }
   };
 
+  const copiedSuccessfully = (key: string) => {
+    setCopied(key); setTimeout(() => setCopied(null), 2000);
+    if(key==="account")trackSiteEvent("bank_account_copy");
+    else if(key==="ref")trackSiteEvent("ref_code_copy");
+  };
+
   const copyText = (text: string, key: string) => {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(() => {
-          setCopied(key); setTimeout(() => setCopied(null), 2000);
+          copiedSuccessfully(key);
         }).catch(() => {
           fallbackCopy(text, key);
         });
@@ -222,7 +228,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     const el = document.createElement("textarea");
     el.value = text; el.style.position = "fixed"; el.style.opacity = "0";
     document.body.appendChild(el); el.focus(); el.select();
-    try { document.execCommand("copy"); setCopied(key); setTimeout(() => setCopied(null), 2000); } catch {}
+    try { if(document.execCommand("copy"))copiedSuccessfully(key); } catch {}
     document.body.removeChild(el);
   };
 
@@ -1670,6 +1676,8 @@ function AdminAnalyticsTab() {
       {stat("Кино нээсэн",today.filmOpens)}
       {stat("Киног бүтэн үзэх дарсан",today.watchClicks,`${Number(today.uniqueWatchers||0)} өөр browser`)}
       {stat("Төлбөрийн хэсэг рүү орсон",today.paymentOpens,`${Number(today.uniquePaymentVisitors||0)} өөр browser`)}
+      {stat("Банкны данс хуулсан",today.bankAccountCopies,`${Number(today.uniqueBankCopyVisitors||0)} өөр browser`)}
+      {stat("Гүйлгээний код хуулсан",today.refCodeCopies,`${Number(today.uniqueRefCopyVisitors||0)} өөр browser`)}
       {stat("Кино тоглож эхэлсэн",today.playStarts,`${Number(today.uniquePlayers||0)} өөр browser`)}
       {stat("Facebook / Messenger-ээс",today.facebookVisits)}
       {stat("Банкны цэнэглэлт",today.topupAmount,`${Number(today.topupCount||0)} амжилттай цэнэглэлт`,"₮")}
@@ -1698,6 +1706,8 @@ function AdminAnalyticsTab() {
       {stat("SMS автоматаар баталсан",period.autoSmsConfirmed)}
       {stat("SMS алдаа",period.smsFailures)}
       {stat("Төлбөрийн хэсэг рүү орсон",period.paymentOpens,`${Number(period.uniquePaymentVisitors||0)} өөр browser`)}
+      {stat("Банкны данс хуулсан",period.bankAccountCopies,`${Number(period.uniqueBankCopyVisitors||0)} өөр browser`)}
+      {stat("Гүйлгээний код хуулсан",period.refCodeCopies,`${Number(period.uniqueRefCopyVisitors||0)} өөр browser`)}
       {stat("Unique browser → Үзэх",period.visitorToWatchPct,undefined,"%")}
       {stat("Үзэх → Төлбөрийн хэсэг",period.watchToPaymentPct,undefined,"%")}
       {stat("Төлбөрийн хэсэг → Тоглосон",period.paymentToPlayPct,undefined,"%")}
