@@ -229,11 +229,11 @@ export function AdminChatInbox({announcements}: {announcements?: ReactNode}) {
       {error && <div className="chat-error" role="alert">{error}<button onClick={() => void load()}>Дахин ачаалах</button></div>}
       {loading ? <p className="chat-empty">Ачаалж байна…</p> : !threads.length && !error ? <p className="chat-empty">{query ? 'Тохирох чат олдсонгүй.' : 'Шинэ мессеж энд харагдана.'}</p> : null}
       <div className="chat-thread-list">{threads.map(t => <button type="button" key={t.user_id} className={`chat-thread ${selected?.user_id === t.user_id ? 'chat-thread-selected' : ''}`} onClick={() => setSelected(t)}>
-        <span className="chat-avatar" aria-hidden="true">{t.phone.slice(-2)}</span><span className="chat-thread-copy"><strong>{t.phone}</strong><small>{t.sender === 'admin' ? 'Та: ' : ''}{t.has_image ? '▧ ' : ''}{t.message || 'Зураг'}</small></span><ChatBadge count={Number(t.unread)} />
+        <span className="chat-avatar" aria-hidden="true">#{t.browser_no}</span><span className="chat-thread-copy"><strong>Төхөөрөмж #{t.browser_no}</strong><small>{t.label || t.phone}</small><small>{t.sender === 'admin' ? 'Та: ' : ''}{t.has_image ? '▧ ' : ''}{t.message || 'Зураг'}</small></span><ChatBadge count={Number(t.unread)} />
       </button>)}</div>
       {(offset > 0 || more) && <div className="chat-pagination"><button disabled={!offset} onClick={() => setOffset(v => Math.max(0,v-50))}>Өмнөх</button><button disabled={!more} onClick={() => setOffset(v => v+50)}>Дараах</button></div>}
       {announcements && <details className="chat-announcements"><summary>Нийтэд харагдах зар</summary>{announcements}</details>}
     </aside>
-    <div className="chat-inbox-detail">{selected ? <ChatPanel key={selected.user_id} admin userId={selected.user_id} title={selected.phone} onBack={() => setSelected(null)} /> : <div className="chat-empty chat-select-prompt"><span aria-hidden="true">💬</span><h3>Хэрэглэгчтэй шууд ярилцаарай</h3><p>Зүүн талаас чат сонгоход мессеж, зураг болон уншсан төлөв харагдана.</p></div>}</div>
+    <div className="chat-inbox-detail">{selected ? <ChatPanel key={selected.user_id} admin userId={selected.user_id} title={`Төхөөрөмж #${selected.browser_no} · ${selected.label || selected.phone}`} onBack={() => setSelected(null)} /> : <div className="chat-empty chat-select-prompt"><span aria-hidden="true">💬</span><h3>Хэрэглэгчтэй шууд ярилцаарай</h3><p>Зүүн талаас чат сонгоход мессеж, зураг болон уншсан төлөв харагдана.</p></div>}</div>
   </div>;
 }
