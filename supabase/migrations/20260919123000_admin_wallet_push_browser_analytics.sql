@@ -243,7 +243,7 @@ top_films as (
   limit 20
 ),
 daily as (
-  select d::date day,
+  select d::date as day_date,
     (select count(distinct e.visitor_key) from public.site_events e where e.event_type='visit' and e.created_at>=d and e.created_at<d+interval '1 day')::bigint visitors,
     (select count(*) from public.site_events e where e.event_type='watch_click' and e.created_at>=d and e.created_at<d+interval '1 day')::bigint watch_clicks,
     (select count(*) from public.site_events e where e.event_type='play_start' and e.created_at>=d and e.created_at<d+interval '1 day')::bigint play_starts,
@@ -295,7 +295,7 @@ select jsonb_build_object(
     'watchToPlayPct',(select case when count(*) filter(where event_type='watch_click')=0 then 0 else round(100.0*count(*) filter(where event_type='play_start')/count(*) filter(where event_type='watch_click'),1) end from period_events)
   ),
   'topFilms',coalesce((select jsonb_agg(to_jsonb(t)) from top_films t),'[]'::jsonb),
-  'daily',coalesce((select jsonb_agg(to_jsonb(d) order by d.day) from daily d),'[]'::jsonb)
+  'daily',coalesce((select jsonb_agg(to_jsonb(d) order by d.day_date) from daily d),'[]'::jsonb)
 );
 $$;
 revoke all on function public.kino_analytics_summary(integer) from public,anon,authenticated;
