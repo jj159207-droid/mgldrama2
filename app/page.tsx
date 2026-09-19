@@ -43,7 +43,7 @@ function analyticsSource(): "facebook" | "direct" | "other" {
   return ref ? "other" : "direct";
 }
 
-function trackSiteEvent(event:"visit"|"film_open"|"watch_click"|"play_start", filmId?:number) {
+function trackSiteEvent(event:"visit"|"film_open"|"watch_click"|"payment_open"|"play_start", filmId?:number) {
   if (typeof window === "undefined") return;
   void requestJson("/api/analytics",{
     method:"POST",
@@ -1609,6 +1609,7 @@ function AdminAnalyticsTab() {
       {stat("Сайт руу орсон",today.visits,"Refresh/дахин оролт тусдаа")}
       {stat("Кино нээсэн",today.filmOpens)}
       {stat("Киног бүтэн үзэх дарсан",today.watchClicks,`${Number(today.uniqueWatchers||0)} өөр browser`)}
+      {stat("Төлбөрийн хэсэг рүү орсон",today.paymentOpens,`${Number(today.uniquePaymentVisitors||0)} өөр browser`)}
       {stat("Кино тоглож эхэлсэн",today.playStarts,`${Number(today.uniquePlayers||0)} өөр browser`)}
       {stat("Facebook / Messenger-ээс",today.facebookVisits)}
       {stat("Банкны цэнэглэлт",today.topupAmount,`${Number(today.topupCount||0)} амжилттай цэнэглэлт`,"₮")}
@@ -1636,7 +1637,10 @@ function AdminAnalyticsTab() {
       {stat("Push идэвхжүүлсэн",period.pushEnabledUsers)}
       {stat("SMS автоматаар баталсан",period.autoSmsConfirmed)}
       {stat("SMS алдаа",period.smsFailures)}
+      {stat("Төлбөрийн хэсэг рүү орсон",period.paymentOpens,`${Number(period.uniquePaymentVisitors||0)} өөр browser`)}
       {stat("Unique browser → Үзэх",period.visitorToWatchPct,undefined,"%")}
+      {stat("Үзэх → Төлбөрийн хэсэг",period.watchToPaymentPct,undefined,"%")}
+      {stat("Төлбөрийн хэсэг → Тоглосон",period.paymentToPlayPct,undefined,"%")}
       {stat("Unique Үзэх → Тоглосон",period.watchToPlayPct,undefined,"%")}
     </div>
 
@@ -2102,6 +2106,7 @@ export default function Home() {
             }else{
               const needed=Math.max(0,wallet.price-wallet.balance);
               const topupAmount=Math.max(5000,Math.ceil(needed/1000)*1000);
+              trackSiteEvent("payment_open",Number(film.id));
               setPayFilm({id:0,title:"Үлдэгдэл цэнэглэх",price:topupAmount,topupAmount,monthly:true,plan:"wallet_topup",locked:true,returnFilm:film,walletBefore:wallet.balance});
               setPage("film");
             }
