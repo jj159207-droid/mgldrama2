@@ -105,5 +105,5 @@ export async function rateLimit(key:string) {
 }
 export function publicUser(user:Row) {
   const guest=user.is_guest===true;
-  return {id:user.id,phone:guest?'':user.phone,user_id:user.user_id || `#${String(user.id).padStart(6,'0')}`,guest};
+  return {id:user.id,phone:guest?'':user.phone,user_id:user.user_id || `#${String(user.id).padStart(6,'0')}`,browser_no:Number(user.browser_no||user.id),guest};
 }
