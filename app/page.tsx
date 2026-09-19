@@ -31,7 +31,7 @@ const DEFAULT_BANK_ACCOUNT = {
   bank: "Хаан банк",
   number: "5251258979",
   name: "Т.Жаргалбаяр",
-  iban: "MN030005005251258979",
+  iban: "MN03000500",
 };
 const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
@@ -168,7 +168,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       const number=String(data?.bankAccount||DEFAULT_bankAccount.number).trim();
       const name=String(data?.accountName||DEFAULT_bankAccount.name).trim();
       const iban=String(data?.bankIban||"").toUpperCase().replace(/\s+/g,"");
-      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name,iban:/^MN\d{18}$/.test(iban)?iban:""});
+      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name,iban:/^MN\d{1,8}$/.test(iban)?iban:""});
     }).catch(()=>{});
     return()=>{alive=false;};
   },[]);
@@ -1587,7 +1587,7 @@ function AdminSettingsTab() {
     if(bank.length<2){alert("Банкны нэрийг оруулна уу.");return;}
     if(!/^[A-Za-z0-9 -]{6,40}$/.test(number)){alert("Дансны дугаараа зөв оруулна уу.");return;}
     if(owner.length<2){alert("Данс эзэмшигчийн нэрийг оруулна уу.");return;}
-    if(iban&&!/^MN\d{18}$/.test(iban)){alert("IBAN нь MN + 18 цифр, нийт 20 тэмдэгт байна.");return;}
+    if(iban&&!/^MN\d{1,8}$/.test(iban)){alert("IBAN нь MN-ээр эхэлсэн, нийт 10 хүртэл тэмдэгт байна. 10-аас богино байж болно.");return;}
     saveBusy.current=true;setSaving(true);setSaved(false);
     try{
       const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankName:bank,bankAccount:number,accountName:owner,bankIban:iban})});
@@ -1607,8 +1607,8 @@ function AdminSettingsTab() {
       <label style={lbl}>💳 Дансны дугаар</label>
       <input value={bankAccount} maxLength={40} autoComplete="off" onChange={(e:any)=>setBankAccount(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="5403972086" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:17}}/>
       <label style={lbl}>🏷️ IBAN дансны дугаар</label>
-      <input value={bankIban} maxLength={24} autoComplete="off" onChange={(e:any)=>setBankIban(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g,"").slice(0,24))} placeholder="MN12 1234 1234 5678 9123" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:15}}/>
-      <div style={{fontSize:11,color:C.muted,marginTop:-7,marginBottom:12}}>Монгол IBAN: MN + 18 цифр, нийт 20 тэмдэгт.</div>
+      <input value={bankIban} maxLength={10} autoComplete="off" onChange={(e:any)=>setBankIban(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,10))} placeholder="MN03000500" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:15}}/>
+      <div style={{fontSize:11,color:C.muted,marginTop:-7,marginBottom:12}}>IBAN: MN-ээр эхэлсэн, нийт 10 хүртэл тэмдэгт. 10-аас богино байж болно.</div>
       <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:16}}>
         <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><div style={{fontSize:12,color:C.muted,marginTop:4}}>IBAN {bankIban||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:3}}>{bankAccount||"—"}</strong>
       </div>
