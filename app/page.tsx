@@ -1920,7 +1920,21 @@ export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const visitTracked = useRef(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const previousScrollRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    const scrollTop = () => window.scrollTo({top:0,left:0,behavior:"auto"});
+    scrollTop();
+    const firstFrame = window.requestAnimationFrame(() => {
+      scrollTop();
+      window.requestAnimationFrame(scrollTop);
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrame);
+      window.history.scrollRestoration = previousScrollRestoration;
+    };
+  }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
   const [walletBalance, setWalletBalance] = useState(0);
   useEffect(() => {
