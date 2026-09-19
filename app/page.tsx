@@ -11,6 +11,7 @@ import ReadinessCheck from "@/app/components/ReadinessCheck";
 import CatalogBrowser from "@/app/components/CatalogBrowser";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
 import AppInstallButton from "@/app/components/AppInstallButton";
+import PushNotificationSetup from "@/app/components/PushNotificationSetup";
 import AdminEntryLogo from "@/app/components/AdminEntryLogo";
 import AppearanceEditor from "@/app/components/AppearanceEditor";
 import useSiteAppearance from "@/app/components/useSiteAppearance";
@@ -255,6 +256,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       try{
         const rows=await dbFetch("pending_payments",{method:"POST",body:JSON.stringify({ref_code:refCode,film_id:film.id||null,plan:film.plan||(film.monthly?"monthly":"single"),...(film.plan==="wallet_topup"?{amount:Number(film.topupAmount||film.price||5000)}:{})})},true);
         if(!Array.isArray(rows)||!rows.length)throw new Error("Захиалга үүссэнгүй.");
+        const savedRef=String(rows[0].ref_code||"");
+        if(savedRef && savedRef!==refCode){if(!cancelled)setRefCode(savedRef);return;}
         const amount=Number(rows[0].amount),created=Date.parse(rows[0].created_at);
         if(!Number.isSafeInteger(amount)||amount<=0||!Number.isFinite(created))throw new Error("Захиалгын дүн эсвэл хугацаа буруу байна.");
         stopAt=created+24*60*60*1000;
@@ -704,7 +707,7 @@ function AdminOrdersTab() {
       const [pend, fl, us] = await Promise.all([
         dbAll("pending_payments?select=*"),
         dbAll("films?select=id,title"),
-        dbAll("users?select=id,phone,user_id"),
+        dbAll("users?select=id,phone,user_id,browser_no,is_guest"),
       ]);
       setOrders(Array.isArray(pend) ? pend : []);
       setFilms(Array.isArray(fl) ? fl : []);
@@ -747,8 +750,10 @@ function AdminOrdersTab() {
 
   const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
   const getPhone = (uid: number, order?: any) => {
-    if (order?.phone) return order.phone;
-    return uid ? (users.find((u: any) => u.id === uid)?.phone || "—") : "—";
+    const u=uid?users.find((row:any)=>row.id===uid):null;
+    if(u?.browser_no)return u.is_guest ? `Төхөөрөмж #${u.browser_no} · ${u.user_id||u.phone}` : `#${u.browser_no} · ${u.phone||u.user_id}`;
+    if(order?.phone)return order.phone;
+    return u?.phone || "—";
   };
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.red;
   const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
@@ -1554,6 +1559,7 @@ function AdminAnalyticsTab() {
   const [days,setDays]=useState(30);
   const [data,setData]=useState<any>(null);
   const [loading,setLoading]=useState(true);
+  const [resetting,setResetting]=useState(false);
   const load=useCallback(async()=>{
     setLoading(true);
     try{setData(await requestJson(`/api/analytics?days=${days}`,{},true));}
@@ -1562,51 +1568,78 @@ function AdminAnalyticsTab() {
   },[days]);
   useEffect(()=>{void load();},[load]);
 
+  const reset=async()=>{
+    if(!window.confirm("Статистикийг одооноос 0-оос шинээр эхлүүлэх үү? Хуучин raw түүх устахгүй."))return;
+    setResetting(true);
+    try{await requestJson("/api/analytics",{method:"POST",body:JSON.stringify({action:"reset"})});await load();}
+    finally{setResetting(false);}
+  };
+
   const today=data?.today||{};
   const period=data?.period||{};
   const topFilms=Array.isArray(data?.topFilms)?data.topFilms:[];
-  const stat=(label:string,value:any,note?:string)=><div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"12px 10px"}}>
+  const daily=Array.isArray(data?.daily)?data.daily.slice(-7):[];
+  const stat=(label:string,value:any,note?:string,suffix="")=><div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"12px 10px"}}>
     <div style={{fontSize:10,color:C.muted,lineHeight:1.35}}>{label}</div>
-    <div style={{fontSize:22,fontWeight:900,color:C.gold,marginTop:3}}>{Number(value||0).toLocaleString()}</div>
-    {note&&<div style={{fontSize:9,color:C.muted,marginTop:2}}>{note}</div>}
+    <div style={{fontSize:21,fontWeight:900,color:C.gold,marginTop:3}}>{Number(value||0).toLocaleString()}{suffix}</div>
+    {note&&<div style={{fontSize:9,color:C.muted,marginTop:2,lineHeight:1.35}}>{note}</div>}
   </div>;
 
   return <div style={{padding:"0 14px"}}>
-    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
       <div style={{fontSize:15,fontWeight:800,color:C.txt}}>📊 Сайтын статистик</div>
-      <button type="button" onClick={load} disabled={loading} style={{marginLeft:"auto",background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:8,padding:"7px 10px",color:C.muted,fontSize:12}}>{loading?"…":"🔄 Шинэчлэх"}</button>
+      <button type="button" onClick={load} disabled={loading||resetting} style={{marginLeft:"auto",background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:8,padding:"7px 10px",color:C.muted,fontSize:12}}>{loading?"…":"🔄 Шинэчлэх"}</button>
+      <button type="button" onClick={()=>void reset()} disabled={loading||resetting} style={{background:"#301416",border:"1px solid #7f1d1d",borderRadius:8,padding:"7px 10px",color:"#fecaca",fontSize:12,fontWeight:750}}>{resetting?"Эхлүүлж байна…":"↺ 0-оос шинээр эхлүүлэх"}</button>
     </div>
+    {data?.resetAt&&<div style={{fontSize:10,color:C.muted,marginBottom:14}}>Статистикийн эхлэл: {new Date(data.resetAt).toLocaleString("mn-MN",{timeZone:"Asia/Ulaanbaatar"})}</div>}
 
     <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Өнөөдөр</div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginBottom:16}}>
-      {stat("Давтагдашгүй хэрэглэгч",today.uniqueVisitors,"Нэг төхөөрөмжийг нэг хүн гэж тооцно")}
+      {stat("Давтагдашгүй browser",today.uniqueVisitors,"Cookie-аар давхардлыг хасна")}
+      {stat("Шинэ browser #",today.newBrowsers)}
       {stat("Сайт руу орсон",today.visits,"Refresh/дахин оролт тусдаа")}
       {stat("Кино нээсэн",today.filmOpens)}
-      {stat("Үзэх дарсан",today.watchClicks)}
+      {stat("Киног бүтэн үзэх дарсан",today.watchClicks)}
       {stat("Кино тоглож эхэлсэн",today.playStarts)}
       {stat("Facebook / Messenger-ээс",today.facebookVisits)}
+      {stat("Банкны цэнэглэлт",today.topupAmount,`${Number(today.topupCount||0)} амжилттай цэнэглэлт`,"₮")}
     </div>
 
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
       <div style={{fontSize:12,fontWeight:800,color:C.txt}}>Хугацааны нийлбэр</div>
       <select value={days} onChange={e=>setDays(Number(e.target.value))} style={{...inputSt,marginLeft:"auto",width:"auto",padding:"7px 10px",fontSize:12}}>
-        <option value={7}>7 хоног</option><option value={30}>30 хоног</option><option value={90}>90 хоног</option>
+        <option value={7}>7 хоног</option><option value={30}>30 хоног</option><option value={90}>90 хоног</option><option value={365}>365 хоног</option>
       </select>
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:7,marginBottom:18}}>
-      {stat("Хэрэглэгч",period.uniqueVisitors)}
-      {stat("Үзэх дарсан",period.watchClicks)}
-      {stat("Тоглосон",period.playStarts)}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:7,marginBottom:18}}>
+      {stat("Давтагдашгүй browser",period.uniqueVisitors)}
+      {stat("Шинээр үүссэн browser #",period.newBrowsers)}
+      {stat("Мөнгө хийсэн хэрэглэгч",period.payingUsers)}
+      {stat("Банкны цэнэглэлт",period.topupAmount,`${Number(period.topupCount||0)} удаа`,"₮")}
+      {stat("Админы нэмсэн мөнгө",period.adminCreditAmount,"Борлуулалтын орлогод орохгүй","₮")}
+      {stat("Wallet-аас зарцуулсан",period.spentAmount,undefined,"₮")}
+      {stat("1 кино авсан",period.filmPurchases)}
+      {stat("Багц авсан",period.packagePurchases)}
+      {stat("Pending цэнэглэлт",period.pendingTopups)}
+      {stat("Push идэвхжүүлсэн",period.pushEnabledUsers)}
+      {stat("Browser → Үзэх",period.visitorToWatchPct,undefined,"%")}
+      {stat("Үзэх → Тоглосон",period.watchToPlayPct,undefined,"%")}
     </div>
 
-    <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Хамгийн их сонирхсон кино</div>
+    {daily.length>0&&<><div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Сүүлийн өдрүүд</div>
+      <div style={{display:"grid",gap:6,marginBottom:18}}>{daily.map((row:any)=><div key={row.day_date} style={{display:"grid",gridTemplateColumns:"1.2fr repeat(4,1fr)",gap:6,padding:"8px 9px",background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:8,fontSize:10,color:C.muted}}>
+        <strong style={{color:C.txt}}>{new Date(row.day_date+"T00:00:00").toLocaleDateString("mn-MN",{month:"2-digit",day:"2-digit"})}</strong>
+        <span>👤 {Number(row.visitors||0)}</span><span>▶ {Number(row.watch_clicks||0)}</span><span>🎬 {Number(row.play_starts||0)}</span><span>💰 {Number(row.topup_amount||0).toLocaleString()}₮</span>
+      </div>)}</div></>}
+
+    <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Хамгийн их сонирхсон / тоглосон кино</div>
     {loading&&!data?<div style={{padding:30,textAlign:"center",color:C.muted}}>Ачааллаж байна…</div>
       : topFilms.length===0?<div style={{padding:20,textAlign:"center",color:C.muted,background:C.card,borderRadius:10}}>Одоогоор статистик цуглараагүй байна.</div>
       : <div style={{display:"flex",flexDirection:"column",gap:7}}>
         {topFilms.map((row:any,index:number)=><div key={row.film_id} style={{display:"grid",gridTemplateColumns:"28px minmax(0,1fr) auto",alignItems:"center",gap:8,background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"9px 10px"}}>
           <div style={{fontSize:12,fontWeight:900,color:C.gold}}>#{index+1}</div>
-          <div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:750,color:C.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.title}</div><div style={{fontSize:9,color:C.muted,marginTop:2}}>Нээсэн {Number(row.opens||0).toLocaleString()} · Тоглосон {Number(row.play_starts||0).toLocaleString()}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:900,color:C.green}}>{Number(row.watch_clicks||0).toLocaleString()}</div><div style={{fontSize:9,color:C.muted}}>Үзэх</div></div>
+          <div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:750,color:C.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.title}</div><div style={{fontSize:9,color:C.muted,marginTop:2}}>Нээсэн {Number(row.opens||0).toLocaleString()} · Үзэх {Number(row.watch_clicks||0).toLocaleString()}</div></div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:900,color:C.green}}>{Number(row.play_starts||0).toLocaleString()}</div><div style={{fontSize:9,color:C.muted}}>Тоглосон</div></div>
         </div>)}
       </div>}
   </div>;
@@ -1857,6 +1890,15 @@ export default function Home() {
     }).catch(()=>{}).finally(()=>{if(active)setAuthReady(true);});
     return()=>{active=false;};
   }, []);
+
+  useEffect(()=>{
+    if(!mounted||!authReady||!user?.id)return;
+    const url=new URL(window.location.href);
+    if(url.searchParams.get("chat")!=="1")return;
+    url.searchParams.delete("chat");
+    window.history.replaceState(window.history.state,"",url.pathname+(url.search?"?"+url.searchParams.toString():"")+url.hash);
+    setShowContact(true);
+  },[mounted,authReady,user?.id]);
 
   // Refresh on return from a banking app; do not poll hidden tabs.
   useEffect(() => {
@@ -2178,6 +2220,7 @@ export default function Home() {
       {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); void loadFilms(); navigateTo("admin"); }} onBack={() => setPage("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
+      <PushNotificationSetup key={user?.id||"none"} enabled={!!user?.id&&!adminAuth} />
       {showContact && <ContactModal onClose={() => setShowContact(false)} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
