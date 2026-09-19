@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { ApiError, bodyJson, db, fail, json, originCheck } from '@/lib/server';
 import { CHAT_INPUT_LIMIT, chatId, chatImage, chatMessage, chatOwner, chatSession } from '@/lib/chat';
 import type { Row } from '@/lib/domain';
+import { sendPushToUser } from '@/lib/push';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
@@ -50,6 +51,7 @@ export async function POST(req: NextRequest) {
     const rows = await db('rpc/kino_chat_send', 'POST', {
       p_user: owner, p_sender: s.admin ? 'admin' : 'user', p_message: b.message.trim(), p_image: image, p_client: b.client_id,
     });
+    if(s.admin)await sendPushToUser(owner);
     return json({message: chatMessage(rows[0])});
   } catch (error) {
     if (error instanceof ApiError && error.code === 'P0429') return json({message: 'Хэт олон мессеж илгээсэн байна. Нэг минут хүлээгээрэй.'}, 429);
