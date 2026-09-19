@@ -6,7 +6,7 @@ export interface ChatMessage {
 
 export const CHAT_WELCOME = 'Таны кино нээгдээгүй эсвэл гүйлгээний утгаа буруу бичсэн бол мөнгө шилжүүлсэн баримтын зургаа энд илгээнэ үү. Киноны нэр эсвэл авсан багцаа (3 хоног / 1 сар, ангилал) тодорхой бичээрэй. Админ шалгаад энд хариулна.';
 export interface ChatThread {
-  user_id: number; phone: string; label: string | null; message: string;
+  user_id: number; phone: string; label: string | null; browser_no: number; message: string;
   has_image: boolean; sender: 'user' | 'admin'; updated_at: string; unread: number;
 }
 
