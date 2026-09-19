@@ -333,7 +333,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       </section>
 
       <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
-        <span><small>Данс</small><strong>{bankAccount.number}</strong></span>
+        <span><small>Данс · {bankAccount.bank} · IBAN-{String(bankAccount.iban || "").replace(/^MN/i,"")}</small><strong>{bankAccount.number}</strong></span>
         <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
       </button>
 
