@@ -407,19 +407,25 @@ test('announcement deletion selects one row and preserves unrelated messages',as
  assert.equal((await api.DELETE(dbReq('contact_messages?id=eq.1','DELETE'))).status,403);
 });
 
-test('settings writes require admin, validate URLs and call only the settings RPC',async()=>{
- assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'https://m.me/test'}))).status,403);
- const c=await admin();assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'javascript:alert(1)'},c))).status,400);
+test('settings writes require admin and only allow Messenger plus a valid Mongolian IBAN',async()=>{
+ assert.equal((await settings.PUT(req('/api/settings','PUT',{bankIban:'MN030005005251258979'}))).status,403);
+ const c=await admin();
+ assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'javascript:alert(1)'},c))).status,400);
+ assert.equal((await settings.PUT(req('/api/settings','PUT',{bankIban:'MN123'},c))).status,400);
+ assert.equal((await settings.PUT(req('/api/settings','PUT',{bankName:'Other bank'},c))).status,400);
  const original=global.fetch;
  let writes=0;
  global.fetch=async(input,init)=>{
   const url=new URL(String(input));
   if(url.pathname.endsWith('/rpc/kino_save_settings')){
-    writes++;assert.deepEqual(JSON.parse(JSON.parse(String(init?.body)).settings_value),{messengerUrl:'https://m.me/test'});return Response.json([]);
+    writes++;
+    assert.deepEqual(JSON.parse(JSON.parse(String(init?.body)).settings_value),{messengerUrl:'https://m.me/test',bankIban:'MN030005005251258979'});
+    return Response.json([]);
   }
   return original(input,init);
  };
- assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'https://m.me/test'},c))).status,200);assert.equal(writes,1);
+ assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'https://m.me/test',bankIban:'MN03 0005 00 5251258979'},c))).status,200);
+ assert.equal(writes,1);
 });
 
 test('admin cannot save a filter label as the movie category',async()=>{
