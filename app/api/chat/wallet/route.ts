@@ -10,8 +10,11 @@ export async function GET(req:NextRequest) {
     const s=await chatSession(req);
     if(!s.admin)throw new ApiError(403,'Админы эрх шаардлагатай.');
     const owner=chatOwner(s,req.nextUrl.searchParams.get('user'));
-    const [row]=await db('rpc/kino_wallet_balance','POST',{p_user:owner});
-    return json({balance:Number(row?.balance||0)});
+    const [[row],subscriptions]=await Promise.all([
+      db('rpc/kino_wallet_balance','POST',{p_user:owner}),
+      db(`push_subscriptions?user_id=eq.${owner}&select=id&limit=1`)
+    ]);
+    return json({balance:Number(row?.balance||0),pushEnabled:subscriptions.length>0});
   } catch(error){return fail(error);}
 }
 
