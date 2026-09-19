@@ -46,9 +46,8 @@ async function handler(req:NextRequest) {
       if(req.method==='GET') {
         query.set('user_id',`eq.${s.userId}`);query.set('select','id,ref_code,user_id,film_id,plan,amount,status,created_at,confirmed_at');
       }else if(req.method==='POST'&&b) {
-        const [owner]=await db(`users?id=eq.${s.userId}&select=phone,is_guest&limit=1`);
+        const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
-        if(owner.is_guest===true)throw new ApiError(403,'Төлбөр хийхийн өмнө утасны дугаар, PIN-ээр бүртгүүлнэ үү. Таны одоогийн эрх, үлдэгдэл шинэ данс руу автоматаар шилжинэ.','REGISTER_FOR_PAYMENT');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
