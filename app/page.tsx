@@ -760,7 +760,7 @@ function AdminOrdersTab() {
 
   const filtered = orders.filter((o: any) => {
     if (filter === "all") { }
-    else if (filter === "monthly") { if (!o.plan || o.plan === "single" || o.plan === "wallet_topup") return false; }
+    else if (filter === "monthly") { if (!o.plan || o.plan === "single" || o.plan === "wallet_topup" || o.plan === "wallet_admin") return false; }
     else { if (o.status !== filter) return false; }
     if (search.trim()) {
       const s = search.trim().toLowerCase();
@@ -774,7 +774,7 @@ function AdminOrdersTab() {
   const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + Number(o.amount || 0), 0);
   const pendingCount = orders.filter(o => o.status === "pending").length;
   const confirmedCount = orders.filter(o => o.status === "confirmed").length;
-  const monthlyCount = orders.filter(o => o.plan && o.plan !== "single" && o.plan !== "wallet_topup" && o.status === "confirmed").length;
+  const monthlyCount = orders.filter(o => o.plan && o.plan !== "single" && o.plan !== "wallet_topup" && o.plan !== "wallet_admin" && o.status === "confirmed").length;
 
   const filters: { key: typeof filter; label: string }[] = [
     { key: "all", label: `Бүгд ${orders.length}` },
