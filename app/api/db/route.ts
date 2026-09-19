@@ -101,7 +101,7 @@ async function handler(req:NextRequest) {
   }
   if(table==='pending_payments'&&admin&&req.method==='DELETE')throw new ApiError(405,'Гүйлгээний кодын түүхийг устгахгүй. Захиалгын эрхийг хасах үйлдлийг ашиглана уу.');
   if(table==='pending_payments'&&admin&&req.method==='PATCH'&&b){
-    if(!['confirmed','revoked'].includes(String(b.status))||Object.keys(b).some(k=>!['status','confirmed_at'].includes(k)))throw new ApiError(400,'Захиалгыг зөвхөн баталгаажуулах эсвэл эрхийг хасах боломжтой.');
+    if(!['confirmed','revoked'].includes(String(b.status))||Object.keys(b).some(k=>!['status','confirmed_at','confirmed_amount'].includes(k)))throw new ApiError(400,'Захиалгыг зөвхөн баталгаажуулах эсвэл эрхийг хасах боломжтой.');
     const refFilter=query.get('ref_code'),idFilter=query.get('id');
     const targetFilter=refFilter?.startsWith('eq.')?`ref_code=eq.${encodeURIComponent(refFilter.slice(3))}`:idFilter?.startsWith('eq.')?`id=eq.${encodeURIComponent(idFilter.slice(3))}`:'';
     if(targetFilter){
@@ -111,10 +111,12 @@ async function handler(req:NextRequest) {
         if(b.status==='revoked')throw new ApiError(400,'Цэнэглэгдсэн үлдэгдлийг эрх хасах товчоор буцаахгүй. Wallet гүйлгээг шалгана уу.');
         if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
         if(target.status!=='pending')throw new ApiError(409,'Цэнэглэлтийн төлөв өөрчлөгдсөн байна.');
+        const actualAmount=b.confirmed_amount===undefined?Number(target.amount):Number(b.confirmed_amount);
+        if(!Number.isSafeInteger(actualAmount)||actualAmount<5000||actualAmount>200000)throw new ApiError(400,'Бодитоор орсон дүн 5,000₮-өөс 200,000₮ хүртэл байна.');
         await db('rpc/kino_wallet_confirm_topup','POST',{
           p_payment:Number(target.id),
           p_ref:String(target.ref_code),
-          p_amount:Number(target.amount),
+          p_amount:actualAmount,
           p_allow_expired:true,
         });
         return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
