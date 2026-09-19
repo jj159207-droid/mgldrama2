@@ -5,7 +5,7 @@ import { ApiError, bodyJson, db, fail, json, originCheck, session } from "@/lib/
 export const runtime = "nodejs";
 
 const VISITOR_COOKIE = "taza_visitor_v1";
-const EVENTS = new Set(["visit","film_open","watch_click","play_start"]);
+const EVENTS = new Set(["visit","film_open","watch_click","payment_open","play_start"]);
 const SOURCES = new Set(["facebook","direct","other"]);
 
 export async function POST(req: NextRequest) {
