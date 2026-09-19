@@ -255,3 +255,7 @@
     height: 16px;
   }
 }
+
+.wallet-transfer-label-blink{color:#22c55e!important;font-weight:800;animation:wallet-transfer-label-blink 1.05s ease-in-out infinite}
+@keyframes wallet-transfer-label-blink{0%,100%{opacity:1;text-shadow:0 0 0 transparent}50%{opacity:.3;text-shadow:0 0 9px currentColor}}
+@media(prefers-reduced-motion:reduce){.wallet-transfer-label-blink{animation:none}}
