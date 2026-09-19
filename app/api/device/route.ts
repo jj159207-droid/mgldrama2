@@ -10,7 +10,7 @@ export async function POST(req:NextRequest) {
     const current=await session(req);
     if(current?.admin)return json({admin:true,user:null});
     if(current?.userId){
-      const [existing]=await db(`users?id=eq.${current.userId}&select=id,phone,user_id,is_guest&limit=1`);
+      const [existing]=await db(`users?id=eq.${current.userId}&select=id,phone,user_id,is_guest,browser_no&limit=1`);
       if(existing)return json({user:publicUser(existing)});
     }
     for(let attempt=0;attempt<5;attempt++){
