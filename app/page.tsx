@@ -346,13 +346,6 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
         <b>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</b>
       </button>
 
-      <section className="wallet-single-instructions" aria-label="Гүйлгээний утгын заавар">
-        <p>Гүйлгээний утгыг заавал энэ <strong>6 тоог</strong> бичнэ.</p>
-        <p>Энэ нь таны сайтын нэр.</p>
-        <p>1 киног <strong>2,000₮-өөр</strong> үзнэ.</p>
-        <p>Таны цэнэглэсэн үлдэгдэл хадгалагдана.</p>
-      </section>
-
       <div className="wallet-single-balance">
         Таны кино сайтын дансны одоогийн үлдэгдэл
         <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong>
