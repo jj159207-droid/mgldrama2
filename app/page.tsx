@@ -723,12 +723,21 @@ function AdminOrdersTab() {
 
   useEffect(() => { load(); }, []);
 
-  const confirmOrder = async (ref_code: string) => {
+  const confirmOrder = async (order: any) => {
+    const ref_code=String(order?.ref_code||"");
+    if(!ref_code)return;
+    let actualAmount:Number|number=Number(order?.amount||0);
+    if(order?.plan==="wallet_topup"){
+      const entered=window.prompt("Банкны дансанд БОДИТОЙ орсон дүнг оруулна уу.\nЖишээ: 13000",String(Number(order?.amount||5000)));
+      if(entered===null)return;
+      actualAmount=Number(entered.replace(/[^0-9]/g,""));
+      if(!Number.isSafeInteger(actualAmount)||Number(actualAmount)<5000||Number(actualAmount)>200000){alert("5,000₮-өөс 200,000₮ хүртэл бодит дүн оруулна уу.");return;}
+    }
     setConfirming(ref_code);
     try {
       await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: "confirmed", confirmed_at: new Date().toISOString() }),
+        body: JSON.stringify({status:"confirmed",confirmed_at:new Date().toISOString(),...(order?.plan==="wallet_topup"?{confirmed_amount:Number(actualAmount)}:{})}),
       });
       await load();
     } catch(e) {
@@ -841,7 +850,7 @@ function AdminOrdersTab() {
             </div>
             <div style={{ display: "flex", gap: 6 }}>
               {o.status === "pending" && (
-                <button onClick={() => confirmOrder(o.ref_code)} disabled={confirming === o.ref_code}
+                <button onClick={() => confirmOrder(o)} disabled={confirming === o.ref_code}
                   style={{ flex: 1, background: confirming === o.ref_code ? C.card2 : "#166534", border: "none", borderRadius: 8, padding: "10px", color: confirming === o.ref_code ? C.muted : "#4ade80", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
                   {confirming === o.ref_code ? "..." : "✅ Баталгаажуулах"}
                 </button>
