@@ -1663,7 +1663,7 @@ function AdminAnalyticsTab() {
     <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginBottom:16}}>
       {stat("Давтагдашгүй browser",today.uniqueVisitors,"Cookie-аар давхардлыг хасна")}
       {stat("Шинэ browser #",today.newBrowsers)}
-      {stat("Сайт руу орсон",today.visits,"Refresh/дахин оролт тусдаа")}
+      {stat("Сайт бүрэн ачаалсан",today.visits,"Session + киноны жагсаалт бэлэн болсон оролт")}
       {stat("Кино нээсэн",today.filmOpens)}
       {stat("Киног бүтэн үзэх дарсан",today.watchClicks,`${Number(today.uniqueWatchers||0)} өөр browser`)}
       {stat("Төлбөрийн хэсэг рүү орсон",today.paymentOpens,`${Number(today.uniquePaymentVisitors||0)} өөр browser`)}
@@ -1919,7 +1919,8 @@ export default function Home() {
   const chatUnread = useChatUnread(user?.id || null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); trackSiteEvent("visit"); }, []);
+  const visitTracked = useRef(false);
+  useEffect(() => { setMounted(true); }, []);
   const [accessMap, setAccessMap] = useState<Record<string, number>>({});
   const [walletBalance, setWalletBalance] = useState(0);
   useEffect(() => {
@@ -2020,6 +2021,11 @@ export default function Home() {
     }
   }, []);
   useEffect(() => { void loadFilms(); return () => filmLoadController.current?.abort(); }, [loadFilms]);
+  useEffect(() => {
+    if(!mounted || !authReady || loading || loadError || adminAuth || visitTracked.current)return;
+    visitTracked.current=true;
+    trackSiteEvent("visit");
+  },[mounted,authReady,loading,loadError,adminAuth]);
   useEffect(() => {
     const retry = () => { if (loadError) void loadFilms(); };
     window.addEventListener("online", retry);
