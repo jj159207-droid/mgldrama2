@@ -29,10 +29,14 @@ import { filmNavigationUrl, prepareFilmHistory, readFilmDestination, type FilmDe
 // ══════════════════════════════════════════════
 const DEFAULT_BANK_ACCOUNT = {
   bank: "Хаан банк",
-  number: "5403972086",
   name: "Т.Жаргалбаяр",
   iban: "",
 };
+function formatMongolianIban(value: string) {
+  const compact=String(value||"").toUpperCase().replace(/\s+/g,"");
+  if(!/^MN\d{18}$/.test(compact))return compact;
+  return `${compact.slice(0,4)} ${compact.slice(4,8)} ${compact.slice(8,10)} ${compact.slice(10)}`;
+}
 const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
 function analyticsSource(): "facebook" | "direct" | "other" {
@@ -165,10 +169,9 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
     requestJson("/api/settings",{},true).then(data=>{
       if(!alive)return;
       const bank=String(data?.bankName||DEFAULT_bankAccount.bank).trim();
-      const number=String(data?.bankAccount||DEFAULT_bankAccount.number).trim();
       const name=String(data?.accountName||DEFAULT_bankAccount.name).trim();
       const iban=String(data?.bankIban||"").toUpperCase().replace(/\s+/g,"");
-      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name,iban:/^MN\d{18}$/.test(iban)?iban:""});
+      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,name:name||DEFAULT_bankAccount.name,iban:/^MN\d{18}$/.test(iban)?iban:""});
     }).catch(()=>{});
     return()=>{alive=false;};
   },[]);
@@ -332,8 +335,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
         <p>Та энэ данс руу</p>
       </section>
 
-      <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
-        <span><small>Данс</small><strong>{bankAccount.number}</strong></span>
+      <button type="button" disabled={!bankAccount.iban} className="wallet-single-copy" onClick={() => copyText(bankAccount.iban,"account")}>
+        <span><small>IBAN данс</small><strong>{bankAccount.iban ? formatMongolianIban(bankAccount.iban) : "Тохируулаагүй"}</strong></span>
         <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
       </button>
 
@@ -356,7 +359,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       <section className="wallet-single-bank" aria-label="Банкны мэдээлэл">
         <div className="wallet-single-row"><span>Банк</span><strong>{bankAccount.bank}</strong></div>
         <div className="wallet-single-row"><span>Нэр</span><strong>{bankAccount.name}</strong></div>
-        <div className="wallet-single-row"><span>IBAN</span><strong>{bankAccount.iban || "Тохируулаагүй"}</strong></div>
+        <div className="wallet-single-row"><span>IBAN</span><strong>{bankAccount.iban ? formatMongolianIban(bankAccount.iban) : "Тохируулаагүй"}</strong></div>
       </section>
 
       <div className="wallet-single-balance">
@@ -389,7 +392,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
       {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
         {isWalletTopup && <div className="wallet-transfer-head wallet-transfer-head-note"><span>5,000₮-өөс дээш дүнгээр цэнэглэнэ үү</span></div>}
-        <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span><span className="account-label-line">Дансны дугаар {bankAccount.iban && <em className="bank-ibn">IBAN {bankAccount.iban}</em>}</span><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+        <section className="bank-details"><h3>1. IBAN данс руу шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button disabled={!bankAccount.iban} className="copy-account" onClick={() => copyText(bankAccount.iban,"account")}><span><span className="account-label-line">IBAN дансны дугаар</span><strong>{bankAccount.iban ? formatMongolianIban(bankAccount.iban) : "Тохируулаагүй"}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
         <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
       </div>}
       <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
@@ -1556,9 +1559,6 @@ function EditFilmPanel({ f, onDone }: any) {
 // ══════════════════════════════════════════════
 function AdminSettingsTab() {
   const [messengerUrl,setMessengerUrl]=useState("");
-  const [bankName,setBankName]=useState(DEFAULT_BANK_ACCOUNT.bank);
-  const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT.number);
-  const [accountName,setAccountName]=useState(DEFAULT_BANK_ACCOUNT.name);
   const [bankIban,setBankIban]=useState(DEFAULT_BANK_ACCOUNT.iban);
   const [saved,setSaved]=useState(false);
   const [loading,setLoading]=useState(true);
@@ -1569,29 +1569,21 @@ function AdminSettingsTab() {
     requestJson("/api/settings").then(data=>{
       if(!active)return;
       setMessengerUrl(data?.messengerUrl||"");
-      setBankName(data?.bankName||DEFAULT_BANK_ACCOUNT.bank);
-      setBankAccount(data?.bankAccount||DEFAULT_BANK_ACCOUNT.number);
-      setAccountName(data?.accountName||DEFAULT_BANK_ACCOUNT.name);
-      setBankIban(data?.bankIban||DEFAULT_BANK_ACCOUNT.iban);
+      setBankIban(formatMongolianIban(data?.bankIban||DEFAULT_BANK_ACCOUNT.iban));
     }).catch(()=>{}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[]);
   const saveSettings=async()=>{
     if(saveBusy.current)return;
     const messenger=messengerUrl.trim();
-    const bank=bankName.trim();
-    const number=bankAccount.trim();
-    const owner=accountName.trim();
     const iban=bankIban.toUpperCase().replace(/\s+/g,"");
     if(messenger&&!safeUrl(messenger)){alert("Зөв HTTPS Messenger холбоос оруулна уу.");return;}
-    if(bank.length<2){alert("Банкны нэрийг оруулна уу.");return;}
-    if(!/^[A-Za-z0-9 -]{6,40}$/.test(number)){alert("Дансны дугаараа зөв оруулна уу.");return;}
-    if(owner.length<2){alert("Данс эзэмшигчийн нэрийг оруулна уу.");return;}
-    if(iban&&!/^MN\d{18}$/.test(iban)){alert("IBAN нь MN + 18 цифр, нийт 20 тэмдэгт байна.");return;}
+    if(!/^MN\d{18}$/.test(iban)){alert("IBAN нь MN + 18 цифр, нийт 20 тэмдэгт байна.");return;}
     saveBusy.current=true;setSaving(true);setSaved(false);
     try{
-      const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankName:bank,bankAccount:number,accountName:owner,bankIban:iban})});
-      setMessengerUrl(data?.messengerUrl||"");setBankName(data.bankName);setBankAccount(data.bankAccount);setAccountName(data.accountName);setBankIban(data.bankIban||DEFAULT_BANK_ACCOUNT.iban);
+      const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankIban:iban})});
+      setMessengerUrl(data?.messengerUrl||"");
+      setBankIban(formatMongolianIban(data?.bankIban||""));
       setSaved(true);window.dispatchEvent(new Event("kinoSettingsChanged"));
     }catch{}finally{saveBusy.current=false;setSaving(false);}
   };
@@ -1599,25 +1591,34 @@ function AdminSettingsTab() {
   return <div style={{padding:"0 14px"}}>
     <ReadinessCheck />
     <div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:12,padding:16,marginBottom:12}}>
-      <div style={{fontSize:14,fontWeight:700,color:C.txt,marginBottom:16}}>⚙️ Сайтын тохиргоо</div>
-      <label style={lbl}>🏦 Банкны нэр</label>
-      <input value={bankName} maxLength={80} onChange={(e:any)=>setBankName(e.target.value)} placeholder="Хаан банк" style={{...inputSt,marginBottom:12}}/>
-      <label style={lbl}>👤 Данс эзэмшигчийн нэр</label>
-      <input value={accountName} maxLength={100} onChange={(e:any)=>setAccountName(e.target.value)} placeholder="Данс эзэмшигч" style={{...inputSt,marginBottom:12}}/>
-      <label style={lbl}>💳 Дансны дугаар</label>
-      <input value={bankAccount} maxLength={40} autoComplete="off" onChange={(e:any)=>setBankAccount(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="5403972086" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:17}}/>
-      <label style={lbl}>🏷️ IBAN дансны дугаар</label>
-      <input value={bankIban} maxLength={24} autoComplete="off" onChange={(e:any)=>setBankIban(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g,"").slice(0,24))} placeholder="MN12 1234 1234 5678 9123" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:15}}/>
-      <div style={{fontSize:11,color:C.muted,marginTop:-7,marginBottom:12}}>Монгол IBAN: MN + 18 цифр, нийт 20 тэмдэгт.</div>
+      <div style={{fontSize:14,fontWeight:700,color:C.txt,marginBottom:16}}>💳 Төлбөрийн IBAN</div>
+      <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:14}}>
+        <div style={{fontSize:12,color:C.muted}}>Банк</div>
+        <strong style={{display:"block",color:C.txt,marginTop:2}}>{DEFAULT_BANK_ACCOUNT.bank}</strong>
+        <div style={{fontSize:12,color:C.muted,marginTop:8}}>Хүлээн авагч</div>
+        <strong style={{display:"block",color:C.txt,marginTop:2}}>{DEFAULT_BANK_ACCOUNT.name}</strong>
+      </div>
+      <label style={lbl}>IBAN дансны дугаар</label>
+      <input
+        value={bankIban}
+        maxLength={24}
+        autoComplete="off"
+        inputMode="text"
+        onChange={(e:any)=>setBankIban(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g,"").slice(0,24))}
+        placeholder="MN03 0005 00 5251258979"
+        style={{...inputSt,marginBottom:8,fontFamily:"monospace",fontSize:16}}
+      />
+      <div style={{fontSize:11,color:C.muted,marginBottom:16}}>Жишээ: MN03 0005 00 5251258979 · Хадгалах үед зайг автоматаар зөвшөөрнө.</div>
       <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:16}}>
-        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><div style={{fontSize:12,color:C.muted,marginTop:4}}>IBAN {bankIban||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:3}}>{bankAccount||"—"}</strong>
+        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид харагдах IBAN</div>
+        <strong style={{display:"block",fontSize:17,color:C.gold,fontFamily:"monospace"}}>{bankIban||"—"}</strong>
       </div>
       <label style={lbl}>💬 Messenger холбоос</label>
       <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Жишээ: https://m.me/таны_хуудас_нэр</div>
       <input value={messengerUrl} onChange={(e:any)=>setMessengerUrl(e.target.value)} placeholder="https://m.me/..." style={{...inputSt,marginBottom:12}}/>
-      <button onClick={saveSettings} disabled={saving} style={{...goldBtn,borderRadius:10}}>{saving?"Хадгалж байна…":saved?"✅ Хадгалагдлаа!":"💾 Бүгдийг хадгалах"}</button>
+      <button onClick={saveSettings} disabled={saving} style={{...goldBtn,borderRadius:10}}>{saving?"Хадгалж байна…":saved?"✅ Хадгалагдлаа!":"💾 IBAN хадгалах"}</button>
     </div>
-    <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 14px"}}><div style={{fontSize:12,color:C.muted,lineHeight:1.7}}>Дансны нэр, дугаар хадгалмагц дараагийн төлбөрийн цонхонд шинэ мэдээлэл шууд ашиглагдана.</div></div>
+    <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 14px"}}><div style={{fontSize:12,color:C.muted,lineHeight:1.7}}>Админ банкны хэсэгт зөвхөн IBAN дугаарыг өөрчилнө. Банк болон хүлээн авагчийн нэр тогтмол байна.</div></div>
   </div>;
 }
 
