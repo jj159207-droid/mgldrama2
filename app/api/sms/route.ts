@@ -82,10 +82,12 @@ export async function POST(req:NextRequest) {
       outcome='amount_rejected';
       throw new ApiError(400,'Цэнэглэх дүн 5,000₮-өөс 200,000₮ хүртэл байна.');
     }
-    const [wallet]=await db('rpc/kino_wallet_confirm_topup','POST',{
+    const messageHash=createHash('sha256').update(rawText).digest('hex');
+    const [wallet]=await db('rpc/kino_wallet_confirm_sms_topup','POST',{
       p_payment:Number(payment.id),
       p_ref:parsed.ref,
       p_amount:parsed.amount,
+      p_message_hash:messageHash,
       p_allow_expired:false,
     });
     const balance=Number(wallet?.balance || 0);
@@ -101,7 +103,8 @@ export async function POST(req:NextRequest) {
       wallet:true,
       walletBalance:balance,
       creditedAmount:parsed.amount,
-      alreadyConfirmed:wallet?.result==='already_confirmed'
+      alreadyConfirmed:wallet?.result==='already_confirmed',
+      creditedPaymentId:wallet?.credited_payment_id || null
     });
   }
 
