@@ -12,6 +12,12 @@ export async function POST(req: NextRequest) {
   try {
     originCheck(req);
     const body = await bodyJson(req,4096);
+    if(body.action==="reset"){
+      const s=await session(req);
+      if(!s?.admin)throw new ApiError(403,"Админы эрх шаардлагатай.");
+      const [reset]=await db("rpc/kino_analytics_reset","POST",{});
+      return json({ok:true,resetAt:reset?.reset_at||new Date().toISOString()});
+    }
     const eventType = String(body.event || "");
     if(!EVENTS.has(eventType)) throw new ApiError(400,"Статистикийн үйлдэл буруу.");
 
