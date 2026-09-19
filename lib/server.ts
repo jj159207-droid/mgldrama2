@@ -83,6 +83,7 @@ export function pinMatches(pin:string,stored:unknown) {
 }
 export interface Session { userId:number|null; admin:boolean }
 const COOKIE='kino_session_v2';
+export const DEVICE_COOKIE='taza_device_v1';
 export async function session(req:NextRequest):Promise<Session|null> {
   const token=req.cookies.get(COOKIE)?.value;if(!token || !/^[a-f0-9]{64}$/.test(token))return null;
   const [row]=await db(`app_sessions?token_hash=eq.${digest(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id,is_admin&limit=1`);
@@ -96,6 +97,12 @@ export async function issueSession(req:NextRequest,userId:number|null,admin:bool
 }
 export function setSessionCookie(res:NextResponse,token:string,age:number) {
   res.cookies.set(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',path:'/',maxAge:age});return res;
+}
+export function setDeviceCookie(res:NextResponse,token:string,age=365*24*60*60) {
+  res.cookies.set(DEVICE_COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:age});return res;
+}
+export function clearDeviceCookie(res:NextResponse) {
+  res.cookies.set(DEVICE_COOKIE,'',{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:0});return res;
 }
 export async function revokeSession(req:NextRequest) {const token=req.cookies.get(COOKIE)?.value;if(token)await db(`app_sessions?token_hash=eq.${digest(token)}`,'DELETE');}
 export async function rateLimit(key:string) {
