@@ -46,6 +46,9 @@ async function handler(req:NextRequest) {
       if(req.method==='GET') {
         query.set('user_id',`eq.${s.userId}`);query.set('select','id,ref_code,user_id,film_id,plan,amount,status,created_at,confirmed_at');
       }else if(req.method==='POST'&&b) {
+        const [owner]=await db(`users?id=eq.${s.userId}&select=phone,is_guest&limit=1`);
+        if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
+        if(owner.is_guest===true)throw new ApiError(403,'Төлбөр хийхийн өмнө утасны дугаар, PIN-ээр бүртгүүлнэ үү. Таны одоогийн эрх, үлдэгдэл шинэ данс руу автоматаар шилжинэ.','REGISTER_FOR_PAYMENT');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
@@ -64,9 +67,7 @@ async function handler(req:NextRequest) {
           const [conflict]=await db(`pending_payments?ref_code=eq.${ref}&select=id,user_id,plan,amount,status,created_at&limit=1`);
           if(conflict)throw new ApiError(409,'Гүйлгээний код давхардлаа. Шинэ код үүсгэнэ үү.','REF_CONFLICT');
 
-          const [u]=await db(`users?id=eq.${s.userId}&select=phone`);
-          if(!u)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
-          const topup={ref_code:ref,film_id:null,amount,status:'pending',user_id:s.userId,phone:u.phone,plan:'wallet_topup'};
+          const topup={ref_code:ref,film_id:null,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan:'wallet_topup'};
           try {
             return json(await db('pending_payments','POST',topup));
           } catch(error) {
@@ -84,8 +85,7 @@ async function handler(req:NextRequest) {
           amount=Number(film.price);
         }
         if(!Number.isSafeInteger(amount)||amount<=0)throw new ApiError(400,'Багц эсвэл үнэ буруу.');
-        const [u]=await db(`users?id=eq.${s.userId}&select=phone`);
-        b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:u?.phone,plan};
+        b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan};
         // Recover a concurrent insert only for the same owner and purchase.
         const lookup=()=>db(`pending_payments?ref_code=eq.${ref}&select=*`);
         const samePurchase=(row:Row)=>String(row.user_id)===String(s.userId)
