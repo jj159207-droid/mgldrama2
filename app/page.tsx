@@ -338,7 +338,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       </button>
 
       <section className="wallet-single-instructions" aria-label="Цэнэглэх нөхцөл">
-        <p><strong>5,000₮-өөс дээш</strong> гүйлгээ хийж дансаа цэнэглэнэ.</p>
+        <p><strong>6,000₮-өөр</strong> <strong>3 кино үзэх эрх</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -351,12 +351,6 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
         <p>Энэ нь таны сайтын нэр.</p>
         <p>1 киног <strong>2,000₮-өөр</strong> үзнэ.</p>
         <p>Таны цэнэглэсэн үлдэгдэл хадгалагдана.</p>
-      </section>
-
-      <section className="wallet-single-bank" aria-label="Банкны мэдээлэл">
-        <div className="wallet-single-row"><span>Банк</span><strong>{bankAccount.bank}</strong></div>
-        <div className="wallet-single-row"><span>Нэр</span><strong>{bankAccount.name}</strong></div>
-        <div className="wallet-single-row"><span>IBAN</span><strong>{bankAccount.iban || "Тохируулаагүй"}</strong></div>
       </section>
 
       <div className="wallet-single-balance">
