@@ -31,7 +31,7 @@ const DEFAULT_BANK_ACCOUNT = {
   bank: "Хаан банк",
   number: "5403972086",
   name: "Т.Жаргалбаяр",
-  ibn: "IBN-MN95000 500",
+  iban: "",
 };
 const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
@@ -167,8 +167,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       const bank=String(data?.bankName||DEFAULT_bankAccount.bank).trim();
       const number=String(data?.bankAccount||DEFAULT_bankAccount.number).trim();
       const name=String(data?.accountName||DEFAULT_bankAccount.name).trim();
-      const ibn=String(data?.bankIbn||DEFAULT_bankAccount.ibn).trim();
-      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name,ibn:ibn||DEFAULT_bankAccount.ibn});
+      const iban=String(data?.bankIban||"").toUpperCase().replace(/\s+/g,"");
+      setBankAccount({bank:bank||DEFAULT_bankAccount.bank,number:number||DEFAULT_bankAccount.number,name:name||DEFAULT_bankAccount.name,iban:/^MN\d{18}$/.test(iban)?iban:""});
     }).catch(()=>{});
     return()=>{alive=false;};
   },[]);
@@ -242,7 +242,12 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
         if(cancelled)return;
         if(rows?.[0]?.status==='confirmed'){await finishPayment(()=>!cancelled);return;}
         if(!rows?.length || rows[0].status!=='pending'){
-          ready=false;setOrderReady(false);setAutoStatus("timeout");setPaymentError("Захиалга цуцлагдсан эсвэл олдсонгүй. Төлбөр шилжүүлэхгүй, админтай холбогдоно уу.");return;
+          const status=String(rows?.[0]?.status||"");
+          ready=false;setOrderReady(false);setAutoStatus("timeout");
+          setPaymentError(status==="expired"
+            ?"Энэ төлбөрийн кодын 24 цагийн хугацаа дууссан. Шинэ код үүсгээд төлбөр хийнэ үү."
+            :"Захиалга цуцлагдсан эсвэл олдсонгүй. Төлбөр шилжүүлэхгүй, админтай холбогдоно уу.");
+          return;
         }
         if(Date.now()>stopAt){ready=false;setOrderReady(false);setAutoStatus("timeout");return;}
         setAutoStatus("waiting");setPaymentError("");
@@ -351,7 +356,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       <section className="wallet-single-bank" aria-label="Банкны мэдээлэл">
         <div className="wallet-single-row"><span>Банк</span><strong>{bankAccount.bank}</strong></div>
         <div className="wallet-single-row"><span>Нэр</span><strong>{bankAccount.name}</strong></div>
-        <div className="wallet-single-row"><span>IBN</span><strong>{bankAccount.ibn}</strong></div>
+        <div className="wallet-single-row"><span>IBAN</span><strong>{bankAccount.iban || "Тохируулаагүй"}</strong></div>
       </section>
 
       <div className="wallet-single-balance">
@@ -384,7 +389,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
       {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
         {isWalletTopup && <div className="wallet-transfer-head wallet-transfer-head-note"><span>5,000₮-өөс дээш дүнгээр цэнэглэнэ үү</span></div>}
-        <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span><span className="account-label-line">Дансны дугаар <em className="bank-ibn">{bankAccount.ibn}</em></span><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+        <section className="bank-details"><h3>1. Дансаар шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" onClick={() => copyText(bankAccount.number,"account")}><span><span className="account-label-line">Дансны дугаар {bankAccount.iban && <em className="bank-ibn">IBAN {bankAccount.iban}</em>}</span><strong>{bankAccount.number}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
         <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
       </div>}
       <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
@@ -747,7 +752,7 @@ function AdminOrdersTab() {
   const [confirming, setConfirming] = useState<string | null>(null);
   const [films, setFilms] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "revoked" | "monthly">("all");
+  const [filter, setFilter] = useState<"all" | "pending" | "confirmed" | "expired" | "revoked" | "monthly">("all");
   const [search, setSearch] = useState("");
 
   const load = async () => {
@@ -815,7 +820,7 @@ function AdminOrdersTab() {
     return u?.phone || "—";
   };
   const statusColor = (s: string) => s === "confirmed" ? C.green : s === "pending" ? C.gold : C.red;
-  const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
+  const statusLabel = (s: string) => s === "confirmed" ? "✅ Баталгаажсан" : s === "expired" ? "⌛ Хугацаа дууссан" : s === "revoked" ? "🚫 Хасагдсан" : "⏳ Хүлээгдэж байна";
 
   const filtered = orders.filter((o: any) => {
     if (filter === "all") { }
@@ -839,6 +844,7 @@ function AdminOrdersTab() {
     { key: "all", label: `Бүгд ${orders.length}` },
     { key: "pending", label: `⏳ ${pendingCount}` },
     { key: "confirmed", label: `✅ ${confirmedCount}` },
+    { key: "expired", label: `⌛ Хугацаа дууссан` },
     { key: "monthly", label: `👑 ${monthlyCount}` },
     { key: "revoked", label: `🚫 Хасагдсан` },
   ];
@@ -1553,7 +1559,7 @@ function AdminSettingsTab() {
   const [bankName,setBankName]=useState(DEFAULT_BANK_ACCOUNT.bank);
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT.number);
   const [accountName,setAccountName]=useState(DEFAULT_BANK_ACCOUNT.name);
-  const [bankIbn,setBankIbn]=useState(DEFAULT_BANK_ACCOUNT.ibn);
+  const [bankIban,setBankIban]=useState(DEFAULT_BANK_ACCOUNT.iban);
   const [saved,setSaved]=useState(false);
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
@@ -1566,7 +1572,7 @@ function AdminSettingsTab() {
       setBankName(data?.bankName||DEFAULT_BANK_ACCOUNT.bank);
       setBankAccount(data?.bankAccount||DEFAULT_BANK_ACCOUNT.number);
       setAccountName(data?.accountName||DEFAULT_BANK_ACCOUNT.name);
-      setBankIbn(data?.bankIbn||DEFAULT_BANK_ACCOUNT.ibn);
+      setBankIban(data?.bankIban||DEFAULT_BANK_ACCOUNT.iban);
     }).catch(()=>{}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
   },[]);
@@ -1576,16 +1582,16 @@ function AdminSettingsTab() {
     const bank=bankName.trim();
     const number=bankAccount.trim();
     const owner=accountName.trim();
-    const ibn=bankIbn.trim();
+    const iban=bankIban.toUpperCase().replace(/\s+/g,"");
     if(messenger&&!safeUrl(messenger)){alert("Зөв HTTPS Messenger холбоос оруулна уу.");return;}
     if(bank.length<2){alert("Банкны нэрийг оруулна уу.");return;}
     if(!/^[A-Za-z0-9 -]{6,40}$/.test(number)){alert("Дансны дугаараа зөв оруулна уу.");return;}
     if(owner.length<2){alert("Данс эзэмшигчийн нэрийг оруулна уу.");return;}
-    if(!/^[A-Za-z0-9 -]{3,80}$/.test(ibn)){alert("IBN мэдээллийг зөв оруулна уу.");return;}
+    if(iban&&!/^MN\d{18}$/.test(iban)){alert("IBAN нь MN + 18 цифр, нийт 20 тэмдэгт байна.");return;}
     saveBusy.current=true;setSaving(true);setSaved(false);
     try{
-      const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankName:bank,bankAccount:number,accountName:owner,bankIbn:ibn})});
-      setMessengerUrl(data?.messengerUrl||"");setBankName(data.bankName);setBankAccount(data.bankAccount);setAccountName(data.accountName);setBankIbn(data.bankIbn||DEFAULT_BANK_ACCOUNT.ibn);
+      const data=await requestJson("/api/settings",{method:"PUT",body:JSON.stringify({messengerUrl:messenger,bankName:bank,bankAccount:number,accountName:owner,bankIban:iban})});
+      setMessengerUrl(data?.messengerUrl||"");setBankName(data.bankName);setBankAccount(data.bankAccount);setAccountName(data.accountName);setBankIban(data.bankIban||DEFAULT_BANK_ACCOUNT.iban);
       setSaved(true);window.dispatchEvent(new Event("kinoSettingsChanged"));
     }catch{}finally{saveBusy.current=false;setSaving(false);}
   };
@@ -1600,10 +1606,11 @@ function AdminSettingsTab() {
       <input value={accountName} maxLength={100} onChange={(e:any)=>setAccountName(e.target.value)} placeholder="Данс эзэмшигч" style={{...inputSt,marginBottom:12}}/>
       <label style={lbl}>💳 Дансны дугаар</label>
       <input value={bankAccount} maxLength={40} autoComplete="off" onChange={(e:any)=>setBankAccount(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="5403972086" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:17}}/>
-      <label style={lbl}>🏷️ Дансны дугаарын ард харагдах IBN</label>
-      <input value={bankIbn} maxLength={80} autoComplete="off" onChange={(e:any)=>setBankIbn(e.target.value.replace(/[^A-Za-z0-9 -]/g,""))} placeholder="IBN-MN95000 500" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:15}}/>
+      <label style={lbl}>🏷️ IBAN дансны дугаар</label>
+      <input value={bankIban} maxLength={24} autoComplete="off" onChange={(e:any)=>setBankIban(e.target.value.toUpperCase().replace(/[^A-Z0-9 ]/g,"").slice(0,24))} placeholder="MN12 1234 1234 5678 9123" style={{...inputSt,marginBottom:12,fontFamily:"monospace",fontSize:15}}/>
+      <div style={{fontSize:11,color:C.muted,marginTop:-7,marginBottom:12}}>Монгол IBAN: MN + 18 цифр, нийт 20 тэмдэгт.</div>
       <div style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:16}}>
-        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><div style={{fontSize:12,color:C.muted,marginTop:4}}>Дансны дугаар {bankIbn||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:3}}>{bankAccount||"—"}</strong>
+        <div style={{fontSize:11,color:C.muted,marginBottom:4}}>Хэрэглэгчид ингэж харагдана</div><div style={{fontSize:13,color:C.txt}}>{bankName||"—"} · {accountName||"—"}</div><div style={{fontSize:12,color:C.muted,marginTop:4}}>IBAN {bankIban||"—"}</div><strong style={{display:"block",fontSize:18,color:C.gold,marginTop:3}}>{bankAccount||"—"}</strong>
       </div>
       <label style={lbl}>💬 Messenger холбоос</label>
       <div style={{fontSize:11,color:C.muted,marginBottom:8}}>Жишээ: https://m.me/таны_хуудас_нэр</div>
