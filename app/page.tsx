@@ -338,7 +338,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       </button>
 
       <section className="wallet-single-instructions" aria-label="Цэнэглэх нөхцөл">
-        <p><strong>6,000₮-өөр</strong> <strong>3 кино үзэх эрх</strong></p>
+        <p><strong>Шилжүүлэх дүн 6,000₮</strong> · <strong>3 кино үзнэ</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
