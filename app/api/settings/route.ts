@@ -11,9 +11,9 @@ function normalizeIban(value:unknown) {
 const DEFAULTS={
  messengerUrl:safeUrl(process.env.MESSENGER_URL),
  bankName:String(process.env.BANK_NAME||'Хаан банк').trim(),
- bankAccount:String(process.env.BANK_ACCOUNT||'5403972086').trim(),
+ bankAccount:String(process.env.BANK_ACCOUNT||'5251258979').trim(),
  accountName:String(process.env.BANK_ACCOUNT_NAME||'Т.Жаргалбаяр').trim(),
- bankIban:normalizeIban(process.env.BANK_IBAN||process.env.BANK_IBN),
+ bankIban:normalizeIban(process.env.BANK_IBAN||process.env.BANK_IBN||'MN030005005251258979'),
 };
 const clean=(value:unknown,max:number)=>typeof value==='string'?value.trim().replace(/\s+/g,' ').slice(0,max):'';
 const validAccount=(value:string)=>/^[A-Za-z0-9 -]{6,40}$/.test(value);
