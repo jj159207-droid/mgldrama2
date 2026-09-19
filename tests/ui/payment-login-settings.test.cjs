@@ -6,22 +6,24 @@ const repo=path.resolve(__dirname,'../..');
 const page=readFileSync(path.join(repo,'app/page.tsx'),'utf8');
 const settings=readFileSync(path.join(repo,'app/api/settings/route.ts'),'utf8');
 
-test('admin settings can edit the bank name, owner, and account number',()=>{
-  assert.match(page,/🏦 Банкны нэр/);
-  assert.match(page,/👤 Данс эзэмшигчийн нэр/);
-  assert.match(page,/💳 Дансны дугаар/);
-  assert.match(page,/bankName:bank,bankAccount:number,accountName:owner/);
-  assert.match(settings,/bankName/);
-  assert.match(settings,/bankAccount/);
-  assert.match(settings,/accountName/);
+test('admin payment settings edit only the Mongolian IBAN',()=>{
+  assert.match(page,/💳 Төлбөрийн IBAN/);
+  assert.match(page,/IBAN дансны дугаар/);
+  assert.match(page,/bankIban:iban/);
+  assert.match(page,/MN03 0005 00 5251258979/);
+  assert.doesNotMatch(page,/setBankName/);
+  assert.doesNotMatch(page,/setAccountName/);
+  assert.match(settings,/FIXED_BANK_NAME/);
+  assert.match(settings,/FIXED_ACCOUNT_NAME/);
+  assert.match(settings,/new Set\(\['messengerUrl','bankIban','bankIbn'\]\)/);
 });
 
-test('checkout loads the latest saved bank settings instead of only hardcoded data',()=>{
+test('checkout loads and copies the saved IBAN instead of the legacy account number',()=>{
   assert.match(page,/const \[bankAccount,setBankAccount\]=useState\(DEFAULT_BANK_ACCOUNT\)/);
   assert.match(page,/requestJson\("\/api\/settings",\{\},true\)/);
-  assert.match(page,/bankAccount\.number/);
-  assert.doesNotMatch(page,/const BANK_ACCOUNT =/);
-  assert.doesNotMatch(page,/\bBANK_ACCOUNT\.number\b/);
+  assert.match(page,/bankAccount\.iban/);
+  assert.match(page,/copyText\(bankAccount\.iban,"account"\)/);
+  assert.doesNotMatch(page,/bankAccount\.number/);
 });
 
 test('package purchase dialog does not reveal movie counts',()=>{
@@ -45,8 +47,9 @@ test('completed phone and registration PIN fields advance focus automatically',(
   assert.match(page,/register&&next\.length===4\)document\.getElementById\("user-pin2"\)\?\.focus\(\)/);
 });
 
-test('site settings endpoint permits optional Messenger while validating payment details',()=>{
+test('site settings endpoint permits optional Messenger and validates only the IBAN bank field',()=>{
   assert.match(settings,/messengerRaw\?safeUrl\(messengerRaw\):''/);
-  assert.match(settings,/validAccount\(bankAccount\)/);
+  assert.match(settings,/\^MN\\d\{18\}\$/);
+  assert.match(settings,/зөвхөн IBAN дугаар өөрчилнө/);
   assert.match(settings,/kino_save_settings/);
 });
