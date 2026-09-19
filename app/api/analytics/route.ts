@@ -5,7 +5,8 @@ import { ApiError, bodyJson, db, fail, json, originCheck, session } from "@/lib/
 export const runtime = "nodejs";
 
 const VISITOR_COOKIE = "taza_visitor_v1";
-const EVENTS = new Set(["visit","film_open","watch_click","payment_open","play_start"]);
+const EVENTS = new Set(["visit","film_open","watch_click","payment_open","play_start","bank_account_copy","ref_code_copy"]);
+const FILM_EVENTS = new Set(["film_open","watch_click","payment_open","play_start"]);
 const SOURCES = new Set(["facebook","direct","other"]);
 
 export async function POST(req: NextRequest) {
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
 
     const rawFilm = body.film_id;
     const filmId = rawFilm === undefined || rawFilm === null ? null : Number(rawFilm);
-    if(eventType !== "visit" && (!Number.isSafeInteger(filmId) || Number(filmId) <= 0)) {
+    if(FILM_EVENTS.has(eventType) && (!Number.isSafeInteger(filmId) || Number(filmId) <= 0)) {
       throw new ApiError(400,"Киноны ID буруу.");
     }
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
     await db("site_events","POST",{
       visitor_key:visitorKey,
       event_type:eventType,
-      film_id:eventType === "visit" ? null : filmId,
+      film_id:FILM_EVENTS.has(eventType) ? filmId : null,
       source,
     });
 
@@ -61,8 +62,17 @@ export async function GET(req: NextRequest) {
     if(!s?.admin) throw new ApiError(403,"Админы эрх шаардлагатай.");
     const daysRaw = Number(new URL(req.url).searchParams.get("days") || 30);
     const days = Number.isSafeInteger(daysRaw) ? Math.min(365,Math.max(1,daysRaw)) : 30;
-    const [row] = await db("rpc/kino_analytics_summary","POST",{p_days:days});
-    return json(row?.summary || {days,today:{},period:{},topFilms:[]});
+    const [mainRows,copyRows] = await Promise.all([
+      db("rpc/kino_analytics_summary","POST",{p_days:days}),
+      db("rpc/kino_analytics_copy_summary","POST",{p_days:days}),
+    ]);
+    const base=mainRows?.[0]?.summary || {days,today:{},period:{},topFilms:[]};
+    const copies=copyRows?.[0]?.summary || {};
+    return json({
+      ...base,
+      today:{...(base.today||{}),...(copies.today||{})},
+      period:{...(base.period||{}),...(copies.period||{})},
+    });
   } catch(error) {
     return fail(error);
   }
