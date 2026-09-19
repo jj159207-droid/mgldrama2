@@ -132,7 +132,7 @@ async function handler(req:NextRequest) {
       if(target?.plan==='wallet_topup'){
         if(b.status==='revoked')throw new ApiError(400,'Цэнэглэгдсэн үлдэгдлийг эрх хасах товчоор буцаахгүй. Wallet гүйлгээг шалгана уу.');
         if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
-        if(target.status!=='pending')throw new ApiError(409,'Цэнэглэлтийн төлөв өөрчлөгдсөн байна.');
+        if(!['pending','expired'].includes(String(target.status)))throw new ApiError(409,'Цэнэглэлтийн төлөв өөрчлөгдсөн байна.');
         const actualAmount=b.confirmed_amount===undefined?Number(target.amount):Number(b.confirmed_amount);
         if(!Number.isSafeInteger(actualAmount)||actualAmount<5000||actualAmount>200000)throw new ApiError(400,'Бодитоор орсон дүн 5,000₮-өөс 200,000₮ хүртэл байна.');
         await db('rpc/kino_wallet_confirm_topup','POST',{
