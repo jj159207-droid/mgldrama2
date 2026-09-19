@@ -29,9 +29,9 @@ import { filmNavigationUrl, prepareFilmHistory, readFilmDestination, type FilmDe
 // ══════════════════════════════════════════════
 const DEFAULT_BANK_ACCOUNT = {
   bank: "Хаан банк",
-  number: "5403972086",
+  number: "5251258979",
   name: "Т.Жаргалбаяр",
-  iban: "",
+  iban: "MN030005005251258979",
 };
 const DEFAULT_bankAccount = DEFAULT_BANK_ACCOUNT;
 
