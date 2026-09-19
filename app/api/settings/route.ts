@@ -5,7 +5,7 @@ export const runtime='nodejs';
 
 function normalizeIban(value:unknown) {
  const compact=typeof value==='string'?value.toUpperCase().replace(/\s+/g,''):'';
- return /^MN\d{18}$/.test(compact)?compact:'';
+ return /^MN\d{1,8}$/.test(compact)?compact:'';
 }
 
 const DEFAULTS={
@@ -13,7 +13,7 @@ const DEFAULTS={
  bankName:String(process.env.BANK_NAME||'Хаан банк').trim(),
  bankAccount:String(process.env.BANK_ACCOUNT||'5251258979').trim(),
  accountName:String(process.env.BANK_ACCOUNT_NAME||'Т.Жаргалбаяр').trim(),
- bankIban:normalizeIban(process.env.BANK_IBAN||process.env.BANK_IBN||'MN030005005251258979'),
+ bankIban:normalizeIban(process.env.BANK_IBAN||process.env.BANK_IBN||'MN03000500'),
 };
 const clean=(value:unknown,max:number)=>typeof value==='string'?value.trim().replace(/\s+/g,' ').slice(0,max):'';
 const validAccount=(value:string)=>/^[A-Za-z0-9 -]{6,40}$/.test(value);
@@ -61,7 +61,7 @@ export async function PUT(req:NextRequest) {
   if(bankName.length<2)throw new ApiError(400,'Банкны нэрийг зөв оруулна уу.');
   if(!validAccount(bankAccount))throw new ApiError(400,'Дансны дугаар 6–40 тэмдэгт, зөвхөн үсэг/тоо байх ёстой.');
   if(accountName.length<2)throw new ApiError(400,'Данс эзэмшигчийн нэрийг зөв оруулна уу.');
-  if(hasIban&&!bankIban)throw new ApiError(400,'Монгол IBAN нь MN + 18 цифр, нийт 20 тэмдэгт байна.');
+  if(hasIban&&!bankIban)throw new ApiError(400,'IBAN нь MN-ээр эхэлсэн, нийт 10 хүртэл тэмдэгт байна. 10-аас богино байж болно.');
   // Preserve the historical messenger-only payload on a brand-new install, while
   // merging it with stored payment details once richer settings exist.
   const saved=legacyMessengerOnly&&!found?{messengerUrl}:{messengerUrl,bankName,bankAccount,accountName,bankIban};
