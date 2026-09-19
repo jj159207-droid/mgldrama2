@@ -216,7 +216,7 @@ export default function CinematicHeroMount() {
   }, [target, films.length]);
 
   const openPlans = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"erotic",duration:"1month"}}));
+    window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"erotic",duration:"3day"}}));
   }, []);
 
   const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} walletBalance={walletBalance} /> : null, [films, openPlans, walletBalance]);
