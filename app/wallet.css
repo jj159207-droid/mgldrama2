@@ -454,3 +454,286 @@
 .wallet-topup-checkout .wallet-topup-simple-message + .checkout-summary {
   display: none !important;
 }
+
+
+/* Single-movie top-up: dedicated mobile full-screen payment page. */
+.wallet-topup-checkout.wallet-single-fullscreen {
+  width: 100%;
+}
+
+.wallet-single-topbar {
+  display: grid;
+  grid-template-columns: 42px 1fr 42px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.wallet-single-topbar > strong {
+  color: #f8fafc;
+  font-size: 17px;
+  font-weight: 950;
+  text-align: center;
+}
+
+.wallet-single-back {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 12px;
+  background: rgba(255,255,255,.045);
+  color: #f8fafc;
+  font-size: 23px;
+  cursor: pointer;
+}
+
+.wallet-single-instructions {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 14px;
+  padding: 15px 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+  background: rgba(255,255,255,.025);
+}
+
+.wallet-single-instructions p {
+  margin: 0;
+  color: #e5e7eb;
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.48;
+}
+
+.wallet-single-instructions strong {
+  color: #fbbf24;
+  font-weight: 950;
+}
+
+.wallet-single-bank {
+  display: grid;
+  gap: 1px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 14px;
+  background: rgba(255,255,255,.07);
+}
+
+.wallet-single-row {
+  min-height: 48px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--surface, #111923);
+}
+
+.wallet-single-row span {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.wallet-single-row strong {
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 900;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.wallet-single-copy {
+  width: 100%;
+  min-height: 68px;
+  margin: 0 0 10px;
+  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(251,191,36,.48);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(251,191,36,.08), rgba(255,255,255,.02)),
+    var(--surface, #111923);
+  color: #f8fafc;
+  cursor: pointer;
+  text-align: left;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 8px 18px rgba(0,0,0,.22);
+}
+
+.wallet-single-copy > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wallet-single-copy small {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.wallet-single-copy strong {
+  color: #fbbf24;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(20px, 6vw, 27px);
+  font-weight: 950;
+  letter-spacing: .035em;
+  line-height: 1.15;
+}
+
+.wallet-single-copy b {
+  flex: 0 0 auto;
+  min-width: 76px;
+  padding: 8px 9px;
+  border-radius: 9px;
+  background: rgba(251,191,36,.12);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.wallet-single-copy:active {
+  transform: translateY(2px);
+}
+
+.wallet-single-ref {
+  border-color: #64748b;
+  background: rgba(100,116,139,.08);
+  animation: wallet-single-ref-pulse 1.2s ease-in-out infinite;
+}
+
+.wallet-single-ref strong,
+.wallet-single-ref b {
+  color: #cbd5e1;
+}
+
+.wallet-single-ref b {
+  background: rgba(148,163,184,.10);
+}
+
+.wallet-single-ref:disabled {
+  opacity: .62;
+  cursor: wait;
+}
+
+.wallet-single-balance {
+  margin: 12px 0;
+  padding: 11px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 12px;
+  background: rgba(22,101,52,.12);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.wallet-single-balance strong {
+  color: #4ade80;
+  font-size: 18px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.wallet-single-wait {
+  margin-top: 12px;
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 13px;
+  background: rgba(255,255,255,.025);
+}
+
+.wallet-single-wait strong {
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wallet-single-wait p {
+  margin: 3px 0 0;
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.wallet-single-error {
+  margin-bottom: 12px !important;
+}
+
+@keyframes wallet-single-ref-pulse {
+  0%,100% {
+    border-color: #64748b;
+    box-shadow: 0 0 0 2px rgba(100,116,139,.06);
+    filter: brightness(.96);
+  }
+  50% {
+    border-color: #cbd5e1;
+    box-shadow: 0 0 0 4px rgba(203,213,225,.10), 0 0 20px rgba(148,163,184,.18);
+    filter: brightness(1.12);
+  }
+}
+
+@media (max-width: 760px) {
+  .film-reference-page .detail-payment > .checkout-inline.wallet-single-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 600 !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      14px
+      max(18px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(251,191,36,.08), transparent 32%),
+      #070b11 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-sizing: border-box;
+  }
+
+  .wallet-single-topbar {
+    position: sticky;
+    top: calc(-1 * max(12px, env(safe-area-inset-top)));
+    z-index: 4;
+    margin-left: -14px;
+    margin-right: -14px;
+    padding: max(12px, env(safe-area-inset-top)) 14px 10px;
+    background: rgba(7,11,17,.94);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+
+  .wallet-single-instructions p {
+    font-size: 13px;
+  }
+
+  .wallet-single-copy strong {
+    font-size: clamp(21px, 7vw, 28px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-single-ref {
+    animation: none !important;
+  }
+}
