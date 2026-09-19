@@ -24,9 +24,6 @@ export async function POST(req:NextRequest) {
     originCheck(req);
     const s=await session(req);
     if(!s?.userId||s.admin)throw new ApiError(403,'Хэрэглэгчийн эрх шаардлагатай.');
-    const [owner]=await db(`users?id=eq.${s.userId}&select=is_guest&limit=1`);
-    if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
-    if(owner.is_guest===true)throw new ApiError(403,'Төлбөр хийхийн өмнө утасны дугаар, PIN-ээр бүртгүүлнэ үү. Таны одоогийн эрх, үлдэгдэл шинэ данс руу автоматаар шилжинэ.','REGISTER_FOR_PAYMENT');
     const b=await bodyJson(req,4096);
     let result:any;
     if(b.action==='purchase'){
