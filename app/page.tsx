@@ -2168,7 +2168,13 @@ export default function Home() {
               setPage("film");
             }
           }catch(walletError){
-            setWatchError(walletError instanceof Error?walletError.message:"Үлдэгдлийг шалгаж чадсангүй.");
+            if(walletError instanceof RequestError && walletError.code==="REGISTER_FOR_PAYMENT"){
+              pendingActionRef.current={kind:"watch",film};
+              setWatchError("");
+              setShowLoginModal(true);
+            }else{
+              setWatchError(walletError instanceof Error?walletError.message:"Үлдэгдлийг шалгаж чадсангүй.");
+            }
           }
         } else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
       }
@@ -2228,6 +2234,11 @@ export default function Home() {
       if(!viewer && !adminAuth)viewer=await ensureDeviceUser();
       if(adminAuth && !viewer){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
       if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+      if(viewer.guest){
+        pendingActionRef.current={kind:"plan",plan,film:sourceFilm};
+        setShowLoginModal(true);
+        return;
+      }
       if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup")return;
       if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
       const viewerId=Number(viewer.id);
