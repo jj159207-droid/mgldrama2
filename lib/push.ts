@@ -32,7 +32,7 @@ function vapidToken(endpoint:string,cfg:PushConfig) {
   const header=encodeJson({typ:'JWT',alg:'ES256'});
   const payload=encodeJson({aud:new URL(endpoint).origin,exp:now+6*3600,sub:cfg.subject});
   const unsigned=`${header}.${payload}`;
-  const key=createPrivateKey({key:cfg.private_jwk as JsonWebKey,format:'jwk'});
+  const key=createPrivateKey({key:cfg.private_jwk as any,format:'jwk'});
   const signature=cryptoSign('sha256',Buffer.from(unsigned),{key,dsaEncoding:'ieee-p1363'}).toString('base64url');
   return `${unsigned}.${signature}`;
 }
