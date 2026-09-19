@@ -324,28 +324,35 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
       <section className="wallet-single-instructions" aria-label="Киноны данс цэнэглэх заавар">
-        <p>Та энэ данс руу <strong>5,000₮-өөс дээш</strong> гүйлгээ хийнэ.</p>
-        <p>Гүйлгээний утга дээр доорх <strong>6 оронтой кодыг</strong> бичнэ.</p>
-        <p>Энэ 6 оронтой код бол таны сайтын хаяг юм.</p>
-        <p>Та 1 киног <strong>2,000₮-өөр</strong> үзнэ.</p>
-        <p>Таны цэнэглэсэн үлдэгдэл хадгалагдаад байна.</p>
+        <p>Та энэ данс руу</p>
+      </section>
+
+      <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
+        <span><small>Данс</small><strong>{bankAccount.number}</strong></span>
+        <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
+      </button>
+
+      <section className="wallet-single-instructions" aria-label="Цэнэглэх нөхцөл">
+        <p><strong>5,000₮-өөс дээш</strong> гүйлгээ хийж дансаа цэнэглэнэ.</p>
+      </section>
+
+      <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
+        <span><small>Гүйлгээний утга</small><strong>{orderReady ? refCode : "…"}</strong></span>
+        <b>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</b>
+      </button>
+
+      <section className="wallet-single-instructions" aria-label="Гүйлгээний утгын заавар">
+        <p>Гүйлгээний утгыг заавал энэ <strong>6 тоог</strong> бичнэ.</p>
+        <p>Энэ нь таны сайтын нэр.</p>
+        <p>1 киног <strong>2,000₮-өөр</strong> үзнэ.</p>
+        <p>Таны цэнэглэсэн үлдэгдэл хадгалагдана.</p>
       </section>
 
       <section className="wallet-single-bank" aria-label="Банкны мэдээлэл">
         <div className="wallet-single-row"><span>Банк</span><strong>{bankAccount.bank}</strong></div>
+        <div className="wallet-single-row"><span>Нэр</span><strong>{bankAccount.name}</strong></div>
         <div className="wallet-single-row"><span>IBN</span><strong>{bankAccount.ibn}</strong></div>
-        <div className="wallet-single-row"><span>Хүлээн авагч</span><strong>{bankAccount.name}</strong></div>
       </section>
-
-      <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
-        <span><small>Дансны дугаар</small><strong>{bankAccount.number}</strong></span>
-        <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
-      </button>
-
-      <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
-        <span><small>Гүйлгээний утга · 6 оронтой код</small><strong>{orderReady ? refCode : "…"}</strong></span>
-        <b>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</b>
-      </button>
 
       <div className="wallet-single-balance">
         Таны кино сайтын дансны одоогийн үлдэгдэл
