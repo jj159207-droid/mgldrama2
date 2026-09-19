@@ -342,7 +342,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
-        <span><small>Гүйлгээний утга</small><strong>{orderReady ? refCode : "…"}</strong></span>
+        <span><small className="wallet-transfer-label-blink">Гүйлгээний утга</small><strong>{orderReady ? refCode : "…"}</strong></span>
         <b>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</b>
       </button>
 
