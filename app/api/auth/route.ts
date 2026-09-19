@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ApiError,bodyJson,db,equalSecret,fail,issueSession,json,originCheck,pinHash,pinMatches,publicUser,rateLimit,revokeSession,session,setSessionCookie } from '@/lib/server';
+import { ApiError,bodyJson,clearDeviceCookie,db,equalSecret,fail,issueSession,json,originCheck,pinHash,pinMatches,publicUser,rateLimit,revokeSession,session,setSessionCookie } from '@/lib/server';
 export const runtime='nodejs';
 export async function GET(req:NextRequest) {
   try {const s=await session(req);if(!s)return json({user:null,admin:false});
@@ -10,7 +10,14 @@ export async function GET(req:NextRequest) {
 export async function POST(req:NextRequest) {
  try {
   originCheck(req);const b=await bodyJson(req,16000);
-  if(b.action==='logout'){await revokeSession(req);return setSessionCookie(json({ok:true}),'',0);}
+  if(b.action==='logout'){
+    const current=await session(req);
+    await revokeSession(req);
+    const res=setSessionCookie(json({ok:true}),'',0);
+    // Explicit user/guest logout should forget this device. Admin logout keeps the
+    // recovery token so returning to the public site restores the previous user.
+    return current?.userId ? clearDeviceCookie(res) : res;
+  }
   if(b.action==='admin') {
     const key=process.env.ADMIN_PASSWORD;
     if(!key || key.length<16)throw new ApiError(503,'ADMIN_PASSWORD тохиргоонд 16-аас урт шинэ нууц үг тохируулна уу.');
