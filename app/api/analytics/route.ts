@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { NextRequest } from "next/server";
+import { isRow } from "@/lib/domain";
 import { ApiError, bodyJson, db, fail, json, originCheck, session } from "@/lib/server";
 
 export const runtime = "nodejs";
@@ -66,12 +67,18 @@ export async function GET(req: NextRequest) {
       db("rpc/kino_analytics_summary","POST",{p_days:days}),
       db("rpc/kino_analytics_copy_summary","POST",{p_days:days}),
     ]);
-    const base=mainRows?.[0]?.summary || {days,today:{},period:{},topFilms:[]};
-    const copies=copyRows?.[0]?.summary || {};
+    const baseRaw=mainRows?.[0]?.summary;
+    const copiesRaw=copyRows?.[0]?.summary;
+    const base=isRow(baseRaw)?baseRaw:{days,today:{},period:{},topFilms:[]};
+    const copies=isRow(copiesRaw)?copiesRaw:{};
+    const baseToday=isRow(base.today)?base.today:{};
+    const basePeriod=isRow(base.period)?base.period:{};
+    const copyToday=isRow(copies.today)?copies.today:{};
+    const copyPeriod=isRow(copies.period)?copies.period:{};
     return json({
       ...base,
-      today:{...(base.today||{}),...(copies.today||{})},
-      period:{...(base.period||{}),...(copies.period||{})},
+      today:{...baseToday,...copyToday},
+      period:{...basePeriod,...copyPeriod},
     });
   } catch(error) {
     return fail(error);
