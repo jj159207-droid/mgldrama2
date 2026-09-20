@@ -91,7 +91,7 @@ const pop=async(url,state={page:'home'})=>act(async()=>{window.history.replaceSt
 const movie=()=>document.querySelector('.full-player video')?.getAttribute('src');
 const title=()=>document.querySelector('#selected-film-title')?.textContent;
 
-test('TAZA hides every movie until the 12500 MNT 48-hour package is confirmed',async()=>{
+test('TAZA hides every movie until the 12500 MNT 72-hour package is confirmed',async()=>{
  entryAllowed=false;walletBalance=0;
  await render('/?film=7&fbclid=tracking');
  assert.equal(document.querySelector('#selected-film-title'),null);
@@ -103,6 +103,7 @@ test('TAZA hides every movie until the 12500 MNT 48-hour package is confirmed',a
  assert.doesNotMatch(pricing.textContent,/1 кино - 2,000₮/);
  assert.doesNotMatch(pricing.textContent,/41 кино/);
  assert.doesNotMatch(pricing.textContent,/48 цаг/);
+ assert.doesNotMatch(document.body.textContent,/Таны кино сайтын дансны одоогийн үлдэгдэл/);
  assert.equal(orders.length,1);assert.equal(orders[0].plan,'all_48h');assert.equal(orders[0].amount,12500);
  orders[0].status='confirmed';entryAllowed=true;entitled=true;
  await act(async()=>window.dispatchEvent(new dom.window.Event('focus')));
