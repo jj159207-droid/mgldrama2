@@ -338,7 +338,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
       <section className="wallet-single-instructions" aria-label="Киноны данс цэнэглэх заавар">
-        <p>Та энэ данс руу мөнгө шилжүүлснээр кино сайт нээгдэж, кино үзэх эрх автоматаар үүснэ.</p>
+        <p>Та энэ данс руу мөнгө шилжүүлнэ үү.</p>
       </section>
 
       <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
