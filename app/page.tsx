@@ -652,7 +652,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
   const dialogRef = useRef<HTMLDialogElement>(null);
   const categories = [{key:"gadaad",label:"Гадаад"},{key:"hyatad",label:"Хятад"},{key:"oros",label:"Орос"},{key:"erotic",label:"Эротик"},{key:"all",label:"Бүх ангилал"}];
   const countFor = (key: string) => films.filter(f => key === "all" ? ["Гадаад","Хятад","Орос","Эротик"].includes(decodeCat(f.badge)) : decodeCat(f.badge) === categories.find(c => c.key === key)?.label).length;
-  const plan = category === "all" ? "all_1month" : `${category}_${duration}`;
+  const plan = category === "all" ? "all_48h" : `${category}_${duration}`;
   const price = PLAN_PRICES[plan];
   const selectedCount = countFor(category);
   const ensurePlanHistory = useCallback(() => {
@@ -663,10 +663,10 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
   useEffect(() => {
     const openPreset=(event:Event)=>{
       const detail=(event as CustomEvent<{category?:string;duration?:string}>).detail || {};
-      if(detail.category==="erotic"){
+      if(detail.category==="erotic" || detail.category==="all"){
         ensurePlanHistory();
-        setCategory("erotic");
-        setDuration(detail.duration==="1month"?"1month":"3day");
+        setCategory(detail.category);
+        setDuration(detail.category==="all"?"72h":detail.duration==="1month"?"1month":"3day");
         setOpen(true);
       }
     };
@@ -694,14 +694,14 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
       <div className="dialog-heading"><div><span className="eyebrow">ҮЗЭХ ЭРХ</span><h2 id="package-dialog-title">Багцаа сонгоорой</h2></div><button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button></div>
       <fieldset className="package-fieldset"><legend>1. Ямар кино үзэх вэ?</legend><div className="package-choices">
         {categories.map(c => <label key={c.key} className={`package-choice ${category === c.key ? "selected" : ""}`}>
-          <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);if(c.key === "all")setDuration("1month");}} />
+          <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);if(c.key === "all")setDuration("72h");}} />
           <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">21+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
         </label>)}
       </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, орос, эротик — дөрвөн ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
       <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
-        {(category === "all" ? ["1month"] : ["3day","1month"]).map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
+        {(category === "all" ? ["72h"] : ["3day","1month"]).map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
           <input type="radio" name="package-duration" value={d} checked={duration === d} onChange={() => setDuration(d)} />
-          <span><strong>{d === "3day" ? "3 хоног" : "1 сар"}</strong><span>{PLAN_PRICES[category === "all" ? "all_1month" : `${category}_${d}`].toLocaleString()}₮</span></span>
+          <span><strong>{d === "72h" ? "72 цаг" : d === "3day" ? "3 хоног" : "1 сар"}</strong><span>{PLAN_PRICES[category === "all" ? "all_48h" : `${category}_${d}`].toLocaleString()}₮</span></span>
         </label>)}
       </div><p className="package-hint">Төлбөр баталгаажсан үеэс үзэх хугацаа эхэлнэ.</p></fieldset>
       <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>Сонгосон багцын кинонууд</span></span><strong>{price.toLocaleString()}₮</strong></div>
@@ -757,7 +757,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Сайтын бүх кино 7,900₮</strong><span>72 цаг үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
