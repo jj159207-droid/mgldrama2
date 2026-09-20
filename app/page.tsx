@@ -2150,17 +2150,29 @@ export default function Home() {
       if(request===filmLoadRequest.current && !controller.signal.aborted)setLoading(false);
     }
   }, []);
-  useEffect(() => { void loadFilms(); return () => filmLoadController.current?.abort(); }, [loadFilms]);
   useEffect(() => {
-    if(!mounted || !authReady || loading || loadError || adminAuth || visitTracked.current)return;
+    if(!siteResolved)return;
+    const mayLoad=adminAuth || siteId!=="taza" || entryAllowed;
+    if(!mayLoad){
+      filmLoadController.current?.abort();
+      setFilms([]);setLoading(false);setLoadError("");
+      return;
+    }
+    void loadFilms();
+    return () => filmLoadController.current?.abort();
+  },[loadFilms,siteResolved,siteId,entryAllowed,adminAuth]);
+  useEffect(() => {
+    if(!mounted || !authReady || !entryReady || (siteId==="taza"&&!entryAllowed) || loading || loadError || adminAuth || visitTracked.current)return;
     visitTracked.current=true;
     trackSiteEvent("visit");
-  },[mounted,authReady,loading,loadError,adminAuth]);
+  },[mounted,authReady,entryReady,entryAllowed,siteId,loading,loadError,adminAuth]);
   useEffect(() => {
-    const retry = () => { if (loadError) void loadFilms(); };
+    const retry = () => {
+      if(loadError && (adminAuth || siteId!=="taza" || entryAllowed))void loadFilms();
+    };
     window.addEventListener("online", retry);
     return () => window.removeEventListener("online", retry);
-  }, [loadError, loadFilms]);
+  }, [loadError, loadFilms, adminAuth, siteId, entryAllowed]);
 
   // ── Навигацийн helper ──
   const navigateTo = (newPage: string) => {
@@ -2199,6 +2211,7 @@ export default function Home() {
   // Visiting a movie link loads public details only. Playback always needs a click.
   useEffect(() => {
     if(filmTarget.kind==="none")return;
+    if(siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed){setFilmOpening(false);return;}
     setPage("film");setFilmError("");setFilmOpening(true);
     if(filmTarget.kind==="invalid"){
       setSelectedFilm(null);setFilmError("Киноны холбоос буруу байна. Бүх кино хэсгээс киногоо сонгоно уу.");setFilmOpening(false);return;
@@ -2220,7 +2233,7 @@ export default function Home() {
     };
     void open();
     return()=>controller.abort();
-  },[filmTarget]);
+  },[filmTarget,siteResolved,siteId,adminAuth,entryAllowed]);
 
   const playFilm = async (f: FilmDetails, stillActive = () => true) => {
     const intent=++playRequest.current;
