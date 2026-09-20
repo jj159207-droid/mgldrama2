@@ -44,7 +44,7 @@ function analyticsSource(): "facebook" | "direct" | "other" {
   return ref ? "other" : "direct";
 }
 
-function trackSiteEvent(event:"visit"|"film_open"|"watch_click"|"payment_open"|"play_start"|"bank_account_copy"|"ref_code_copy", filmId?:number) {
+function trackSiteEvent(event:"visit"|"film_open"|"watch_click"|"payment_open"|"play_start"|"bank_account_copy"|"ref_code_copy"|"paywall_view"|"entry_payment_success", filmId?:number) {
   if (typeof window === "undefined") return;
   void requestJson("/api/analytics",{
     method:"POST",
@@ -198,6 +198,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
     confirmationSeen.current = true;
     setPaymentError("");
     setAutoStatus("paid");
+    if(isEntryGate)trackSiteEvent("entry_payment_success");
     try {
       await paidCallback.current(stillActive);
       if (stillActive()) completed.current = true;
@@ -1718,7 +1719,7 @@ function AdminAnalyticsTab() {
   useEffect(()=>{void load();},[load]);
 
   const reset=async()=>{
-    if(!window.confirm("Статистикийг одооноос 0-оос шинээр эхлүүлэх үү? Хуучин raw түүх устахгүй."))return;
+    if(!window.confirm("Статистикийг одооноос шинээр эхлүүлэх үү? Хуучин түүх устахгүй."))return;
     setResetting(true);
     try{await requestJson("/api/analytics",{method:"POST",body:JSON.stringify({action:"reset"})});await load();}
     finally{setResetting(false);}
@@ -1728,82 +1729,109 @@ function AdminAnalyticsTab() {
   const period=data?.period||{};
   const topFilms=Array.isArray(data?.topFilms)?data.topFilms:[];
   const daily=Array.isArray(data?.daily)?data.daily.slice(-7):[];
-  const stat=(label:string,value:any,note?:string,suffix="")=><div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"12px 10px"}}>
+
+  const stat=(label:string,value:any,note?:string,suffix="")=><div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:12,padding:"13px 11px"}}>
     <div style={{fontSize:10,color:C.muted,lineHeight:1.35}}>{label}</div>
-    <div style={{fontSize:21,fontWeight:900,color:C.gold,marginTop:3}}>{Number(value||0).toLocaleString()}{suffix}</div>
-    {note&&<div style={{fontSize:9,color:C.muted,marginTop:2,lineHeight:1.35}}>{note}</div>}
+    <div style={{fontSize:22,fontWeight:900,color:C.gold,marginTop:4}}>{Number(value||0).toLocaleString()}{suffix}</div>
+    {note&&<div style={{fontSize:9,color:C.muted,marginTop:3,lineHeight:1.4}}>{note}</div>}
   </div>;
+
+  const funnel=[
+    {label:"Төлбөрийн хуудас үзсэн",value:Number(period.uniquePaywallVisitors||0),icon:"👀"},
+    {label:"Данс хуулсан",value:Number(period.uniqueBankCopyVisitors||0),icon:"🏦"},
+    {label:"Код хуулсан",value:Number(period.uniqueRefCopyVisitors||0),icon:"🔑"},
+    {label:"Төлбөр баталгаажсан",value:Number(period.uniqueEntryPayers||0),icon:"✅"},
+    {label:"Кино сан нээгдсэн",value:Number(period.uniqueCatalogVisitors||0),icon:"🎬"},
+  ];
 
   return <div style={{padding:"0 14px"}}>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8,flexWrap:"wrap"}}>
-      <div style={{fontSize:15,fontWeight:800,color:C.txt}}>📊 Сайтын статистик</div>
+      <div style={{fontSize:15,fontWeight:800,color:C.txt}}>📊 Борлуулалтын статистик</div>
       <button type="button" onClick={load} disabled={loading||resetting} style={{marginLeft:"auto",background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:8,padding:"7px 10px",color:C.muted,fontSize:12}}>{loading?"…":"🔄 Шинэчлэх"}</button>
-      <button type="button" onClick={()=>void reset()} disabled={loading||resetting} style={{background:"#301416",border:"1px solid #7f1d1d",borderRadius:8,padding:"7px 10px",color:"#fecaca",fontSize:12,fontWeight:750}}>{resetting?"Эхлүүлж байна…":"↺ 0-оос шинээр эхлүүлэх"}</button>
+      <button type="button" onClick={()=>void reset()} disabled={loading||resetting} style={{background:"#301416",border:"1px solid #7f1d1d",borderRadius:8,padding:"7px 10px",color:"#fecaca",fontSize:12,fontWeight:750}}>{resetting?"Эхлүүлж байна…":"↺ Шинээр эхлүүлэх"}</button>
+    </div>
+    <div style={{fontSize:10,color:C.muted,lineHeight:1.5,marginBottom:12}}>
+      Төлбөрийн хуудас → данс/код хуулах → төлбөр баталгаажих → кино сан нээгдэх дарааллыг харуулна.
     </div>
     {data?.resetAt&&<div style={{fontSize:10,color:C.muted,marginBottom:14}}>Статистикийн эхлэл: {new Date(data.resetAt).toLocaleString("mn-MN",{timeZone:"Asia/Ulaanbaatar"})}</div>}
 
     <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Өнөөдөр</div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginBottom:16}}>
-      {stat("Давтагдашгүй browser",today.uniqueVisitors,"Cookie-аар давхардлыг хасна")}
-      {stat("Шинэ browser #",today.newBrowsers)}
-      {stat("Сайт бүрэн ачаалсан",today.visits,"Session + киноны жагсаалт бэлэн болсон оролт")}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginBottom:18}}>
+      {stat("Төлбөрийн хуудас үзсэн",today.uniquePaywallVisitors,`Нийт ${Number(today.paywallViews||0)} нээлт`)}
+      {stat("Facebook / Messenger-ээс",today.uniqueFacebookPaywallVisitors,`Нийт ${Number(today.facebookPaywallViews||0)} нээлт`)}
+      {stat("Банкны данс хуулсан",today.uniqueBankCopyVisitors,`Нийт ${Number(today.bankAccountCopies||0)} удаа`)}
+      {stat("Гүйлгээний код хуулсан",today.uniqueRefCopyVisitors,`Нийт ${Number(today.refCodeCopies||0)} удаа`)}
+      {stat("Төлбөр баталгаажсан",today.uniqueEntryPayers,`Нийт ${Number(today.entryPayments||0)} төлбөр`)}
+      {stat("Төлбөрийн хөрвөлт",today.entryConversionPct,"Төлсөн browser ÷ төлбөрийн хуудас үзсэн browser","%")}
+      {stat("Өнөөдрийн орлого",today.topupAmount,`${Number(today.topupCount||0)} амжилттай цэнэглэлт`,"₮")}
+      {stat("Кино сан нээгдсэн",today.uniqueCatalogVisitors,`Нийт ${Number(today.catalogOpens||0)} нээлт`)}
       {stat("Кино нээсэн",today.filmOpens)}
-      {stat("Киног бүтэн үзэх дарсан",today.watchClicks,`${Number(today.uniqueWatchers||0)} өөр browser`)}
-      {stat("Төлбөрийн хэсэг рүү орсон",today.paymentOpens,`${Number(today.uniquePaymentVisitors||0)} өөр browser`)}
-      {stat("Банкны данс хуулсан",today.bankAccountCopies,`${Number(today.uniqueBankCopyVisitors||0)} өөр browser`)}
-      {stat("Гүйлгээний код хуулсан",today.refCodeCopies,`${Number(today.uniqueRefCopyVisitors||0)} өөр browser`)}
-      {stat("Кино тоглож эхэлсэн",today.playStarts,`${Number(today.uniquePlayers||0)} өөр browser`)}
-      {stat("Facebook / Messenger-ээс",today.facebookVisits)}
-      {stat("Банкны цэнэглэлт",today.topupAmount,`${Number(today.topupCount||0)} амжилттай цэнэглэлт`,"₮")}
+      {stat("Кино тоглосон",today.uniquePlayers,`Нийт ${Number(today.playStarts||0)} тоглолт`)}
     </div>
 
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-      <div style={{fontSize:12,fontWeight:800,color:C.txt}}>Хугацааны нийлбэр</div>
+      <div style={{fontSize:12,fontWeight:800,color:C.txt}}>Төлбөрийн зам</div>
       <select value={days} onChange={e=>setDays(Number(e.target.value))} style={{...inputSt,marginLeft:"auto",width:"auto",padding:"7px 10px",fontSize:12}}>
         <option value={7}>7 хоног</option><option value={30}>30 хоног</option><option value={90}>90 хоног</option><option value={365}>365 хоног</option>
       </select>
     </div>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:7,marginBottom:18}}>
-      {stat("Давтагдашгүй browser",period.uniqueVisitors)}
-      {stat("Шинээр үүссэн browser #",period.newBrowsers)}
-      {stat("Мөнгө хийсэн хэрэглэгч",period.payingUsers)}
-      {stat("Идэвхтэй эрхтэй",period.activeRightsUsers)}
-      {stat("Банкны цэнэглэлт",period.topupAmount,`${Number(period.topupCount||0)} удаа`,"₮")}
-      {stat("Дундаж цэнэглэлт",period.avgTopupAmount,undefined,"₮")}
-      {stat("Админы нэмсэн мөнгө",period.adminCreditAmount,"Борлуулалтын орлогод орохгүй","₮")}
-      {stat("Wallet-аас зарцуулсан",period.spentAmount,undefined,"₮")}
-      {stat("Нийт wallet үлдэгдэл",period.walletBalanceOutstanding,"Бүх хэрэглэгчийн одоогийн нийлбэр","₮")}
-      {stat("1 кино авсан",period.filmPurchases)}
-      {stat("Багц авсан",period.packagePurchases)}
-      {stat("Идэвхтэй pending",period.pendingTopups,"Хэрэглэгч+дүнгээр давхардлыг хассан")}
-      {stat("Push идэвхжүүлсэн",period.pushEnabledUsers)}
-      {stat("SMS автоматаар баталсан",period.autoSmsConfirmed)}
-      {stat("SMS алдаа",period.smsFailures)}
-      {stat("Төлбөрийн хэсэг рүү орсон",period.paymentOpens,`${Number(period.uniquePaymentVisitors||0)} өөр browser`)}
-      {stat("Банкны данс хуулсан",period.bankAccountCopies,`${Number(period.uniqueBankCopyVisitors||0)} өөр browser`)}
-      {stat("Гүйлгээний код хуулсан",period.refCodeCopies,`${Number(period.uniqueRefCopyVisitors||0)} өөр browser`)}
-      {stat("Unique browser → Үзэх",period.visitorToWatchPct,undefined,"%")}
-      {stat("Үзэх → Төлбөрийн хэсэг",period.watchToPaymentPct,undefined,"%")}
-      {stat("Төлбөрийн хэсэг → Тоглосон",period.paymentToPlayPct,undefined,"%")}
-      {stat("Unique Үзэх → Тоглосон",period.watchToPlayPct,undefined,"%")}
+
+    <div style={{display:"grid",gap:7,marginBottom:14}}>
+      {funnel.map((step,index)=><div key={step.label} style={{display:"grid",gridTemplateColumns:"34px minmax(0,1fr) auto",alignItems:"center",gap:9,background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:11,padding:"10px 11px"}}>
+        <div style={{fontSize:20,textAlign:"center"}}>{step.icon}</div>
+        <div><div style={{fontSize:12,fontWeight:750,color:C.txt}}>{index+1}. {step.label}</div>{index<3&&<div style={{fontSize:9,color:C.muted,marginTop:2}}>Давтагдсан browser-ийг нэг гэж тоолно</div>}</div>
+        <div style={{fontSize:20,fontWeight:900,color:index===3?C.green:C.gold}}>{step.value.toLocaleString()}</div>
+      </div>)}
     </div>
 
-    {daily.length>0&&<><div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Сүүлийн өдрүүд</div>
-      <div style={{display:"grid",gap:6,marginBottom:18}}>{daily.map((row:any)=><div key={row.day_date} style={{display:"grid",gridTemplateColumns:"1.2fr repeat(4,1fr)",gap:6,padding:"8px 9px",background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:8,fontSize:10,color:C.muted}}>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:8,marginBottom:18}}>
+      {stat("Төлбөрийн хөрвөлт",period.entryConversionPct,"Төлбөр хийсэн ÷ төлбөрийн хуудас үзсэн","%")}
+      {stat("Төлбөр хийгээгүй",period.unpaidVisitors,"Сонгосон хугацаанд төлбөр баталгаажаагүй browser")}
+      {stat("Нийт орлого",period.topupAmount,`${Number(period.topupCount||0)} цэнэглэлт`,"₮")}
+      {stat("Дундаж цэнэглэлт",period.avgTopupAmount,undefined,"₮")}
+      {stat("Кино сан нээгдсэн",period.uniqueCatalogVisitors,`Нийт ${Number(period.catalogOpens||0)} нээлт`)}
+      {stat("Кино тоглосон",period.uniquePlayers,`Нийт ${Number(period.playStarts||0)} тоглолт`)}
+      {stat("Хүлээгдэж буй төлбөр",period.pendingTopups,"Одоогоор pending төлөвтэй")}
+      {stat("Facebook / Messenger-ээс",period.uniqueFacebookPaywallVisitors,`Нийт ${Number(period.facebookPaywallViews||0)} нээлт`)}
+    </div>
+
+    {daily.length>0&&<><div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Сүүлийн 7 өдөр</div>
+      <div style={{display:"grid",gap:6,marginBottom:18}}>{daily.map((row:any)=><div key={row.day_date} style={{display:"grid",gridTemplateColumns:"1.15fr repeat(5,minmax(0,1fr))",gap:5,padding:"8px 8px",background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:8,fontSize:9,color:C.muted,alignItems:"center"}}>
         <strong style={{color:C.txt}}>{new Date(row.day_date+"T00:00:00").toLocaleDateString("mn-MN",{month:"2-digit",day:"2-digit"})}</strong>
-        <span>👤 {Number(row.visitors||0)}</span><span>▶ {Number(row.watch_clicks||0)}</span><span>🎬 {Number(row.play_starts||0)}</span><span>💰 {Number(row.topup_amount||0).toLocaleString()}₮</span>
+        <span>👀 {Number(row.paywall_visitors||0)}</span>
+        <span>✅ {Number(row.entry_payers||0)}</span>
+        <span>🎬 {Number(row.catalog_visitors||0)}</span>
+        <span>▶ {Number(row.players||0)}</span>
+        <span>💰 {Number(row.topup_amount||0).toLocaleString()}₮</span>
       </div>)}</div></>}
 
-    <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Хамгийн их сонирхсон / тоглосон кино</div>
+    <div style={{fontSize:12,fontWeight:800,color:C.txt,marginBottom:8}}>Хамгийн их үзсэн кино</div>
     {loading&&!data?<div style={{padding:30,textAlign:"center",color:C.muted}}>Ачааллаж байна…</div>
-      : topFilms.length===0?<div style={{padding:20,textAlign:"center",color:C.muted,background:C.card,borderRadius:10}}>Одоогоор статистик цуглараагүй байна.</div>
-      : <div style={{display:"flex",flexDirection:"column",gap:7}}>
+      : topFilms.length===0?<div style={{padding:20,textAlign:"center",color:C.muted,background:C.card,borderRadius:10}}>Одоогоор киноны статистик цуглараагүй байна.</div>
+      : <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:18}}>
         {topFilms.map((row:any,index:number)=><div key={row.film_id} style={{display:"grid",gridTemplateColumns:"28px minmax(0,1fr) auto",alignItems:"center",gap:8,background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"9px 10px"}}>
           <div style={{fontSize:12,fontWeight:900,color:C.gold}}>#{index+1}</div>
-          <div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:750,color:C.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.title}</div><div style={{fontSize:9,color:C.muted,marginTop:2}}>Нээсэн {Number(row.opens||0).toLocaleString()} · Үзэх {Number(row.watch_clicks||0).toLocaleString()}</div></div>
+          <div style={{minWidth:0}}><div style={{fontSize:12,fontWeight:750,color:C.txt,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{row.title}</div><div style={{fontSize:9,color:C.muted,marginTop:2}}>Нээсэн {Number(row.opens||0).toLocaleString()} · Бүтэн үзэх {Number(row.watch_clicks||0).toLocaleString()}</div></div>
           <div style={{textAlign:"right"}}><div style={{fontSize:15,fontWeight:900,color:C.green}}>{Number(row.play_starts||0).toLocaleString()}</div><div style={{fontSize:9,color:C.muted}}>Тоглосон</div></div>
         </div>)}
       </div>}
+
+    <details style={{background:C.card2,border:`0.5px solid ${C.bd}`,borderRadius:10,padding:"10px 12px",marginBottom:18}}>
+      <summary style={{cursor:"pointer",fontSize:12,fontWeight:800,color:C.txt}}>Техникийн дэлгэрэнгүй</summary>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:7,marginTop:10}}>
+        {stat("Шинэ browser #",period.newBrowsers)}
+        {stat("Мөнгө хийсэн хэрэглэгч",period.payingUsers)}
+        {stat("Идэвхтэй эрхтэй",period.activeRightsUsers)}
+        {stat("Push идэвхтэй",period.pushEnabledUsers)}
+        {stat("SMS автоматаар баталсан",period.autoSmsConfirmed)}
+        {stat("SMS алдаа",period.smsFailures)}
+        {stat("Админы нэмсэн мөнгө",period.adminCreditAmount,"Орлогод тооцохгүй","₮")}
+        {stat("Wallet-аас зарцуулсан",period.spentAmount,undefined,"₮")}
+        {stat("Нийт wallet үлдэгдэл",period.walletBalanceOutstanding,undefined,"₮")}
+        {stat("1 кино авсан",period.filmPurchases)}
+        {stat("Багц авсан",period.packagePurchases)}
+      </div>
+    </details>
   </div>;
 }
 
@@ -2018,6 +2046,7 @@ export default function Home() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const visitTracked = useRef(false);
+  const paywallTracked = useRef(false);
   useEffect(() => {
     setMounted(true);
     const previousScrollRestoration = window.history.scrollRestoration;
@@ -2187,6 +2216,12 @@ export default function Home() {
     void loadFilms();
     return () => filmLoadController.current?.abort();
   },[loadFilms,siteResolved,siteId,entryAllowed,adminAuth]);
+  useEffect(() => {
+    if(!mounted||!authReady||!entryReady||siteId!=="taza"||adminAuth||entryAllowed||!user?.id||paywallTracked.current)return;
+    paywallTracked.current=true;
+    trackSiteEvent("paywall_view");
+  },[mounted,authReady,entryReady,siteId,adminAuth,entryAllowed,user?.id]);
+
   useEffect(() => {
     if(!mounted || !authReady || !entryReady || (siteId==="taza"&&!entryAllowed) || loading || loadError || adminAuth || visitTracked.current)return;
     visitTracked.current=true;
