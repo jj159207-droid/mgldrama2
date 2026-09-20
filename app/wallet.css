@@ -739,7 +739,7 @@
 }
 
 
-/* TAZA entry payment: clear auto-open message + cinematic waiting animation. */
+/* TAZA entry payment: cinematic paused-player waiting state. */
 .wallet-entry-auto-open {
   text-align: center;
 }
@@ -764,7 +764,14 @@
   width: calc(100% + 24px);
   max-width: none;
   margin: 12px -12px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
   display: block;
+  cursor: pointer;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .wallet-video-screen {
@@ -774,70 +781,139 @@
   width: 100%;
   height: auto;
   aspect-ratio: 16 / 9;
-  min-height: 150px;
+  min-height: 170px;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 14px;
   background:
-    radial-gradient(circle at 50% 50%, rgba(74,222,128,.14), transparent 42%),
-    linear-gradient(135deg, rgba(15,23,42,.98), rgba(2,6,23,.98));
-  box-shadow: inset 0 0 28px rgba(74,222,128,.05), 0 10px 28px rgba(0,0,0,.22);
+    linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.52)),
+    url('/cinema-cover.webp') center 44% / cover no-repeat,
+    #020617;
+  box-shadow:
+    inset 0 -54px 70px rgba(0,0,0,.55),
+    inset 0 0 35px rgba(0,0,0,.22),
+    0 14px 32px rgba(0,0,0,.32);
+}
+
+.wallet-video-cinematic {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(90deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.07) 48%,rgba(255,255,255,0) 58%),
+    radial-gradient(circle at 50% 48%,rgba(255,255,255,.04),transparent 34%);
+  transform: translateX(-120%);
+  animation: wallet-cinema-light 3.8s ease-in-out infinite;
 }
 
 .wallet-video-play {
   position: relative;
-  z-index: 3;
-  width: clamp(54px, 15vw, 76px);
-  height: clamp(54px, 15vw, 76px);
+  z-index: 4;
+  width: clamp(62px, 17vw, 86px);
+  height: clamp(62px, 17vw, 86px);
   border-radius: 50%;
-  background: rgba(74,222,128,.16);
-  border: 1px solid rgba(74,222,128,.70);
-  box-shadow: 0 0 0 0 rgba(74,222,128,.30);
-  animation: wallet-video-play-pulse 1.45s ease-out infinite;
+  background: rgba(0,0,0,.48);
+  border: 2px solid rgba(255,255,255,.92);
+  backdrop-filter: blur(5px);
+  box-shadow:
+    0 0 0 0 rgba(255,255,255,.28),
+    0 7px 28px rgba(0,0,0,.34);
+  animation: wallet-video-play-pulse 1.65s ease-out infinite;
 }
 
 .wallet-video-play::after {
   content: "";
   position: absolute;
-  left: 42%;
+  left: 52%;
   top: 50%;
   width: 0;
   height: 0;
-  transform: translate(-30%,-50%);
-  border-top: clamp(10px, 3vw, 15px) solid transparent;
-  border-bottom: clamp(10px, 3vw, 15px) solid transparent;
-  border-left: clamp(15px, 4vw, 22px) solid #86efac;
-  filter: drop-shadow(0 0 5px rgba(134,239,172,.35));
+  transform: translate(-32%,-50%);
+  border-top: clamp(11px,3vw,15px) solid transparent;
+  border-bottom: clamp(11px,3vw,15px) solid transparent;
+  border-left: clamp(18px,4.4vw,24px) solid #fff;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.34));
 }
 
 .wallet-video-wave {
   position: absolute;
-  width: clamp(88px, 24vw, 124px);
-  height: clamp(88px, 24vw, 124px);
-  border: 1px solid rgba(74,222,128,.28);
+  z-index: 3;
+  width: clamp(92px,25vw,132px);
+  height: clamp(92px,25vw,132px);
+  border: 1px solid rgba(255,255,255,.28);
   border-radius: 50%;
   opacity: 0;
-  animation: wallet-video-wave 2s ease-out infinite;
+  animation: wallet-video-wave 2.15s ease-out infinite;
 }
 
 .wallet-video-wave-two {
-  animation-delay: 1s;
+  animation-delay: 1.05s;
+}
+
+.wallet-video-controls {
+  position: absolute;
+  z-index: 5;
+  left: 14px;
+  right: 14px;
+  bottom: 11px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: rgba(255,255,255,.92);
+  font-size: 11px;
+  font-weight: 750;
+  text-shadow: 0 1px 3px rgba(0,0,0,.8);
+  pointer-events: none;
+}
+
+.wallet-video-control-icons {
+  letter-spacing: .02em;
+  font-size: 13px;
+}
+
+.wallet-pay-toast {
+  width: fit-content;
+  max-width: 92%;
+  margin: 11px auto 0;
+  padding: 10px 15px;
+  border: 1px solid rgba(74,222,128,.58);
+  border-radius: 12px;
+  background: rgba(5,15,23,.96);
+  color: #f8fafc;
+  box-shadow: 0 0 20px rgba(74,222,128,.12),0 10px 25px rgba(0,0,0,.30);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.4;
+  animation: wallet-pay-toast-in .18s ease-out;
+}
+
+@keyframes wallet-cinema-light {
+  0%,18% { transform: translateX(-120%); opacity: 0; }
+  44% { opacity: .75; }
+  70%,100% { transform: translateX(120%); opacity: 0; }
 }
 
 @keyframes wallet-video-play-pulse {
-  0% { transform: scale(.94); box-shadow: 0 0 0 0 rgba(74,222,128,.34); }
-  65% { transform: scale(1.04); box-shadow: 0 0 0 16px rgba(74,222,128,0); }
-  100% { transform: scale(.94); box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+  0% { transform: scale(.96); box-shadow: 0 0 0 0 rgba(255,255,255,.25),0 7px 28px rgba(0,0,0,.34); }
+  68% { transform: scale(1.035); box-shadow: 0 0 0 18px rgba(255,255,255,0),0 7px 28px rgba(0,0,0,.34); }
+  100% { transform: scale(.96); box-shadow: 0 0 0 0 rgba(255,255,255,0),0 7px 28px rgba(0,0,0,.34); }
 }
 
 @keyframes wallet-video-wave {
-  0% { transform: scale(.55); opacity: .55; }
+  0% { transform: scale(.62); opacity: .46; }
   100% { transform: scale(1.65); opacity: 0; }
 }
 
+@keyframes wallet-pay-toast-in {
+  from { opacity: 0; transform: translateY(7px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .wallet-video-cinematic,
   .wallet-video-play,
-  .wallet-video-wave {
+  .wallet-video-wave,
+  .wallet-pay-toast {
     animation: none !important;
   }
 }
