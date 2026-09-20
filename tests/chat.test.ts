@@ -86,7 +86,10 @@ beforeEach(async () => {
         }
       }
       return Response.json(result.rows.map(value => {const row=value as Record<string,unknown>;return {...row,...(row.data instanceof Uint8Array ? {data:'\\x'+Buffer.from(row.data).toString('hex')} : {})};}));
-    } catch (e) {return Response.json({code:(e as {code:string}).code}, {status:400});}
+    } catch (e) {
+      const err=e as {code?:string;message?:string};
+      return Response.json({code:err.code||'TEST_DB_ERROR',detail:err.message||String(e)}, {status:400});
+    }
   };
 });
 
