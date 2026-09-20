@@ -337,8 +337,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
-      <section className="wallet-single-instructions" aria-label="Киноны данс цэнэглэх заавар">
-        <p>Та энэ данс руу мөнгө шилжүүлнэ үү.</p>
+      <section className="wallet-single-instructions wallet-entry-auto-open" aria-label="Төлбөр автоматаар баталгаажих мэдээлэл">
+        <p><strong>Автоматаар баталгаажиж кинонууд нээгдэнэ</strong></p>
       </section>
 
       <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
@@ -362,13 +362,20 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       <div className="wallet-single-wait" role="status">
         {!isEntryGate && <span className="status-ring" aria-hidden="true"/>}
-        <div>
+        <div className={isEntryGate ? "wallet-entry-wait-content" : undefined}>
           <strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Төлбөр шалгаж байна…" : "Төлбөрийн SMS хүлээж байна"}</strong>
-          <p>{autoStatus === "timeout"
-            ? "Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу."
+          {autoStatus === "timeout"
+            ? <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>
             : isEntryGate
-              ? "Төлбөр автоматаар баталгаажиж, кинонууд нээгдэнэ."
-              : "Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ."}</p>
+              ? <div className="wallet-video-start-animation" aria-hidden="true">
+                  <span className="wallet-video-screen">
+                    <span className="wallet-video-play"/>
+                    <span className="wallet-video-wave wallet-video-wave-one"/>
+                    <span className="wallet-video-wave wallet-video-wave-two"/>
+                  </span>
+                  <span className="wallet-video-progress"><i/><i/><i/><i/><i/></span>
+                </div>
+              : <p>Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ.</p>}
         </div>
       </div>
     </> : <>
