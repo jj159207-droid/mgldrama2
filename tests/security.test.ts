@@ -45,6 +45,20 @@ beforeEach(()=>{
     if(found)found.last_seen_at=now();else tables.site_user_memberships.push({site_id:site,user_id:user,first_seen_at:now(),last_seen_at:now()});
     return Response.json([{ok:true}]);
   }
+  if(name==='rpc/kino_site_entry_status'){
+    const site=String(body.p_site||'taza'),user=Number(body.p_user);
+    if(site!=='taza')return Response.json([{allowed:true,reason:'not_gated'}]);
+    const sameSite=(row:Row)=>String(row.site_id||'taza')===site;
+    const funded=tables.wallet_ledger.some(row=>sameSite(row)&&Number(row.user_id)===user&&Number(row.delta)>0&&['topup','admin_credit'].includes(String(row.kind)));
+    const paidOnce=tables.pending_payments.some(row=>sameSite(row)&&Number(row.user_id)===user&&Number(row.amount)>0&&(row.status==='confirmed'||!!row.confirmed_at));
+    const activeGrant=tables.pending_payments.some(row=>{
+      if(!sameSite(row)||Number(row.user_id)!==user||row.status!=='confirmed'||['wallet_topup','wallet_admin'].includes(String(row.plan)))return false;
+      const expiry=paymentExpiry({...row,status:'confirmed'});
+      return expiry>Date.now();
+    });
+    const allowed=funded||paidOnce||activeGrant;
+    return Response.json([{allowed,reason:allowed?'paid':'payment_required'}]);
+  }
   assert.ok(name in tables,`unknown table ${name}`);
   tables[name].forEach(r=>{if(r.id===undefined)r.id=nextId++;});
   const match=(row:Row)=>[...u.searchParams].every(([k,v])=>{
@@ -84,6 +98,12 @@ async function register(phone='99112233'){
  return r.headers.get('set-cookie')!.split(';')[0];
 }
 async function admin(){const r=await auth.POST(req('/api/auth','POST',{action:'admin',password:process.env.ADMIN_PASSWORD}));assert.equal(r.status,200);return r.headers.get('set-cookie')!.split(';')[0];}
+function markEntryPaid(userId:number,amount=6000){
+ tables.wallet_ledger.push({id:nextId++,user_id:userId,delta:amount,kind:'topup',site_id:'taza',created_at:now()});
+}
+async function paidUser(phone='99112233'){
+ const cookie=await register(phone);markEntryPaid(Number(tables.users.find(u=>u.phone===phone)?.id));return cookie;
+}
 const dbReq=(path:string,method='GET',body?:unknown,cookie?:string)=>req(`/api/db?path=${encodeURIComponent(path)}`,method,body,cookie);
 function bankSms(ref:string,amount='5,000.00',sender='Khan Bank') {
  return sms.POST(new NextRequest('https://app.test/api/sms',{
@@ -119,8 +139,10 @@ test('anonymous device gets one persistent guest identity and can own its paymen
  const saved=(await order.json())[0];assert.equal(saved.user_id,firstBody.user.id);assert.equal(saved.status,'pending');assert.equal(saved.amount,5000);
 });
 test('cross-origin mutation is rejected',async()=>{const r=await auth.POST(req('/api/auth','POST',{action:'register',phone:'99112233',pin:'1234'},undefined,{origin:'https://evil.test'}));assert.equal(r.status,403);});
-test('public catalog never returns full paid URL; unsafe URLs rejected',async()=>{
- const r=await api.GET(dbReq('films?select=*'));const rows=await r.json();assert.equal(rows[0].url,'|||https://video.example/trailer.mp4');assert.ok(!JSON.stringify(rows).includes('movie.mp4'));
+test('catalog stays hidden before entry payment and paid catalog never returns full video URL',async()=>{
+ assert.equal((await api.GET(dbReq('films?select=*'))).status,402);
+ const cookie=await paidUser();
+ const r=await api.GET(dbReq('films?select=*','GET',undefined,cookie));const rows=await r.json();assert.equal(rows[0].url,'|||https://video.example/trailer.mp4');assert.ok(!JSON.stringify(rows).includes('movie.mp4'));
  assert.equal(safeUrl('javascript:alert(1)'), '');assert.equal(safeUrl('https://user:pass@example.com'),'');
 });
 test('public user list/admin mutation and joins are blocked',async()=>{
@@ -131,7 +153,8 @@ test('public user list/admin mutation and joins are blocked',async()=>{
 test('movie descriptions round trip through admin edits and public details without exposing full video',async()=>{
  const cookie=await admin(),description='Хоёр найзын аялал.\nМонгол хадмалтай.';
  assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description},cookie))).status,200);
- const rows=await (await api.GET(dbReq('films?id=eq.1'))).json();
+ const viewer=await paidUser('99112234');
+ const rows=await (await api.GET(dbReq('films?id=eq.1','GET',undefined,viewer))).json();
  assert.equal(rows[0].description,description);assert.ok(!JSON.stringify(rows).includes('movie.mp4'));
  assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description:''},cookie))).status,200);
  assert.equal(tables.films[0].description,'');
@@ -144,6 +167,7 @@ test('description edits require admin access and validate type and maximum lengt
  assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{description:'a'.repeat(4000)},cookie))).status,200);
 });
 test('legacy catalog retries only a missing-column failure and still redacts paid URLs',async()=>{
+ const viewer=await paidUser();
  const mock=global.fetch;let attempts=0;
  global.fetch=async(input,init)=>{
   const url=new URL(String(input));
@@ -153,11 +177,11 @@ test('legacy catalog retries only a missing-column failure and still redacts pai
   }
   return mock(input,init);
  };
- const response=await api.GET(dbReq('films?id=eq.1'));assert.equal(response.status,200);
+ const response=await api.GET(dbReq('films?id=eq.1','GET',undefined,viewer));assert.equal(response.status,200);
  const rows=await response.json();assert.equal(attempts,2);assert.equal(rows[0].description,'');assert.ok(!JSON.stringify(rows).includes('movie.mp4'));
  attempts=0;
  global.fetch=async()=>{attempts++;return Response.json({code:'XX000'},{status:503});};
- assert.equal((await api.GET(dbReq('films'))).status,502);assert.equal(attempts,1);
+ assert.equal((await api.GET(dbReq('films','GET',undefined,viewer))).status,502);assert.equal(attempts,1);
 });
 test('legacy admin description writes report required update without dropping data',async()=>{
  const cookie=await admin(),mock=global.fetch;let writes=0;
@@ -182,17 +206,19 @@ test('payment read is constrained to cookie owner',async()=>{
  const c=await register();tables.pending_payments.push({id:1,user_id:999,status:'confirmed'});
  const r=await api.GET(dbReq('pending_payments?user_id=eq.999&select=*','GET',undefined,c));assert.deepEqual(await r.json(),[]);
 });
-test('paid playback requires own confirmed unexpired purchase',async()=>{
- const c=await register();assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,403);
- tables.pending_payments.push({user_id:tables.users[0].id,film_id:1,plan:'single',status:'confirmed',confirmed_at:now()});
+test('TAZA playback requires entry payment and then the movie entitlement',async()=>{
+ const c=await register();assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,402);
+ tables.pending_payments.push({user_id:tables.users[0].id,film_id:1,plan:'single',amount:5000,status:'confirmed',confirmed_at:now(),site_id:'taza'});
  const r=await playback.GET(req('/api/playback?id=1','GET',undefined,c));assert.equal(r.status,200);assert.equal((await r.json()).url,'https://video.example/movie.mp4');
  tables.pending_payments[0].status='revoked';assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,403);
 });
-test('full playback always requires login, while free/unlocked films need no payment after login',async()=>{
+test('free and unlocked movies remain behind the TAZA entry payment',async()=>{
  const guest=()=>playback.GET(req('/api/playback?id=1'));
  tables.films[0].free=true;
  assert.equal((await guest()).status,403);
  const c=await register();
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,402);
+ markEntryPaid(Number(tables.users[0].id));
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
  tables.films[0].free=false;tables.films[0].locked=false;
  assert.equal((await guest()).status,403);
@@ -288,7 +314,7 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'410001',film_id:1,plan:'single'},owner))).status,200);
  // The order already existed for two hours when the forwarding phone lost service.
  t.mock.timers.setTime(start+2*3600000);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,402);
  // No webhook is delivered during the next four hours. Then the original SMS arrives.
  const receivedAt=start+6*3600000;
  t.mock.timers.setTime(receivedAt);
@@ -393,8 +419,8 @@ test('admin cannot accidentally mutate all rows with only sorting or selection',
 test('revoking one purchase preserves other rights and allows later purchases',async()=>{
  const cookie=await register();const uid=tables.users[0].id;const ac=await admin();
  tables.pending_payments.push(
-  {id:88,user_id:uid,ref_code:'123456',film_id:1,amount:5000,status:'confirmed',plan:'single',created_at:now()},
-  {id:89,user_id:uid,ref_code:'234567',amount:8000,status:'confirmed',plan:'all_1month',created_at:now()});
+  {id:88,user_id:uid,ref_code:'123456',film_id:1,amount:5000,status:'confirmed',plan:'single',created_at:now(),confirmed_at:now(),site_id:'taza'},
+  {id:89,user_id:uid,ref_code:'234567',amount:8000,status:'confirmed',plan:'all_1month',created_at:now(),confirmed_at:now(),site_id:'taza'});
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.123456','PATCH',{status:'revoked'},ac))).status,200);
  assert.equal(tables.pending_payments[1].status,'confirmed');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
@@ -452,7 +478,8 @@ test('hidden paid URLs cannot be inferred through public filters or sorting',asy
  for(const query of ['url=like.https*','or=(url.like.a*,title.eq.Test)','order=url.asc','preview_url=eq.secret']){
   assert.equal((await api.GET(dbReq(`films?${query}`))).status,400);
  }
- assert.equal((await api.GET(dbReq('films?badge=eq.Хэлтэй%7CГадаад&order=id.desc&limit=200'))).status,200);
+ const viewer=await paidUser();
+ assert.equal((await api.GET(dbReq('films?badge=eq.Хэлтэй%7CГадаад&order=id.desc&limit=200','GET',undefined,viewer))).status,200);
 });
 test('reference history cannot be deleted or reassigned even through admin mutations',async()=>{
  const c=await admin();tables.pending_payments.push({id:9,ref_code:'123456',user_id:1,amount:5000,status:'confirmed',created_at:now()});
