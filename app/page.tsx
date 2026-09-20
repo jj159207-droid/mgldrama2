@@ -334,11 +334,6 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <span />
       </div>
 
-      {isEntryGate && <section className="wallet-single-instructions" aria-label="ТАЗА САЙТ нээх">
-        <p><strong>Кинонууд төлбөр баталгаажсаны дараа харагдана.</strong></p>
-        <p>6,000₮ таны киноны дансанд орж, 2,000₮-ийн 3 кино үзэх боломжтой.</p>
-      </section>}
-
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
       <section className="wallet-single-instructions" aria-label="Киноны данс цэнэглэх заавар">
@@ -760,6 +755,31 @@ function AdminLogin({ onEnter, onBack }: any) {
     <button disabled={busy} style={{...goldBtn,marginTop:12}}>{busy?"Түр хүлээнэ үү...":"Нэвтрэх"}</button>
     <button type="button" disabled={busy} onClick={onBack} style={{...goldBtn,marginTop:8,background:C.card2,color:C.txt}}>Буцах</button>
   </form></div>;
+}
+
+function AdminDestinationChoice({brandName="ТАЗА САЙТ",onAdmin,onMovies,onLogout}:any) {
+  return <main style={{minHeight:"100dvh",display:"grid",placeItems:"center",background:C.bg,padding:24,color:C.txt}}>
+    <section style={{width:"100%",maxWidth:430}}>
+      <div style={{textAlign:"center",marginBottom:24}}>
+        <div style={{fontSize:13,fontWeight:800,color:C.gold,letterSpacing:1,marginBottom:8}}>{brandName}</div>
+        <h1 style={{fontSize:24,margin:0}}>Хаашаа орох вэ?</h1>
+      </div>
+      <div style={{display:"grid",gap:12}}>
+        <button type="button" aria-label="Админ удирдах хэсэг" onClick={onAdmin}
+          style={{minHeight:86,borderRadius:16,border:`1px solid ${C.gold}`,background:C.card,color:C.txt,padding:"16px 18px",textAlign:"left",cursor:"pointer"}}>
+          <strong style={{display:"block",fontSize:17,marginBottom:5}}>⚙️ Админ удирдах хэсэг</strong>
+          <span style={{fontSize:12,color:C.muted}}>Кино, төлбөр, хэрэглэгч, чат, статистик болон тохиргоо</span>
+        </button>
+        <button type="button" aria-label="Кино хэсэг" onClick={onMovies}
+          style={{minHeight:86,borderRadius:16,border:`1px solid ${C.bd}`,background:C.card2,color:C.txt,padding:"16px 18px",textAlign:"left",cursor:"pointer"}}>
+          <strong style={{display:"block",fontSize:17,marginBottom:5}}>🎬 Кино хэсэг</strong>
+          <span style={{fontSize:12,color:C.muted}}>Админ горимоор кино санг харах</span>
+        </button>
+        <button type="button" onClick={onLogout}
+          style={{...goldBtn,marginTop:4,background:"transparent",color:C.muted,border:`1px solid ${C.bd}`}}>Админаас гарах</button>
+      </div>
+    </section>
+  </main>;
 }
 
 function AdminOrdersTab() {
@@ -2534,14 +2554,15 @@ export default function Home() {
           )}
         </main>
       ) : <>
-      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} />}
+      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
-      {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); navigateTo("admin"); }} onBack={() => navigateTo("home")} />}
-      {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
+      {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
+      {page === "admin-choice" && adminAuth && <AdminDestinationChoice brandName={brandName} onAdmin={()=>navigateTo("admin")} onMovies={()=>navigateTo("home")} onLogout={handleLogout} />}
+      {page === "admin" && adminAuth && <AdminPage films={films} onBack={()=>navigateTo("admin-choice")} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       <PushNotificationSetup key={user?.id||"none"} enabled={!!user?.id&&!adminAuth} />
-      {showContact && <ContactModal onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
+      {showContact && <ContactModal onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo(adminAuth?"admin-choice":"adminlogin");}} />}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
 
