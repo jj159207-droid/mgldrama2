@@ -23,7 +23,7 @@ export function filmPlans(film: CatalogFilm) {
   const category = filmCategory(film);
   const key = ({"Эротик":"erotic", "Хятад":"hyatad", "Гадаад":"gadaad", "Орос":"oros"} as Record<string,string>)[category];
   if (!key) return [];
-  return [{id:`${key}_3day`, days:3}, {id:`${key}_1month`, days:30}].map(plan => ({...plan, category, price:plans[plan.id]}));
+  return [{id:`${key}_3day`, hours:72}].map(plan => ({...plan, category, price:plans[plan.id]}));
 }
 
 export function trailerUrl(film: Pick<FilmDetails, "preview_url" | "url">): string {
