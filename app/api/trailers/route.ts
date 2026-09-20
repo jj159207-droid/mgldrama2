@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import ffmpeg from 'ffmpeg-static';
-import { ApiError, bodyJson, db, fail, json, originCheck, session, supabaseConfig } from '@/lib/server';
+import { ApiError, bodyJson, canAdminSite, db, fail, json, originCheck, requestSite, session, supabaseConfig } from '@/lib/server';
 import { createBunnyClip, MAX_CLIP_BYTES, parseBunnySource, TrailerError } from '@/lib/trailer-media';
 import { TRAILER_SECONDS, validTrailerStart } from '@/lib/trailer-spec';
 export const runtime = 'nodejs';
@@ -11,13 +11,14 @@ export async function POST(req: NextRequest) {
   let acquired = false;
   try {
     originCheck(req);
-    if (!(await session(req))?.admin) throw new ApiError(403, 'Админы эрх шаардлагатай.');
+    const site=requestSite(req),s=await session(req);
+    if (!canAdminSite(s,site)) throw new ApiError(403, 'Энэ сайтын админы эрх шаардлагатай.');
     const body = await bodyJson(req, 4096);
     if (Object.keys(body).some(k => !['filmId', 'sourceUrl', 'startSeconds'].includes(k))
       || !Number.isSafeInteger(body.filmId) || Number(body.filmId) <= 0 || typeof body.sourceUrl !== 'string' || !validTrailerStart(body.startSeconds))
       throw new ApiError(400, 'Кино, видео холбоос болон эхлэх цагийг зөв оруулна уу.');
     const source = parseBunnySource(body.sourceUrl);
-    const [film] = await db(`films?id=eq.${body.filmId}&select=id`);
+    const [film] = await db(`films?id=eq.${body.filmId}&site_id=eq.${site}&select=id`);
     if (!film) throw new ApiError(404, 'Кино олдсонгүй.');
     if (busy) throw new ApiError(429, 'Өөр трейлэр үүсгэж байна. Дууссаны дараа дахин оролдоно уу.');
     busy = true; acquired = true;
