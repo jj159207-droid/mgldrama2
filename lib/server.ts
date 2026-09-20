@@ -1,6 +1,10 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { isRow, type Row } from './domain';
+import { siteFromHeader, type SiteId } from './site';
+export function requestSite(req:NextRequest):SiteId {
+  return siteFromHeader(req.headers.get('x-taza-site'));
+}
 export class ApiError extends Error {
   constructor(public status:number, message:string, public code = 'REQUEST_FAILED') {super(message);}
 }
