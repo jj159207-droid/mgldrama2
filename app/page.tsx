@@ -365,7 +365,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <div className={isEntryGate ? "wallet-entry-wait-content" : undefined}>
           <strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Төлбөр шалгаж байна…" : "Төлбөрийн SMS хүлээж байна"}</strong>
           {autoStatus === "timeout"
-            ? <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>
+            ? (!isEntryGate && <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>)
             : isEntryGate
               ? <div className="wallet-video-start-animation" aria-hidden="true">
                   <span className="wallet-video-screen">
