@@ -6,7 +6,7 @@ import { ApiError, bodyJson, canAdminSite, db, fail, json, originCheck, requestS
 export const runtime = "nodejs";
 
 const VISITOR_COOKIE = "taza_visitor_v1";
-const EVENTS = new Set(["visit","film_open","watch_click","payment_open","play_start","bank_account_copy","ref_code_copy"]);
+const EVENTS = new Set(["visit","film_open","watch_click","payment_open","play_start","bank_account_copy","ref_code_copy","paywall_view","entry_payment_success"]);
 const FILM_EVENTS = new Set(["film_open","watch_click","payment_open","play_start"]);
 const SOURCES = new Set(["facebook","direct","other"]);
 
