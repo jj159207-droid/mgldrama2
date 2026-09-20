@@ -3,7 +3,7 @@ export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !
 export const plans: Record<string, number> = {
   erotic_3day:8000,gadaad_3day:8000,hyatad_3day:8000,oros_3day:8000,
   erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,oros_1month:12500,all_1month:20000,
-  all_48h:12500,
+  all_48h:7900,
   wallet_topup:5000,
 };
 export function planLabel(plan: string): string {
