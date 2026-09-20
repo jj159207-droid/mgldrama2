@@ -328,7 +328,7 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal(rights.access.film_2,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,403);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,402);
 });
 
 test('a burst of delayed SMS and concurrent duplicates confirms every matching order once',async(t)=>{
