@@ -671,7 +671,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
     </dialog>;
 }
 
-function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ" }: any) {
+function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ", admin=false }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const getExpiry = (filmId: number, category?: string): string | null => {
@@ -703,7 +703,13 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label={`${brandName} нүүр`}>{brandName}</a></div>
       <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>Үзэх багц</button><button onClick={onContact}>Холбогдох<ChatBadge count={chatUnread} /></button></nav>
       <div className="header-actions">
-      {user && !user.guest ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></> : !user ? <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button> : null}
+      {admin
+        ? <><span className="account-label"><UiIcon name="user" size={16} />Админ</span><button className="quiet-button" onClick={onLogout}>Гарах</button></>
+        : user && !user.guest
+          ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></>
+          : !user
+            ? <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button>
+            : null}
       </div>
     </div></header>
     <main className="catalog-shell">
@@ -2554,7 +2560,7 @@ export default function Home() {
           )}
         </main>
       ) : <>
-      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} />}
+      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
