@@ -6,7 +6,7 @@ export default function CopyFilmLink({id, title}: {id: number; title: string}) {
   const [link, setLink] = useState("");
   const [message, setMessage] = useState("");
   const copy = async () => {
-    const url = filmShareUrl(window.location.origin, id);
+    const url = filmShareUrl(window.location.href, id);
     setLink(url);
     try {
       await navigator.clipboard.writeText(url);
