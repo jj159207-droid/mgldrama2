@@ -1,7 +1,7 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { isRow, type Row } from './domain';
-import { siteFromHeader, type SiteId } from './site';
+import { isSiteId, siteFromHeader, type SiteId } from './site';
 export function requestSite(req:NextRequest):SiteId {
   return siteFromHeader(req.headers.get('x-taza-site'));
 }
@@ -78,6 +78,7 @@ export async function db(path:string, method='GET', body?:unknown):Promise<Row[]
 const digest=(v:string)=>createHash('sha256').update(v).digest('hex');
 export const equalSecret=(a:string,b:string)=>timingSafeEqual(Buffer.from(digest(a)),Buffer.from(digest(b)));
 export function pinHash(pin:string) {const salt=randomBytes(16).toString('hex');return `scrypt:${salt}:${scryptSync(pin,salt,32).toString('hex')}`;}
+export const passwordHash=(password:string)=>pinHash(password);
 export function pinMatches(pin:string,stored:unknown) {
   if(typeof stored!=='string')return false;
   if(!stored.startsWith('scrypt:'))return equalSecret(pin,stored); // Upgraded on first successful legacy login.
@@ -85,18 +86,41 @@ export function pinMatches(pin:string,stored:unknown) {
   if(!/^[a-f0-9]{32}$/.test(salt || '') || !/^[a-f0-9]{64}$/.test(hash || ''))return false;
   return equalSecret(scryptSync(pin,salt,32).toString('hex'),hash);
 }
-export interface Session { userId:number|null; admin:boolean }
+export const passwordMatches=(password:string,stored:unknown)=>pinMatches(password,stored);
+export interface Session {
+  userId:number|null;
+  admin:boolean;
+  adminSiteId:SiteId|null;
+  masterAdmin:boolean;
+}
 const COOKIE='kino_session_v2';
 export const DEVICE_COOKIE='taza_device_v1';
 export async function session(req:NextRequest):Promise<Session|null> {
   const token=req.cookies.get(COOKIE)?.value;if(!token || !/^[a-f0-9]{64}$/.test(token))return null;
-  const [row]=await db(`app_sessions?token_hash=eq.${digest(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id,is_admin&limit=1`);
-  return row?{userId:typeof row.user_id==='number'?row.user_id:null,admin:row.is_admin===true}:null;
+  const [row]=await db(`app_sessions?token_hash=eq.${digest(token)}&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=user_id,is_admin,admin_site_id,is_master_admin&limit=1`);
+  if(!row)return null;
+  return {
+    userId:typeof row.user_id==='number'?row.user_id:null,
+    admin:row.is_admin===true,
+    adminSiteId:isSiteId(row.admin_site_id)?row.admin_site_id:null,
+    masterAdmin:row.is_master_admin===true,
+  };
 }
-export async function issueSession(req:NextRequest,userId:number|null,admin:boolean,ageOverride?:number) {
+export function canAdminSite(s:Session|null|undefined,site:SiteId) {
+  return !!s?.admin && (s.masterAdmin || s.adminSiteId===site);
+}
+export async function issueSession(
+  req:NextRequest,userId:number|null,admin:boolean,ageOverride?:number,
+  adminSiteId:SiteId|null=null,masterAdmin=false
+) {
   await revokeSession(req);
   const token=randomBytes(32).toString('hex'),age=ageOverride ?? (admin?3600:604800);
-  await db('app_sessions','POST',{token_hash:digest(token),user_id:userId,is_admin:admin,expires_at:new Date(Date.now()+age*1000).toISOString()});
+  await db('app_sessions','POST',{
+    token_hash:digest(token),user_id:userId,is_admin:admin,
+    admin_site_id:admin?adminSiteId:null,
+    is_master_admin:admin&&masterAdmin,
+    expires_at:new Date(Date.now()+age*1000).toISOString()
+  });
   return {token,age};
 }
 export function setSessionCookie(res:NextResponse,token:string,age:number) {
