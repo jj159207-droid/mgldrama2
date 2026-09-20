@@ -25,7 +25,11 @@ export async function GET(req?:NextRequest) {
     const site=req?requestSite(req):'taza';
     const [row]=await db(`site_settings?site_id=eq.${site}&select=messenger_url,bank_name,bank_account,account_name,bank_iban&limit=1`);
     return json({...normalizeRow(row),site});
-  } catch(error) {return fail(error);}
+  } catch(error) {
+    if(error instanceof ApiError && ['42703','42P01','PGRST204','PGRST205'].includes(error.code))
+      return json({...normalizeRow(undefined),site:'taza',setupRequired:true});
+    return fail(error);
+  }
 }
 
 export async function PUT(req:NextRequest) {
