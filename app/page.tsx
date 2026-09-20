@@ -182,6 +182,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const [copied, setCopied] = useState<string | null>(null);
   const [autoStatus, setAutoStatus] = useState<"waiting" | "checking" | "paid" | "timeout">("waiting");
   const [showSms, setShowSms] = useState(false);
+  const [showPayHint,setShowPayHint]=useState(false);
+  const payHintTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const [manualChecking, setManualChecking] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completed = useRef(false);
@@ -191,6 +193,12 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const paidCallback = useRef(onPaid);
   useEffect(() => { paidCallback.current = onPaid; }, [onPaid]);
   const timeoutRef = useRef<any>(null);
+  useEffect(()=>()=>{if(payHintTimer.current)clearTimeout(payHintTimer.current);},[]);
+  const showPaymentHint=()=>{
+    setShowPayHint(true);
+    if(payHintTimer.current)clearTimeout(payHintTimer.current);
+    payHintTimer.current=setTimeout(()=>setShowPayHint(false),3000);
+  };
 
   const finishPayment = async (stillActive = () => active.current) => {
     if (completed.current || finishing.current || !stillActive()) return;
@@ -367,13 +375,26 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
           {autoStatus === "timeout"
             ? (!isEntryGate && <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>)
             : isEntryGate
-              ? <div className="wallet-video-start-animation" aria-hidden="true">
-                  <span className="wallet-video-screen">
-                    <span className="wallet-video-play"/>
-                    <span className="wallet-video-wave wallet-video-wave-one"/>
-                    <span className="wallet-video-wave wallet-video-wave-two"/>
-                  </span>
-                </div>
+              ? <>
+                  <button
+                    type="button"
+                    className="wallet-video-start-animation"
+                    aria-label="Кино тоглуулах"
+                    onClick={showPaymentHint}
+                  >
+                    <span className="wallet-video-screen">
+                      <span className="wallet-video-cinematic"/>
+                      <span className="wallet-video-play"/>
+                      <span className="wallet-video-wave wallet-video-wave-one"/>
+                      <span className="wallet-video-wave wallet-video-wave-two"/>
+                      <span className="wallet-video-controls">
+                        <span>0:00</span>
+                        <span className="wallet-video-control-icons">◖)))　⛶</span>
+                      </span>
+                    </span>
+                  </button>
+                  {showPayHint && <div className="wallet-pay-toast" role="alert">Та төлбөрөө баталгаажуулна уу</div>}
+                </>
               : <p>Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ.</p>}
         </div>
       </div>
