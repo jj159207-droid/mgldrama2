@@ -1,6 +1,6 @@
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { isRow, type Row } from './domain';
+import { isRow, paymentExpiry, type Row } from './domain';
 import { isSiteId, siteFromHeader, type SiteId } from './site';
 export function requestSite(req:NextRequest):SiteId {
   return siteFromHeader(req.headers.get('x-taza-site'));
@@ -115,8 +115,12 @@ export function canAdminSite(s:Session|null|undefined,site:SiteId) {
 export async function siteEntryAllowed(userId:number|null|undefined,site:SiteId) {
   if(site!=='taza')return true;
   if(!userId)return false;
-  const [row]=await db('rpc/kino_site_entry_status','POST',{p_user:userId,p_site:site});
-  return row?.allowed===true;
+  const since=encodeURIComponent(new Date(Date.now()-366*86400000).toISOString());
+  const rows=await db(
+    `pending_payments?user_id=eq.${userId}&site_id=eq.${site}&status=eq.confirmed&or=(confirmed_at.gte.${since},and(confirmed_at.is.null,created_at.gte.${since}))&select=id,plan,status,confirmed_at,created_at&order=id.desc&limit=2000`
+  );
+  const now=Date.now();
+  return rows.some(row=>!['wallet_topup','wallet_admin'].includes(String(row.plan||''))&&paymentExpiry(row)>now);
 }
 export async function issueSession(
   req:NextRequest,userId:number|null,admin:boolean,ageOverride?:number,
