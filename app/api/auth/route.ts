@@ -1,15 +1,17 @@
 import { NextRequest } from 'next/server';
-import { ApiError,bodyJson,clearDeviceCookie,db,equalSecret,fail,issueSession,json,originCheck,pinHash,pinMatches,publicUser,rateLimit,revokeSession,session,setSessionCookie } from '@/lib/server';
+import { ApiError,bodyJson,canAdminSite,clearDeviceCookie,db,equalSecret,fail,issueSession,json,originCheck,passwordMatches,pinHash,pinMatches,publicUser,rateLimit,requestSite,revokeSession,session,setSessionCookie } from '@/lib/server';
 export const runtime='nodejs';
 export async function GET(req:NextRequest) {
-  try {const s=await session(req);if(!s)return json({user:null,admin:false});
+  try {
+    const site=requestSite(req),s=await session(req);
+    if(!s)return json({user:null,admin:false,site});
     const [u]=s.userId?await db(`users?id=eq.${s.userId}&select=id,phone,user_id,is_guest,browser_no`):[];
-    return json({user:u?publicUser(u):null,admin:s.admin});
+    return json({user:u?publicUser(u):null,admin:canAdminSite(s,site),masterAdmin:s.masterAdmin,site});
   }catch(e){return fail(e);}
 }
 export async function POST(req:NextRequest) {
  try {
-  originCheck(req);const b=await bodyJson(req,16000);
+  originCheck(req);const site=requestSite(req),b=await bodyJson(req,16000);
   if(b.action==='logout'){
     const current=await session(req);
     await revokeSession(req);
@@ -19,11 +21,21 @@ export async function POST(req:NextRequest) {
     return current?.userId ? clearDeviceCookie(res) : res;
   }
   if(b.action==='admin') {
-    const key=process.env.ADMIN_PASSWORD;
-    if(!key || key.length<16)throw new ApiError(503,'ADMIN_PASSWORD тохиргоонд 16-аас урт шинэ нууц үг тохируулна уу.');
-    await rateLimit('admin-login');
-    if(typeof b.password!=='string'||!equalSecret(b.password,key))throw new ApiError(401,'Нууц үг буруу байна.');
-    const s=await issueSession(req,null,true);return setSessionCookie(json({admin:true}),s.token,s.age);
+    const password=typeof b.password==='string'?b.password:'';
+    if(password.length<8||password.length>128)throw new ApiError(400,'Админы нууц үг буруу байна.');
+    await rateLimit(`admin-login:${site}`);
+
+    const masterKey=process.env.ADMIN_PASSWORD;
+    const master=!!masterKey && masterKey.length>=16 && equalSecret(password,masterKey);
+    let siteAdmin=false;
+    if(!master){
+      const [row]=await db(`site_admins?site_id=eq.${site}&active=eq.true&select=password_hash&limit=1`);
+      siteAdmin=!!row && passwordMatches(password,row.password_hash);
+    }
+    if(!master&&!siteAdmin)throw new ApiError(401,'Нууц үг буруу байна.');
+
+    const s=await issueSession(req,null,true,3600,site,master);
+    return setSessionCookie(json({admin:true,masterAdmin:master,site}),s.token,s.age);
   }
   const previous=await session(req);
   const phone=String(b.phone || ''),pin=String(b.pin || '');
@@ -47,6 +59,7 @@ export async function POST(req:NextRequest) {
       await db('rpc/kino_merge_guest_account','POST',{p_guest:previous.userId,p_user:user.id});
     }
   }
-  const s=await issueSession(req,user.id,false);return setSessionCookie(json({user:publicUser(user)}),s.token,s.age);
+  await db('rpc/kino_touch_site_user','POST',{p_site:site,p_user:user.id});
+  const s=await issueSession(req,user.id,false);return setSessionCookie(json({user:publicUser(user),site}),s.token,s.age);
  }catch(e){return fail(e);}
 }
