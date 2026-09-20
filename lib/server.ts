@@ -111,6 +111,13 @@ export function canAdminSite(s:Session|null|undefined,site:SiteId) {
   // global admins already, so keep them as master-compatible during rollout.
   return !!s?.admin && (s.masterAdmin || s.adminSiteId===null || s.adminSiteId===site);
 }
+
+export async function siteEntryAllowed(userId:number|null|undefined,site:SiteId) {
+  if(site!=='taza')return true;
+  if(!userId)return false;
+  const [row]=await db('rpc/kino_site_entry_status','POST',{p_user:userId,p_site:site});
+  return row?.allowed===true;
+}
 export async function issueSession(
   req:NextRequest,userId:number|null,admin:boolean,ageOverride?:number,
   adminSiteId:SiteId|null=null,masterAdmin=false
