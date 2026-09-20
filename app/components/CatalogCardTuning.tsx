@@ -33,20 +33,18 @@ export default function CatalogCardTuning() {
 
     const applyPackagePreset = () => {
       let requested = false;
-      try { requested = sessionStorage.getItem(PACKAGE_PRESET_KEY) === "erotic_1month"; } catch {}
+      try { requested = sessionStorage.getItem(PACKAGE_PRESET_KEY) === "all_48h"; } catch {}
       if (!requested) return;
 
       const dialog = document.querySelector<HTMLDialogElement>("dialog.package-dialog[open]");
       if (!dialog || dialog.dataset.promoPresetApplied === "1") return;
 
-      const erotic = dialog.querySelector<HTMLInputElement>('input[name="package-category"][value="erotic"]');
-      if (erotic && !erotic.checked) erotic.click();
+      const all = dialog.querySelector<HTMLInputElement>('input[name="package-category"][value="all"]');
+      if (all && !all.checked) all.click();
 
       window.requestAnimationFrame(() => {
         const activeDialog = document.querySelector<HTMLDialogElement>("dialog.package-dialog[open]");
         if (!activeDialog) return;
-        const month = activeDialog.querySelector<HTMLInputElement>('input[name="package-duration"][value="1month"]');
-        if (month && !month.checked) month.click();
         activeDialog.dataset.promoPresetApplied = "1";
         try { sessionStorage.removeItem(PACKAGE_PRESET_KEY); } catch {}
       });
@@ -59,14 +57,14 @@ export default function CatalogCardTuning() {
         const sub = copy ? Array.from(copy.children).find(child => child.tagName === "SPAN") as HTMLElement | undefined : undefined;
         const cta = banner.querySelector<HTMLElement>(".banner-cta");
 
-        if (lead && lead.textContent !== "60 киног бүгдийг 8000 төгрөгөөр") lead.textContent = "60 киног бүгдийг 8000 төгрөгөөр";
-        if (sub && sub.textContent !== "энд дарж үзнэ үү") sub.textContent = "энд дарж үзнэ үү";
+        if (lead && lead.textContent !== "Сайтын бүх киног 7,900 төгрөгөөр") lead.textContent = "Сайтын бүх киног 7,900 төгрөгөөр";
+        if (sub && sub.textContent !== "72 цаг үзэх эрх") sub.textContent = "72 цаг үзэх эрх";
         if (cta && cta.textContent !== "ЭНД ДАРЖ ҮЗЭХ →") cta.textContent = "ЭНД ДАРЖ ҮЗЭХ →";
 
         if (banner.dataset.packagePresetBound !== "1") {
           banner.dataset.packagePresetBound = "1";
           banner.addEventListener("click", () => {
-            try { sessionStorage.setItem(PACKAGE_PRESET_KEY, "erotic_1month"); } catch {}
+            try { sessionStorage.setItem(PACKAGE_PRESET_KEY, "all_48h"); } catch {}
             const existing = document.querySelector<HTMLDialogElement>("dialog.package-dialog");
             if (existing) delete existing.dataset.promoPresetApplied;
             window.setTimeout(applyPackagePreset, 0);
