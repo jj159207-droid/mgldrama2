@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
 import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/domain";
+import { SITES, siteFromPathname, type SiteId } from "@/lib/site";
 
 import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
 import PosterUpload from "@/app/components/PosterUpload";
@@ -669,7 +670,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
     </dialog>;
 }
 
-function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false }: any) {
+function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ" }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const getExpiry = (filmId: number, category?: string): string | null => {
@@ -698,7 +699,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
   return <div className="cinema-site">
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
     <header className="site-header"><div className="header-inner">
-      <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label="ТАЗА САЙТ нүүр">ТАЗА САЙТ</a></div>
+      <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label={`${brandName} нүүр`}>{brandName}</a></div>
       <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>Үзэх багц</button><button onClick={onContact}>Холбогдох<ChatBadge count={chatUnread} /></button></nav>
       <div className="header-actions">
       {user && !user.guest ? <><span className="account-label"><UiIcon name="user" size={16} />{user.phone}</span><button className="quiet-button" onClick={onLogout}>Гарах</button></> : !user ? <button className="primary-button login-button" onClick={openLogin}><UiIcon name="user" size={17} />Нэвтрэх</button> : null}
@@ -712,7 +713,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">ТАЗА САЙТ</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
   </div>;
 }
@@ -742,7 +743,7 @@ function AdminLogin({ onEnter, onBack }: any) {
   const [key,setKey]=useState(""); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
   const pending=useRef(false);
   const go=async(e:React.FormEvent)=>{e.preventDefault();if(pending.current)return;pending.current=true;setBusy(true);setError("");
-    try{await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"admin",password:key})});onEnter();}
+    try{const data=await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"admin",password:key})});onEnter(data);}
     catch(err){setError(err instanceof Error?err.message:"Нэвтэрч чадсангүй.");}
     finally{pending.current=false;setBusy(false);}
   };
@@ -1563,7 +1564,48 @@ function EditFilmPanel({ f, onDone }: any) {
 // ══════════════════════════════════════════════
 // ADMIN ТОХИРГОО — Messenger URL
 // ══════════════════════════════════════════════
-function AdminSettingsTab() {
+function SiteAdminManager() {
+  const [admins,setAdmins]=useState<any[]>([]);
+  const [site,setSite]=useState<"kino-drama"|"kinochid"|"fire">("kino-drama");
+  const [label,setLabel]=useState("");
+  const [password,setPassword]=useState("");
+  const [busy,setBusy]=useState(false);
+  const load=useCallback(async()=>{
+    try{const data=await requestJson("/api/site-admins",{},true);setAdmins(Array.isArray(data?.admins)?data.admins:[]);}catch{setAdmins([]);}
+  },[]);
+  useEffect(()=>{void load();},[load]);
+  const save=async()=>{
+    if(busy)return;
+    if(!label.trim()||password.length<8){alert("Админы нэр болон 8-аас дээш тэмдэгт нууц үг оруулна уу.");return;}
+    setBusy(true);
+    try{
+      await requestJson("/api/site-admins",{method:"PUT",body:JSON.stringify({site,label:label.trim(),password})});
+      setPassword("");await load();alert("Админы эрх хадгалагдлаа.");
+    }finally{setBusy(false);}
+  };
+  return <div style={{background:C.card,border:`1px solid ${C.bd}`,borderRadius:12,padding:16,marginBottom:12}}>
+    <div style={{fontSize:14,fontWeight:800,color:C.txt,marginBottom:10}}>👥 3 сайтын админ эрх</div>
+    <div style={{display:"grid",gap:6,marginBottom:12}}>
+      {(["kino-drama","kinochid","fire"] as const).map(id=>{
+        const found=admins.find((a:any)=>a.site_id===id);
+        return <div key={id} style={{display:"flex",justifyContent:"space-between",gap:8,fontSize:12,color:C.muted}}>
+          <strong style={{color:C.txt}}>{SITES[id].name}</strong><span>{found?.label||"Админ тохируулаагүй"}</span>
+        </div>;
+      })}
+    </div>
+    <label style={lbl}>Сайт</label>
+    <select value={site} onChange={e=>setSite(e.target.value as any)} style={{...inputSt,marginBottom:10}}>
+      <option value="kino-drama">Кино Драма</option><option value="kinochid">Киночид</option><option value="fire">Fire</option>
+    </select>
+    <label style={lbl}>Админы нэр</label>
+    <input value={label} maxLength={80} onChange={e=>setLabel(e.target.value)} style={{...inputSt,marginBottom:10}} placeholder="Жишээ: Драма админ"/>
+    <label style={lbl}>Шинэ нууц үг</label>
+    <input type="password" value={password} maxLength={128} onChange={e=>setPassword(e.target.value)} style={{...inputSt,marginBottom:10}} placeholder="8-аас дээш тэмдэгт"/>
+    <button onClick={()=>void save()} disabled={busy} style={{...goldBtn,borderRadius:10}}>{busy?"Хадгалж байна…":"Админ эрх хадгалах"}</button>
+  </div>;
+}
+
+function AdminSettingsTab({masterAdmin=false}: {masterAdmin?:boolean}) {
   const [messengerUrl,setMessengerUrl]=useState("");
   const [bankName,setBankName]=useState(DEFAULT_BANK_ACCOUNT.bank);
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT.number);
@@ -1606,7 +1648,7 @@ function AdminSettingsTab() {
   };
   if(loading)return <div style={{textAlign:"center",padding:40,color:C.muted}}>Ачааллаж байна...</div>;
   return <div style={{padding:"0 14px"}}>
-    <ReadinessCheck />
+    {masterAdmin&&<><ReadinessCheck /><SiteAdminManager /></>}
     <div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:12,padding:16,marginBottom:12}}>
       <div style={{fontSize:14,fontWeight:700,color:C.txt,marginBottom:16}}>⚙️ Сайтын тохиргоо</div>
       <label style={lbl}>🏦 Банкны нэр</label>
@@ -1739,7 +1781,7 @@ function AppearancePreview({films}: {films:any[]}) {
   return <HomePage preview films={films} catalogState={catalogState} onCatalogChange={setCatalogState} loading={false} user={null} chatUnread={0} onFilm={noop} onAdmin={noop} onContact={noop} onOpenLogin={noop} onMonthly={noop} onRetry={noop}/>;
 }
 
-function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
+function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=false, brandName="ТАЗА САЙТ" }: any) {
   const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "analytics" | "settings" | "appearance">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -1821,7 +1863,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
       </div>
 
       {tab === "orders" && <AdminOrdersTab />}
-      {tab === "settings" && <AdminSettingsTab />}
+      {tab === "settings" && <AdminSettingsTab masterAdmin={masterAdmin} />}
       {tab === "members" && <AdminMembersTab />}
       {tab === "analytics" && <AdminAnalyticsTab />}
       {tab === "sms" && <AdminChatInbox announcements={<AdminAnnouncements />} />}
@@ -1900,6 +1942,10 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved }: any) {
 
 export default function Home() {
   const {appearance,apply:applyAppearance}=useSiteAppearance();
+  const [siteId,setSiteId]=useState<SiteId>("taza");
+  const brandName=SITES[siteId].name;
+  const [masterAdmin,setMasterAdmin]=useState(false);
+  useEffect(()=>{setSiteId(siteFromPathname(window.location.pathname));},[]);
   const [appError,setAppError]=useState("");
   useEffect(()=>{
     const show=(event:Event)=>setAppError(String((event as CustomEvent).detail||"Алдаа гарлаа."));
@@ -1988,7 +2034,7 @@ export default function Home() {
     try { localStorage.removeItem("kino_session");localStorage.removeItem("kino_access"); } catch {}
     requestJson("/api/auth", {}, true).then(data=>{
       if(!active)return;
-      if(data?.admin){setAdminAuth(true);}
+      if(data?.admin){setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);}
       else if(data?.user){accessOwner.current=data.user.id;setUser(data.user);void Promise.all([syncAccessFromDB(data.user.id),syncWalletFromDB(data.user.id)]).catch(()=>{});}
     }).catch(()=>{}).finally(()=>{if(active)setAuthReady(true);});
     return()=>{active=false;};
@@ -2330,7 +2376,7 @@ export default function Home() {
     playRequest.current++;
     try {
       await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"logout"})});
-      accessOwner.current=null;setUser(null);setAdminAuth(false);setAccessMap({});setWalletBalance(0);navigateTo("home");void loadFilms();
+      accessOwner.current=null;setUser(null);setAdminAuth(false);setMasterAdmin(false);setAccessMap({});setWalletBalance(0);navigateTo("home");void loadFilms();
     } catch {} // Keep the signed-in state visible if server-side logout failed.
   };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
@@ -2341,11 +2387,11 @@ export default function Home() {
       {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
 
-      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} />}
+      {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
-      {page === "adminlogin" && <AdminLogin onEnter={() => { playRequest.current++;setAdminAuth(true); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); void loadFilms(); navigateTo("admin"); }} onBack={() => navigateTo("home")} />}
-      {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} />}
+      {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); void loadFilms(); navigateTo("admin"); }} onBack={() => navigateTo("home")} />}
+      {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       <PushNotificationSetup key={user?.id||"none"} enabled={!!user?.id&&!adminAuth} />
       {showContact && <ContactModal onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
@@ -2353,7 +2399,7 @@ export default function Home() {
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
       {showLoginModal && !user && mounted && createPortal(
         <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} className="login-dialog">
-          <div className="dialog-heading"><div><span className="eyebrow">ТАЗА САЙТ</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
+          <div className="dialog-heading"><div><span className="eyebrow">{brandName}</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
           {selectedFilm && <p className="login-note">Үргэлжлүүлэх кино: <strong>{selectedFilm.title}</strong></p>}
           <p className="login-note">Утасны дугаар, PIN кодоороо нэвтэрнэ үү.</p>
           <LoginModal onLogin={(u:any)=>{handleLogin(u);setShowLoginModal(false);}}/>
