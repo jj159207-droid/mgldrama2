@@ -1,8 +1,8 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import {
-  ApiError, DEVICE_COOKIE, db, fail, issueSession, json, originCheck,
-  pinHash, publicUser, session, setDeviceCookie, setSessionCookie
+  ApiError, DEVICE_COOKIE, canAdminSite, db, fail, issueSession, json, originCheck,
+  pinHash, publicUser, requestSite, session, setDeviceCookie, setSessionCookie
 } from '@/lib/server';
 
 export const runtime='nodejs';
@@ -46,13 +46,17 @@ async function attachRecoveryCookie(req:NextRequest,res:any,userId:number) {
 export async function POST(req:NextRequest) {
   try {
     originCheck(req);
-    const current=await session(req);
-    if(current?.admin)return json({admin:true,user:null});
+    const site=requestSite(req),current=await session(req);
+    if(current?.admin){
+      if(canAdminSite(current,site))return json({admin:true,user:null,site});
+      throw new ApiError(403,'Өөр сайтын админ session байна. Админаас гараад энэ сайтыг хэрэглэгчээр нээнэ үү.');
+    }
 
     if(current?.userId){
       const existing=await readUser(current.userId);
       if(existing){
-        const res=json({user:publicUser(existing)});
+        await db('rpc/kino_touch_site_user','POST',{p_site:site,p_user:Number(existing.id)});
+        const res=json({user:publicUser(existing),site});
         return attachRecoveryCookie(req,res,Number(existing.id));
       }
     }
@@ -67,7 +71,8 @@ export async function POST(req:NextRequest) {
         if(recovered){
           const age=recovered.is_guest===true?DEVICE_SESSION_AGE:7*24*60*60;
           const issued=await issueSession(req,Number(recovered.id),false,age);
-          const res=setSessionCookie(json({user:publicUser(recovered),recovered:true}),issued.token,issued.age);
+          await db('rpc/kino_touch_site_user','POST',{p_site:site,p_user:Number(recovered.id)});
+          const res=setSessionCookie(json({user:publicUser(recovered),recovered:true,site}),issued.token,issued.age);
           return setDeviceCookie(res,recovery,DEVICE_TOKEN_AGE);
         }
       }
@@ -84,8 +89,9 @@ export async function POST(req:NextRequest) {
           failed_attempts:0,
         });
         if(!user || typeof user.id!=='number')throw new ApiError(502,'Төхөөрөмжийг бүртгэж чадсангүй.');
+        await db('rpc/kino_touch_site_user','POST',{p_site:site,p_user:user.id});
         const issued=await issueSession(req,user.id,false,DEVICE_SESSION_AGE);
-        const res=setSessionCookie(json({user:publicUser(user),created:true}),issued.token,issued.age);
+        const res=setSessionCookie(json({user:publicUser(user),created:true,site}),issued.token,issued.age);
         return setDeviceCookie(res,await issueDeviceToken(user.id),DEVICE_TOKEN_AGE);
       } catch(error) {
         if(error instanceof ApiError && error.code==='23505')continue;
