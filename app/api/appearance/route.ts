@@ -3,9 +3,9 @@ import {ApiError, bodyJson, canAdminSite, db, fail, json, originCheck, requestSi
 import {validAppearance} from "@/lib/appearance";
 export const runtime = "nodejs";
 const SELECT = "layout,tone,revision";
-export async function GET(req:NextRequest) {
+export async function GET(req?:NextRequest) {
   try {
-    const site=requestSite(req);
+    const site=req?requestSite(req):'taza';
     const [appearance] = await db(`site_appearance?site_id=eq.${site}&select=${SELECT}`);
     if (!validAppearance(appearance)) throw new ApiError(503,"Загварын тохиргоог ачаалж чадсангүй.");
     return json({appearance});
