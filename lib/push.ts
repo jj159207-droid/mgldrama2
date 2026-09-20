@@ -1,5 +1,6 @@
 import { createPrivateKey, sign as cryptoSign } from 'node:crypto';
 import { db } from '@/lib/server';
+import type { SiteId } from '@/lib/site';
 
 type PushConfig = {public_key:string; private_jwk:Record<string,string>; subject:string};
 type PushSubscriptionRow = {id:number; endpoint:string};
@@ -37,11 +38,11 @@ function vapidToken(endpoint:string,cfg:PushConfig) {
   return `${unsigned}.${signature}`;
 }
 
-export async function sendPushToUser(userId:number) {
+export async function sendPushToUser(userId:number,site:SiteId='taza') {
   if(!Number.isSafeInteger(userId)||userId<=0)return;
   const [cfg,rows]=await Promise.all([
     config(),
-    db(`push_subscriptions?user_id=eq.${userId}&select=id,endpoint&limit=20`)
+    db(`push_subscriptions?site_id=eq.${site}&user_id=eq.${userId}&select=id,endpoint&limit=20`)
   ]);
   if(!cfg || !rows.length)return;
   await Promise.allSettled(rows.map(async raw=>{
