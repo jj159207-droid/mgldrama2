@@ -2483,6 +2483,11 @@ export default function Home() {
     } catch {} // Keep the signed-in state visible if server-side logout failed.
   };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
+  const entryBarrier=siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed&&page!=="adminlogin";
+  const entryPaymentFilm={
+    id:0,title:"ТАЗА САЙТ нээх",price:6000,topupAmount:6000,
+    monthly:true,plan:"wallet_topup",locked:true,entryGate:true,walletBefore:walletBalance
+  };
 
   return (
     <div className="app-shell site-theme" data-layout={appearance.layout} style={{...appearanceStyle(appearance), minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
@@ -2490,6 +2495,45 @@ export default function Home() {
       {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
 
+      {entryBarrier ? (
+        <main style={{minHeight:"100dvh",background:C.bg,color:C.txt,padding:0}}>
+          {!entryReady ? (
+            <div style={{minHeight:"100dvh",display:"grid",placeItems:"center",padding:24,textAlign:"center"}}>
+              <div>
+                <AdminEntryLogo onOpen={()=>navigateTo("adminlogin")} />
+                <h1 style={{fontSize:22,margin:"18px 0 8px"}}>ТАЗА САЙТ</h1>
+                <p style={{color:C.muted}}>Төлбөрийн эрхийг шалгаж байна…</p>
+              </div>
+            </div>
+          ) : entryError ? (
+            <div style={{minHeight:"100dvh",display:"grid",placeItems:"center",padding:24}}>
+              <div style={{width:"100%",maxWidth:430,textAlign:"center"}}>
+                <AdminEntryLogo onOpen={()=>navigateTo("adminlogin")} />
+                <h1 style={{fontSize:22,margin:"18px 0 8px"}}>ТАЗА САЙТ нээх</h1>
+                <p role="alert" style={{color:C.red,lineHeight:1.6}}>{entryError}</p>
+                <button type="button" onClick={()=>void retryEntry()} style={{...goldBtn,marginTop:14,borderRadius:10}}>Дахин шалгах</button>
+              </div>
+            </div>
+          ) : user?.id ? (
+            <BankModal
+              inline
+              key={`entry:${user.id}`}
+              film={entryPaymentFilm}
+              onClose={()=>{}}
+              onPaid={handleEntryPaid}
+              onAdmin={()=>navigateTo("adminlogin")}
+              user={user}
+            />
+          ) : (
+            <div style={{minHeight:"100dvh",display:"grid",placeItems:"center",padding:24,textAlign:"center"}}>
+              <div>
+                <p role="alert" style={{color:C.red}}>Төхөөрөмжийг таньж чадсангүй.</p>
+                <button type="button" onClick={()=>void retryEntry()} style={{...goldBtn,borderRadius:10}}>Дахин оролдох</button>
+              </div>
+            </div>
+          )}
+        </main>
+      ) : <>
       {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
@@ -2500,6 +2544,9 @@ export default function Home() {
       {showContact && <ContactModal onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo("admin");}} />}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
+
+      </>}
+
       {showLoginModal && !user && mounted && createPortal(
         <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} className="login-dialog">
           <div className="dialog-heading"><div><span className="eyebrow">{brandName}</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
