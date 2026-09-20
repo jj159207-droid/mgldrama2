@@ -256,6 +256,7 @@ test('matched TAZA all-movie reference accepts any bank income above 5000 and op
  assert.equal(tables.pending_payments[0].status,'pending');
  assert.equal((await bankSms('567890','5,001.00')).status,200);
  assert.equal(tables.pending_payments[0].status,'confirmed');
+ assert.equal(tables.pending_payments[0].confirmed_amount,5001);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,cookie))).status,200);
 });
