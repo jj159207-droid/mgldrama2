@@ -20,9 +20,9 @@ function normalizeRow(row:Record<string,unknown>|undefined) {
   return {messengerUrl,bankName,bankAccount,accountName,bankIban,ibanSetupRequired:!bankIban};
 }
 
-export async function GET(req:NextRequest) {
+export async function GET(req?:NextRequest) {
   try {
-    const site=requestSite(req);
+    const site=req?requestSite(req):'taza';
     const [row]=await db(`site_settings?site_id=eq.${site}&select=messenger_url,bank_name,bank_account,account_name,bank_iban&limit=1`);
     return json({...normalizeRow(row),site});
   } catch(error) {return fail(error);}
