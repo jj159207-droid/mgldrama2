@@ -29,7 +29,10 @@ before(async () => {
   assert.deepEqual((await pg.query('select sender,message from support_messages order by id')).rows, [{sender:'user',message:'Legacy question'},{sender:'admin',message:'Legacy reply'}]);
   assert.equal((await pg.query<{n:number}>('select count(*)::int n from contact_messages')).rows[0].n, 2);
   await pg.exec(await readFile(new URL('../supabase/migrations/20260915200520_chat_access_actions.sql', import.meta.url), 'utf8'));
-  await pg.exec("insert into films(id,title,badge,price,free,locked) values(33,'Film A','Хэлтэй|Гадаад',5000,false,true),(34,'Film B','Хэлтэй|Хятад',5000,false,true)");
+  // Add only the additive columns needed by the multi-site HTTP layer. The
+  // legacy TAZA SQL functions remain the execution oracle in this isolated DB.
+  await pg.exec("alter table films add column site_id text not null default 'taza'; alter table pending_payments add column site_id text not null default 'taza'; alter table support_threads add column site_id text not null default 'taza'; alter table support_messages add column site_id text not null default 'taza';");
+  await pg.exec("insert into films(id,title,badge,price,free,locked,site_id) values(33,'Film A','Хэлтэй|Гадаад',5000,false,true,'taza'),(34,'Film B','Хэлтэй|Хятад',5000,false,true,'taza')");
 });
 beforeEach(async () => {
   await pg.exec('reset role;truncate support_threads cascade;delete from pending_payments;');
@@ -42,13 +45,26 @@ beforeEach(async () => {
     if (table === 'app_sessions') {
       const token = u.searchParams.get('token_hash')?.slice(3);
       const who = (Object.keys(tokens) as (keyof typeof tokens)[]).find(k => hash(tokens[k]) === token);
-      return Response.json(who ? [{user_id: who === 'admin' ? null : who === 'user' ? 1 : 2, is_admin: who === 'admin'}] : []);
+      return Response.json(who ? [{user_id: who === 'admin' ? null : who === 'user' ? 1 : 2, is_admin: who === 'admin', admin_site_id:null, is_master_admin:who === 'admin'}] : []);
     }
+    if (table === 'push_vapid_config' || table === 'push_subscriptions') return Response.json([]);
     try {
       let result;
       if (table.startsWith('rpc/')) {
-        const fn = table.slice(4); assert.ok(['kino_chat_send','kino_chat_inbox','kino_chat_unread','kino_chat_view','kino_chat_activity','kino_chat_grant','kino_chat_clear'].includes(fn));
-        result = await pg.query(`select * from ${fn}(${Object.keys(body).map((k,i) => `${k} => $${i+1}`).join(',')})`, Object.values(body));
+        const requested = table.slice(4);
+        const aliases:Record<string,string>={
+          kino_chat_send_site:'kino_chat_send',
+          kino_chat_inbox_site:'kino_chat_inbox',
+          kino_chat_unread_site:'kino_chat_unread',
+          kino_chat_view_site:'kino_chat_view',
+          kino_chat_activity_site:'kino_chat_activity',
+          kino_chat_grant_site:'kino_chat_grant',
+          kino_chat_clear_site:'kino_chat_clear',
+        };
+        const fn=aliases[requested]||requested;
+        assert.ok(['kino_chat_send','kino_chat_inbox','kino_chat_unread','kino_chat_view','kino_chat_activity','kino_chat_grant','kino_chat_clear'].includes(fn));
+        const callBody={...body};delete callBody.p_site;
+        result = await pg.query(`select * from ${fn}(${Object.keys(callBody).map((k,i) => `${k} => ${i+1}`).join(',')})`, Object.values(callBody));
       } else {
         assert.ok(['support_messages','support_images','pending_payments','films'].includes(table), `Unexpected table ${table}`);
         const params:unknown[] = [], clauses:string[] = [];
