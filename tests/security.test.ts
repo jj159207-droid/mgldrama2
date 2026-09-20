@@ -49,15 +49,11 @@ beforeEach(()=>{
     const site=String(body.p_site||'taza'),user=Number(body.p_user);
     if(site!=='taza')return Response.json([{allowed:true,reason:'not_gated'}]);
     const sameSite=(row:Row)=>String(row.site_id||'taza')===site;
-    const funded=tables.wallet_ledger.some(row=>sameSite(row)&&Number(row.user_id)===user&&Number(row.delta)>0&&['topup','admin_credit'].includes(String(row.kind)));
-    const paidOnce=tables.pending_payments.some(row=>sameSite(row)&&Number(row.user_id)===user&&Number(row.amount)>0&&(row.status==='confirmed'||!!row.confirmed_at));
-    const activeGrant=tables.pending_payments.some(row=>{
+    const activeEntitlement=tables.pending_payments.some(row=>{
       if(!sameSite(row)||Number(row.user_id)!==user||row.status!=='confirmed'||['wallet_topup','wallet_admin'].includes(String(row.plan)))return false;
-      const expiry=paymentExpiry({...row,status:'confirmed'});
-      return expiry>Date.now();
+      return paymentExpiry({...row,status:'confirmed'})>Date.now();
     });
-    const allowed=funded||paidOnce||activeGrant;
-    return Response.json([{allowed,reason:allowed?'paid':'payment_required'}]);
+    return Response.json([{allowed:activeEntitlement,reason:activeEntitlement?'active_entitlement':'payment_required'}]);
   }
   assert.ok(name in tables,`unknown table ${name}`);
   tables[name].forEach(r=>{if(r.id===undefined)r.id=nextId++;});
@@ -98,8 +94,9 @@ async function register(phone='99112233'){
  return r.headers.get('set-cookie')!.split(';')[0];
 }
 async function admin(){const r=await auth.POST(req('/api/auth','POST',{action:'admin',password:process.env.ADMIN_PASSWORD}));assert.equal(r.status,200);return r.headers.get('set-cookie')!.split(';')[0];}
-function markEntryPaid(userId:number,amount=6000){
+function markEntryPaid(userId:number,amount=12500){
  tables.wallet_ledger.push({id:nextId++,user_id:userId,delta:amount,kind:'topup',site_id:'taza',created_at:now()});
+ tables.pending_payments.push({id:nextId++,user_id:userId,ref_code:String(700000+(nextId%200000)),film_id:null,plan:'entry_72h',amount,status:'confirmed',created_at:now(),confirmed_at:now(),site_id:'taza'});
 }
 async function paidUser(phone='99112233'){
  const cookie=await register(phone);markEntryPaid(Number(tables.users.find(u=>u.phone===phone)?.id));return cookie;
@@ -212,6 +209,15 @@ test('TAZA playback requires entry payment and then the movie entitlement',async
  const r=await playback.GET(req('/api/playback?id=1','GET',undefined,c));assert.equal(r.status,200);assert.equal((await r.json()).url,'https://video.example/movie.mp4');
  tables.pending_payments[0].status='revoked';assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,403);
 });
+test('wallet funding or expired payment does not bypass the 72-hour TAZA entry gate',async()=>{
+ const c=await register();const uid=Number(tables.users[0].id);
+ tables.wallet_ledger.push({id:1,user_id:uid,delta:12500,kind:'topup',site_id:'taza',created_at:now()});
+ assert.equal((await api.GET(dbReq('films?select=*','GET',undefined,c))).status,402);
+ tables.pending_payments.push({id:2,user_id:uid,ref_code:'654320',film_id:null,plan:'entry_72h',amount:12500,status:'confirmed',created_at:new Date(Date.now()-73*3600000).toISOString(),confirmed_at:new Date(Date.now()-73*3600000).toISOString(),site_id:'taza'});
+ assert.equal((await api.GET(dbReq('films?select=*','GET',undefined,c))).status,402);
+ tables.pending_payments.push({id:3,user_id:uid,ref_code:'654321',film_id:null,plan:'entry_72h',amount:12500,status:'confirmed',created_at:now(),confirmed_at:now(),site_id:'taza'});
+ assert.equal((await api.GET(dbReq('films?select=*','GET',undefined,c))).status,200);
+});
 test('free and unlocked movies remain behind the TAZA entry payment',async()=>{
  const guest=()=>playback.GET(req('/api/playback?id=1'));
  tables.films[0].free=true;
@@ -261,6 +267,14 @@ test('matched TAZA entry reference accepts any bank income above 5000 and opens 
  assert.equal(tables.pending_payments[0].confirmed_amount,5001);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,cookie))).status,200);
+});
+test('admin manual confirmation stores the actual flexible entry amount',async()=>{
+ const c=await admin();
+ tables.pending_payments.push({id:77,ref_code:'567891',user_id:10,film_id:null,plan:'entry_72h',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
+ assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed'},c))).status,400);
+ assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed',confirmed_amount:6000},c))).status,200);
+ assert.equal(tables.pending_payments[0].status,'confirmed');
+ assert.equal(tables.pending_payments[0].confirmed_amount,6000);
 });
 test('admin can edit but cannot repeatedly extend confirmed payment',async()=>{
  const c=await admin();assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{img:'',price:4000},c))).status,200);
