@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
+import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session,siteEntryAllowed } from '@/lib/server';
 import { plans,safeUrl,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
 export const runtime='nodejs';
@@ -77,6 +77,8 @@ async function handler(req:NextRequest) {
 
   if(table==='sms_logs'&&admin&&!s?.masterAdmin)throw new ApiError(403,'SMS оношлогоог зөвхөн үндсэн админ харна.');
   if(table==='users'&&admin&&req.method==='GET')return json(await siteUsers(query,site));
+  if(table==='films'&&req.method==='GET'&&!admin&&site==='taza'&&!(await siteEntryAllowed(s?.userId,site)))
+    throw new ApiError(402,'ТАЗА САЙТ нээхийн тулд эхлээд 6,000₮ төлбөрөө баталгаажуулна уу.','SITE_PAYMENT_REQUIRED');
 
   if(['films','pending_payments','contact_messages'].includes(table))query.set('site_id',`eq.${site}`);
   let b:Row|undefined=req.method==='GET'||req.method==='DELETE'?undefined:await bodyJson(req);
