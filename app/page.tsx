@@ -503,11 +503,11 @@ function UiIcon({ name, size = 20 }: { name: UiIconName; size?: number }) {
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
-function Poster({ film }: any) {
+function Poster({ film, brandName="ТАЗА САЙТ" }: any) {
   const [failed, setFailed] = useState(false);
   return <div className="poster-art">
     <div className="poster-fallback" aria-hidden="true">
-      <span className="poster-wordmark">ТАЗА САЙТ</span>
+      <span className="poster-wordmark">{brandName}</span>
       <strong>{film.title}</strong>
       <span>{decodeCat(film.badge)} · {decodeBadge(film.badge)}</span>
     </div>
@@ -516,13 +516,13 @@ function Poster({ film }: any) {
       : <TrailerPosterFrame film={film} />}
   </div>;
 }
-function FilmCard({ film, onClick, expiry }: any) {
+function FilmCard({ film, onClick, expiry, brandName }: any) {
   const available = film.free || film.locked === false || !!expiry;
   const isErotic = decodeCat(film.badge) === "Эротик";
   return <article className={`movie-card${isErotic ? " erotic-card" : ""}`}>
     <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — дэлгэрэнгүй үзэх`}>
       <div className="movie-poster">
-        <Poster key={film.img || "no-image"} film={film} />
+        <Poster key={film.img || "no-image"} film={film} brandName={brandName} />
         <span className="movie-badge">{decodeBadge(film.badge)}</span>
         {isErotic && <span className="movie-age21">+21</span>}
         {film.free && <span className="movie-free">Үнэгүй</span>}
@@ -710,7 +710,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       {!preview && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
-          renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} />}
+          renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Илүү олон кино үзмээр байна уу?</strong><span>3 хоног эсвэл 1 сарын багц</span></span><span className="banner-cta">Багц сонгох →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
@@ -1775,10 +1775,10 @@ function AdminAnalyticsTab() {
   </div>;
 }
 
-function AppearancePreview({films}: {films:any[]}) {
+function AppearancePreview({films,brandName}: {films:any[];brandName:string}) {
   const [catalogState,setCatalogState]=useState<CatalogState>({...INITIAL_CATALOG});
   const noop=()=>{};
-  return <HomePage preview films={films} catalogState={catalogState} onCatalogChange={setCatalogState} loading={false} user={null} chatUnread={0} onFilm={noop} onAdmin={noop} onContact={noop} onOpenLogin={noop} onMonthly={noop} onRetry={noop}/>;
+  return <HomePage preview films={films} catalogState={catalogState} onCatalogChange={setCatalogState} loading={false} user={null} chatUnread={0} onFilm={noop} onAdmin={noop} onContact={noop} onOpenLogin={noop} onMonthly={noop} onRetry={noop} brandName={brandName}/>;
 }
 
 function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=false, brandName="ТАЗА САЙТ" }: any) {
@@ -1836,7 +1836,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
   const updateImg = async (id: number, img: string) => { await dbFetch(`films?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ img }) }); setEditId(null); onRefresh(); };
   const updateUrl = async (id: number, url: string) => { await dbFetch(`films?id=eq.${id}`, { method: "PATCH", body: JSON.stringify({ url }) }); setEditId(null); onRefresh(); };
 
-  if(tab === "appearance")return <AppearanceEditor onClose={()=>setTab("list")} onSaved={onAppearanceSaved}><AppearancePreview films={films}/></AppearanceEditor>;
+  if(tab === "appearance")return <AppearanceEditor onClose={()=>setTab("list")} onSaved={onAppearanceSaved}><AppearancePreview films={films} brandName={brandName}/></AppearanceEditor>;
   return (
     <div className="admin-surface" style={{ background: C.bg, minHeight: "100vh", paddingBottom: 30 }}>
       <div style={{ background: C.card, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: `0.5px solid ${C.bd}`, position: "sticky", top: 0, zIndex: 10 }}>
