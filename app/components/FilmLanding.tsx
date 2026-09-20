@@ -136,7 +136,7 @@ export default function FilmLanding(props:Props) {
     </section>}
 
     {packages.length > 0 && <section className="detail-packages" aria-label="Киноны багц">
-      <div className="detail-plan-grid">{packages.map((plan,index)=><article key={plan.id} className="detail-plan"><svg className="plan-calendar" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg><span className="eyebrow">60 кино үзэх эрх</span><h3>{plan.days} хоног</h3><strong>{plan.price.toLocaleString("mn-MN")}₮</strong><button className={index === 0 ? "secondary-button" : "primary-button"} disabled={busy} onClick={()=>choosePlan(plan.id)} aria-label={`${plan.category} ${plan.days} хоногийн багц авах`}>Багц авах</button></article>)}</div>
+      <div className="detail-plan-grid">{packages.map((plan,index)=><article key={plan.id} className="detail-plan"><svg className="plan-calendar" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg><span className="eyebrow">72 цагийн үзэх эрх</span><h3>{plan.hours} цаг</h3><strong>{plan.price.toLocaleString("mn-MN")}₮</strong><button className="primary-button" disabled={busy} onClick={()=>choosePlan(plan.id)} aria-label={`${plan.category} ${plan.hours} цагийн багц авах`}>Багц авах</button></article>)}</div>
     </section>}
   </main>;
 }
