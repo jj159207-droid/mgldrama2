@@ -1,11 +1,12 @@
 import { db } from './server';
 import type { Row } from './domain';
+import type { SiteId } from './site';
 
 // The longest supported legacy entitlement is one year. Page through matching
 // rows so a database response cap cannot hide a newer, still-valid purchase.
-export async function entitlementPayments(userId: number): Promise<Row[]> {
+export async function entitlementPayments(userId: number, site: SiteId = 'taza'): Promise<Row[]> {
   const since = encodeURIComponent(new Date(Date.now() - 366 * 86400000).toISOString());
-  const query = `user_id=eq.${userId}&status=eq.confirmed&or=(confirmed_at.gte.${since},and(confirmed_at.is.null,created_at.gte.${since}))&select=id,film_id,plan,status,confirmed_at,created_at&order=id.asc&limit=200`;
+  const query = `user_id=eq.${userId}&site_id=eq.${site}&status=eq.confirmed&or=(confirmed_at.gte.${since},and(confirmed_at.is.null,created_at.gte.${since}))&select=id,film_id,plan,status,confirmed_at,created_at,site_id&order=id.asc&limit=200`;
   const result: Row[] = [];
   let lastId = 0;
   for (;;) {
