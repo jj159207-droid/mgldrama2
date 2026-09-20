@@ -1,7 +1,7 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
 export const plans: Record<string, number> = {
-  erotic_3day:8000,gadaad_3day:8000,hyatad_3day:8000,oros_3day:8000,
+  erotic_3day:12500,gadaad_3day:12500,hyatad_3day:12500,oros_3day:12500,
   erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,oros_1month:12500,all_1month:20000,
   all_48h:7900,
   wallet_topup:5000,
