@@ -476,6 +476,13 @@
   text-align: center;
 }
 
+.wallet-single-bottom-banner {
+  margin: 16px 0 0;
+  padding: 12px 0 2px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  border-bottom: 0;
+}
+
 .wallet-single-back {
   width: 40px;
   height: 40px;
@@ -721,6 +728,18 @@
     background: rgba(7,11,17,.94);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+
+  .wallet-single-bottom-banner {
+    position: static;
+    top: auto;
+    z-index: auto;
+    margin: 16px -14px 0;
+    padding: 14px 14px max(4px, env(safe-area-inset-bottom));
+    border-top: 1px solid rgba(255,255,255,.08);
+    border-bottom: 0;
+    background: transparent;
+    backdrop-filter: none;
   }
 
   .wallet-single-instructions p {
