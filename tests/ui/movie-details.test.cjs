@@ -19,7 +19,7 @@ let root,session,entitled,orders,requests,failCatalog,failPlayback,authGate,film
 const originalFetch=global.fetch;
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
 beforeEach(()=>{
- session={};entitled=false;orders=[];requests=[];failCatalog=false;failPlayback=false;authGate=null;filmGate=null;loginGate=null;deviceGate=null;playbackGate=null;clipboard=[];entryAllowed=true;walletBalance=6000;
+ session={};entitled=false;orders=[];requests=[];failCatalog=false;failPlayback=false;authGate=null;filmGate=null;loginGate=null;deviceGate=null;playbackGate=null;clipboard=[];entryAllowed=true;walletBalance=0;
  window.history.replaceState({page:'home'},'', '/');
  Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>clipboard.push(value)},configurable:true});
  root=createRoot(document.getElementById('root'));
@@ -72,7 +72,7 @@ beforeEach(()=>{
        const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
        if(existingTopup)return Response.json([existingTopup]);
      }
-     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan.endsWith('_3day')?8000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan==='all_48h'?8000:body.plan.endsWith('_3day')?8000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -91,15 +91,15 @@ const pop=async(url,state={page:'home'})=>act(async()=>{window.history.replaceSt
 const movie=()=>document.querySelector('.full-player video')?.getAttribute('src');
 const title=()=>document.querySelector('#selected-film-title')?.textContent;
 
-test('TAZA hides every movie until the 6000 MNT entry topup is confirmed',async()=>{
+test('TAZA hides every movie until the 8000 MNT 48-hour package is confirmed',async()=>{
  entryAllowed=false;walletBalance=0;
  await render('/?film=7&fbclid=tracking');
  assert.equal(document.querySelector('#selected-film-title'),null);
  assert.equal(document.querySelectorAll('.movie-card').length,0);
- assert.match(document.body.textContent,/Кинонууд төлбөр баталгаажсаны дараа харагдана/);
- assert.match(document.body.textContent,/6,000₮/);
- assert.equal(orders.length,1);assert.equal(orders[0].plan,'wallet_topup');assert.equal(orders[0].amount,6000);
- orders[0].status='confirmed';entryAllowed=true;walletBalance=6000;
+ assert.match(document.body.textContent,/Автоматаар баталгаажиж кинонууд нээгдэнэ/);
+ assert.match(document.body.textContent,/34 кино бүгд 8,000₮ \/ 48 цаг/);
+ assert.equal(orders.length,1);assert.equal(orders[0].plan,'all_48h');assert.equal(orders[0].amount,8000);
+ orders[0].status='confirmed';entryAllowed=true;entitled=true;
  await act(async()=>window.dispatchEvent(new dom.window.Event('focus')));
  await act(async()=>new Promise(resolve=>setTimeout(resolve,0)));
  assert.equal(title(),'Гэрэл');
