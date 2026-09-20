@@ -85,7 +85,11 @@ test('five logo taps within eight seconds reveal sign-in, and the existing passw
  const enter=async value=>act(async()=>{Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(field,value);field.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});
  const submit=()=>act(async()=>field.closest('form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));
  await enter('wrong');await submit();assert.match(document.body.textContent,/Нууц үг буруу/);assert.equal(document.querySelector('.admin-surface'),null);
- await enter('test-existing-admin-password');await submit();assert.ok(document.querySelector('.admin-surface'));assert.deepEqual(authWrites.at(-1),{action:'admin',password:'test-existing-admin-password'});
+ await enter('test-existing-admin-password');await submit();
+ assert.ok(document.querySelector('[aria-label="Админ удирдах хэсэг"]'));assert.ok(document.querySelector('[aria-label="Кино хэсэг"]'));
+ assert.equal(document.querySelector('.admin-surface'),null);
+ await click('[aria-label="Админ удирдах хэсэг"]');assert.ok(document.querySelector('.admin-surface'));
+ assert.deepEqual(authWrites.at(-1),{action:'admin',password:'test-existing-admin-password'});
 });
 test('expired taps and clicks on the name do not unlock the admin entry',async t=>{
  let now=0;t.mock.method(performance,'now',()=>now);await render();
@@ -94,9 +98,13 @@ test('expired taps and clicks on the name do not unlock the admin entry',async t
  await act(async()=>new Promise(resolve=>{window.addEventListener("hashchange",resolve,{once:true});document.querySelector('[aria-label="ТАЗА САЙТ нүүр"]').click();}));assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);
  now=8002;await logo();assert.ok(document.querySelector('[aria-label="Админы нууц үг"]'));
 });
-test('an existing admin session still starts on home and opens management after the hidden gesture',async()=>{
+test('an existing admin session chooses between management and movie sections after the hidden gesture',async()=>{
  session={admin:true};await render();assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
- for(let i=0;i<5;i++)await logo();assert.ok(document.querySelector('.admin-surface'));assert.equal(authWrites.length,0);
+ for(let i=0;i<5;i++)await logo();
+ assert.ok(document.querySelector('[aria-label="Админ удирдах хэсэг"]'));assert.ok(document.querySelector('[aria-label="Кино хэсэг"]'));
+ assert.equal(authWrites.length,0);
+ await click('[aria-label="Кино хэсэг"]');assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
+ for(let i=0;i<5;i++)await logo();await click('[aria-label="Админ удирдах хэсэг"]');assert.ok(document.querySelector('.admin-surface'));
 });
 test('reconnection retries only a failed catalog and clears the offline notice',async()=>{
  failed=true;await render();const previous=filmRequests;
@@ -108,7 +116,7 @@ test('reconnection retries only a failed catalog and clears the offline notice',
 });
 
 test('admin appearance entry previews the real catalog in an inert full-screen dialog',async()=>{
- session={admin:true};await render();for(let i=0;i<5;i++)await logo();
+ session={admin:true};await render();for(let i=0;i<5;i++)await logo();await click('[aria-label="Админ удирдах хэсэг"]');
  await act(async()=>[...document.querySelectorAll('.admin-tabs button')].find(b=>b.textContent.includes('Загвар өөрчлөх')).click());
  const dialog=document.querySelector('.appearance-editor');assert.ok(dialog.open);
  assert.equal(dialog.querySelectorAll('input[type="range"]').length,2);
