@@ -71,7 +71,9 @@ beforeEach(async () => {
           if(['p_client','p_request'].includes(key))return 'uuid';
           return 'text';
         };
-        const args=Object.keys(callBody).map((k,i)=>k+' => 
+        const dollar=String.fromCharCode(36);
+        const args=Object.keys(callBody).map((k,i)=>k+' => '+dollar+(i+1)+'::'+cast(k)).join(',');
+        result = await pg.query(`select * from ${fn}(${args})`, Object.values(callBody));
       } else {
         assert.ok(['support_messages','support_images','pending_payments','films'].includes(table), `Unexpected table ${table}`);
         const params:unknown[] = [], clauses:string[] = [];
