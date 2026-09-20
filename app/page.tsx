@@ -2056,11 +2056,46 @@ export default function Home() {
     try { localStorage.removeItem("kino_session");localStorage.removeItem("kino_access"); } catch {}
     requestJson("/api/auth", {}, true).then(data=>{
       if(!active)return;
-      if(data?.admin){setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);}
+      if(data?.admin){
+        setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);
+        setEntryAllowed(true);setEntryReady(true);
+      }
       else if(data?.user){accessOwner.current=data.user.id;setUser(data.user);void Promise.all([syncAccessFromDB(data.user.id),syncWalletFromDB(data.user.id)]).catch(()=>{});}
     }).catch(()=>{}).finally(()=>{if(active)setAuthReady(true);});
     return()=>{active=false;};
   }, []);
+
+  useEffect(() => {
+    if(!mounted||!authReady||!siteResolved)return;
+    if(siteId!=="taza"){
+      setEntryAllowed(true);setEntryReady(true);setEntryError("");
+      return;
+    }
+    if(adminAuth){
+      setEntryAllowed(true);setEntryReady(true);setEntryError("");
+      return;
+    }
+    let cancelled=false;
+    const run=async()=>{
+      setEntryReady(false);setEntryError("");
+      try{
+        const viewer=user?.id?user:await ensureDeviceUser();
+        if(cancelled)return;
+        if(!viewer?.id)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+        const data=await requestJson("/api/entry-access",{},true);
+        if(cancelled)return;
+        setEntryAllowed(data?.allowed===true);
+        setEntryReady(true);
+      }catch(error){
+        if(cancelled)return;
+        setEntryAllowed(false);
+        setEntryReady(true);
+        setEntryError(error instanceof Error?error.message:"Төлбөрийн эрхийг шалгаж чадсангүй.");
+      }
+    };
+    void run();
+    return()=>{cancelled=true;};
+  },[mounted,authReady,siteResolved,siteId,adminAuth,user?.id]);
 
   useEffect(()=>{
     if(!mounted||!authReady||!user?.id)return;
