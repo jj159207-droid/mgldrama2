@@ -154,9 +154,9 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ══════════════════════════════════════════════
 function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any) {
   const isWalletTopup=film.plan==="wallet_topup";
-  const isSimpleMovieTopup=isWalletTopup&&!film.returnPlan;
   const isEntryGate=film.entryGate===true;
-  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isSimpleMovieTopup?6000:5000));
+  const isSimpleMovieTopup=(isWalletTopup&&!film.returnPlan)||isEntryGate;
+  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?8000:isSimpleMovieTopup?6000:5000));
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup || isSimpleMovieTopup);
@@ -355,7 +355,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </button>
 
       <section className="wallet-single-instructions" aria-label="Цэнэглэх нөхцөл">
-        <p><strong>Шилжүүлэх дүн 6,000₮</strong> · <strong>3 кино үзнэ</strong></p>
+        <p><strong>1 кино 2,000₮</strong> · <strong>34 кино бүгд 8,000₮ / 48 цаг</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -2456,7 +2456,7 @@ export default function Home() {
   const handleEntryPaid = async (stillActive = () => true) => {
     if(!user?.id||!stillActive())return;
     const owner=Number(user.id);
-    await syncWalletFromDB(owner);
+    await Promise.all([syncWalletFromDB(owner),syncAccessFromDB(owner)]);
     if(!stillActive())return;
     const allowed=await syncEntryAccess();
     if(!stillActive())return;
@@ -2577,8 +2577,8 @@ export default function Home() {
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
   const entryBarrier=siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed&&page!=="adminlogin";
   const entryPaymentFilm={
-    id:0,title:"ТАЗА САЙТ нээх",price:6000,topupAmount:6000,
-    monthly:true,plan:"wallet_topup",locked:true,entryGate:true,walletBefore:walletBalance
+    id:0,title:"ТАЗА САЙТ нээх",price:8000,
+    monthly:true,plan:"all_48h",locked:true,entryGate:true,walletBefore:walletBalance
   };
 
   return (
