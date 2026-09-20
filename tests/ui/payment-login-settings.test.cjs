@@ -50,3 +50,11 @@ test('site settings endpoint permits optional Messenger while validating payment
   assert.match(settings,/validAccount\(bankAccount\)/);
   assert.match(settings,/kino_save_settings/);
 });
+
+
+test('TAZA entry payment has no pre-payment movie visibility banner and admin chooses destination',()=>{
+  assert.doesNotMatch(page,/Кинонууд төлбөр баталгаажсаны дараа харагдана/);
+  assert.match(page,/aria-label="Админ удирдах хэсэг"/);
+  assert.match(page,/aria-label="Кино хэсэг"/);
+  assert.match(page,/navigateTo\("admin-choice"\)/);
+});
