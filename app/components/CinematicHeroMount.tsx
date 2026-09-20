@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dbAll } from "@/lib/client";
+import { SITES, siteFromPathname } from "@/lib/site";
 
 type HeroFilm = {
   id: number;
@@ -27,7 +28,7 @@ function heroPackageLabel(film: HeroFilm) {
   return `${language} · ${category} багц`;
 }
 
-function Carousel({ films, onOpenPlans, walletBalance }: { films: HeroFilm[]; onOpenPlans: () => void; walletBalance: number }) {
+function Carousel({ films, onOpenPlans, walletBalance, totalFilms, brandName }: { films: HeroFilm[]; onOpenPlans: () => void; walletBalance: number; totalFilms:number; brandName:string }) {
   const [active, setActive] = useState(0);
   const [failed, setFailed] = useState<Record<number, true>>({});
   const swipe = useRef({ startX: 0, moved: false });
@@ -114,7 +115,7 @@ function Carousel({ films, onOpenPlans, walletBalance }: { films: HeroFilm[]; on
                     onError={() => setFailed(value => ({ ...value, [film.id]: true }))}
                   />
                 ) : (
-                  <span className="cinematic-hero-fallback" aria-hidden="true">ТАЗА САЙТ</span>
+                  <span className="cinematic-hero-fallback" aria-hidden="true">{brandName}</span>
                 )}
                 <span className="cinematic-hero-package">◉ {heroPackageLabel(film)}</span>
                 <span className="cinematic-hero-shade" aria-hidden="true" />
@@ -150,12 +151,12 @@ function Carousel({ films, onOpenPlans, walletBalance }: { films: HeroFilm[]; on
         <strong>{walletBalance.toLocaleString("mn-MN")}₮</strong>
       </div>
 
-      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label="60 кино 8000 төгрөгийн үзэх багц сонгох">
+      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`${totalFilms} кино 8000 төгрөгийн үзэх багц сонгох`}>
         <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
           <path d="m12 10 1.5 2.5M15 15l1.5 2.5M18 20l1.5 2.5" />
         </svg>
-        <span><strong>60</strong> кино <strong>8000</strong> төгрөг үзэх багц</span>
+        <span><strong>{totalFilms}</strong> кино <strong>8000</strong> төгрөг үзэх багц</span>
       </button>
     </section>
   );
@@ -164,7 +165,14 @@ function Carousel({ films, onOpenPlans, walletBalance }: { films: HeroFilm[]; on
 export default function CinematicHeroMount() {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [films, setFilms] = useState<HeroFilm[]>([]);
+  const [totalFilms,setTotalFilms]=useState(0);
+  const [brandName,setBrandName]=useState("ТАЗА САЙТ");
   const [walletBalance, setWalletBalance] = useState(0);
+
+  useEffect(()=>{
+    const id=siteFromPathname(window.location.pathname);
+    setBrandName(SITES[id].name);
+  },[]);
 
   useEffect(() => {
     const readBalance = (value?: unknown) => {
@@ -191,6 +199,7 @@ export default function CinematicHeroMount() {
             img: typeof film.img === "string" ? film.img : "",
             badge: typeof film.badge === "string" ? film.badge : "",
           }));
+        setTotalFilms(clean.length);
         const withPosters = clean.filter(film => film.img);
         setFilms((withPosters.length >= 3 ? withPosters : clean).slice(0, MAX_HERO_FILMS));
       })
@@ -219,6 +228,6 @@ export default function CinematicHeroMount() {
     window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"erotic",duration:"3day"}}));
   }, []);
 
-  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} walletBalance={walletBalance} /> : null, [films, openPlans, walletBalance]);
+  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} walletBalance={walletBalance} totalFilms={totalFilms} brandName={brandName} /> : null, [films, openPlans, walletBalance, totalFilms, brandName]);
   return target && content ? createPortal(content, target) : null;
 }
