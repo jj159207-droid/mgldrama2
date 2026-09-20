@@ -356,7 +356,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
         <p><strong>Шилжүүлэх дүн 12,500₮</strong></p>
-        <p><strong>Бүх киног үзэх эрх</strong></p>
+        <p><strong>Бүх киног 72 цаг үзэх эрх</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -862,17 +862,22 @@ function AdminOrdersTab() {
     const ref_code=String(order?.ref_code||"");
     if(!ref_code)return;
     let actualAmount:Number|number=Number(order?.amount||0);
-    if(order?.plan==="wallet_topup"){
-      const entered=window.prompt("Банкны дансанд БОДИТОЙ орсон дүнг оруулна уу.\nЖишээ: 13000",String(Number(order?.amount||5000)));
+    const needsActualAmount=["wallet_topup","all_48h","entry_72h"].includes(String(order?.plan||""));
+    if(needsActualAmount){
+      const entered=window.prompt("Банкны дансанд БОДИТОЙ орсон дүнг оруулна уу.\nЖишээ: 6000",String(Number(order?.amount||5000)));
       if(entered===null)return;
       actualAmount=Number(entered.replace(/[^0-9]/g,""));
-      if(!Number.isSafeInteger(actualAmount)||Number(actualAmount)<5000||Number(actualAmount)>200000){alert("5,000₮-өөс 200,000₮ хүртэл бодит дүн оруулна уу.");return;}
+      const minimum=order?.plan==="wallet_topup"?5000:5001;
+      if(!Number.isSafeInteger(actualAmount)||Number(actualAmount)<minimum||Number(actualAmount)>200000){
+        alert(order?.plan==="wallet_topup"?"5,000₮-өөс 200,000₮ хүртэл бодит дүн оруулна уу.":"5,000₮-өөс дээш бодитоор орсон дүнг оруулна уу.");
+        return;
+      }
     }
     setConfirming(ref_code);
     try {
       await dbFetch(`pending_payments?ref_code=eq.${ref_code}`, {
         method: "PATCH",
-        body: JSON.stringify({status:"confirmed",confirmed_at:new Date().toISOString(),...(order?.plan==="wallet_topup"?{confirmed_amount:Number(actualAmount)}:{})}),
+        body: JSON.stringify({status:"confirmed",confirmed_at:new Date().toISOString(),...(needsActualAmount?{confirmed_amount:Number(actualAmount)}:{})}),
       });
       await load();
     } catch(e) {
@@ -892,7 +897,7 @@ function AdminOrdersTab() {
   };
 
 
-  const getFilmTitle = (id: number) => id === 0 ? "👑 Сарын багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
+  const getFilmTitle = (id: number) => id === 0 ? "👑 72 цагийн багц" : films.find((f: any) => f.id === id)?.title || `#${id}`;
   const getPhone = (uid: number, order?: any) => {
     const u=uid?users.find((row:any)=>row.id===uid):null;
     if(u?.browser_no)return u.is_guest ? `Төхөөрөмж #${u.browser_no} · ${u.user_id||u.phone}` : `#${u.browser_no} · ${u.phone||u.user_id}`;
@@ -1015,7 +1020,7 @@ function AdminMembersTab() {
   const [films, setFilms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filterTab, setFilterTab] = useState<"allbag"|"monthly"|"3day"|"film">("allbag");
+  const [filterTab, setFilterTab] = useState<"allbag"|"package"|"film">("allbag");
   const [revoking, setRevoking] = useState<string | null>(null);
   // Нийт гишүүд харах
   const [showAllUsers, setShowAllUsers] = useState(false);
@@ -1078,14 +1083,13 @@ function AdminMembersTab() {
   const isActive = (p: any) => paymentExpiry({...p,status:"confirmed"}) > now;
   const activePayments = allPayments.filter(p => p.plan !== "wallet_topup" && isActive(p));
 
-  const paymentsAllBag = activePayments.filter(p => ["all_1month","monthly","1month","3day","1year"].includes(p.plan));
-  const paymentsMonthly = activePayments.filter(p => p.plan && p.plan.endsWith("_1month") && p.plan !== "all_1month");
-  const payments3Day = activePayments.filter(p => p.plan && p.plan.endsWith("_3day"));
+  const paymentsAllBag = activePayments.filter(p => ["all_1month","all_48h","entry_72h","monthly","1month","3day","1year"].includes(p.plan));
+  const paymentsPackage = activePayments.filter(p => p.plan && /_(3day|1month)$/.test(String(p.plan)) && p.plan !== "all_1month");
   const paymentsFilm = activePayments.filter(p => !p.plan || p.plan === "single");
   const revocableUserPayments = userPayments.filter((p:any) => p.plan !== "wallet_topup" && isActive(p));
   const totalWithAccess = new Set(activePayments.map(p => p.user_id)).size;
 
-  const currentPayments = filterTab === "allbag" ? paymentsAllBag : filterTab === "monthly" ? paymentsMonthly : filterTab === "3day" ? payments3Day : paymentsFilm;
+  const currentPayments = filterTab === "allbag" ? paymentsAllBag : filterTab === "package" ? paymentsPackage : paymentsFilm;
   const filteredPayments = currentPayments.filter(p => !search.trim() || getPhone(p.user_id).includes(search.trim()));
 
   const revokePayment = async (ref_code: string) => {
@@ -1143,7 +1147,7 @@ function AdminMembersTab() {
     } finally { setGranting(false); }
   };
 
-  const tabLabel = filterTab === "allbag" ? "🌟 Бүх багц авсан гишүүд" : filterTab === "monthly" ? "👑 1 сарын эрхтэй гишүүд" : filterTab === "3day" ? "⏱ 3 хоногийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
+  const tabLabel = filterTab === "allbag" ? "🌟 Бүх киноны 72 цагийн эрхтэй гишүүд" : filterTab === "package" ? "👑 Ангиллын 72 цагийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
 
   // ── Нийт гишүүдийн жагсаалт дэлгэц ──
   if (showAllUsers) {
@@ -1258,10 +1262,9 @@ function AdminMembersTab() {
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Эрх нэмэх:</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                   {[
-                    ["all_1month", "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d"],
-                    ["month_cat",  "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff"],
-                    ["3day_cat",   "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc"],
-                    ["film",       "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80"],
+                    ["all_1month", "🌟", "Бүх кино · 72 цаг",  "#1a0a3a", "#f59e0b", "#fcd34d"],
+                    ["3day_cat",   "👑", "Ангилал · 72 цаг",   "#061220", "#38bdf8", "#7dd3fc"],
+                    ["film",       "🎬", "1 кино эрх",         "#031a0e", "#16a34a", "#4ade80"],
                   ].map(([key, icon, label, bg, border, color]) => (
                     <button key={key} disabled={granting}
                       onClick={() => {
@@ -1281,16 +1284,16 @@ function AdminMembersTab() {
               </div>
             )}
 
-            {/* 1 сарын эрх — багц сонгох */}
+            {/* Хуучин 1 сарын төлөвлөгөө — 72 цагийн эрх болгон тооцно */}
             {grantStep === "month_cat" && (
               <div>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>👑 1 сарын — аль багц?</div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>👑 72 цаг — аль багц?</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
-                    ["erotic_1month", "🔞 Эротик · 1 сар"],
-                    ["gadaad_1month", "🌍 Гадаад · 1 сар"],
-                    ["hyatad_1month", "🇨🇳 Хятад · 1 сар"],
-                    ["oros_1month", "🇷🇺 Орос · 1 сар"],
+                    ["erotic_1month", "🔞 Эротик · 72 цаг"],
+                    ["gadaad_1month", "🌍 Гадаад · 72 цаг"],
+                    ["hyatad_1month", "🇨🇳 Хятад · 72 цаг"],
+                    ["oros_1month", "🇷🇺 Орос · 72 цаг"],
                   ].map(([plan, label]) => (
                     <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
                       style={{ background: "#2a0550", border: `0.5px solid #a855f7`, borderRadius: 10, padding: "12px 14px", color: "#e9d5ff", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
@@ -1302,16 +1305,16 @@ function AdminMembersTab() {
               </div>
             )}
 
-            {/* 3 хоногийн эрх — багц сонгох */}
+            {/* 72 цагийн эрх — багц сонгох */}
             {grantStep === "3day_cat" && (
               <div>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>⏱ 3 хоног — аль багц?</div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>⏱ 72 цаг — аль багц?</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   {[
-                    ["erotic_3day", "🔞 Эротик · 3 хоног"],
-                    ["gadaad_3day", "🌍 Гадаад · 3 хоног"],
-                    ["hyatad_3day", "🇨🇳 Хятад · 3 хоног"],
-                    ["oros_3day", "🇷🇺 Орос · 3 хоног"],
+                    ["erotic_3day", "🔞 Эротик · 72 цаг"],
+                    ["gadaad_3day", "🌍 Гадаад · 72 цаг"],
+                    ["hyatad_3day", "🇨🇳 Хятад · 72 цаг"],
+                    ["oros_3day", "🇷🇺 Орос · 72 цаг"],
                   ].map(([plan, label]) => (
                     <button key={plan} onClick={() => grantAccess(plan as string)} disabled={granting}
                       style={{ background: "#061220", border: `0.5px solid #38bdf8`, borderRadius: 10, padding: "12px 14px", color: "#7dd3fc", fontSize: 13, fontWeight: 700, cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
@@ -1392,10 +1395,9 @@ function AdminMembersTab() {
       {/* 4 filter таб */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
         {([
-          ["allbag",  "🌟", "Бүх багц",      "#1a0a3a", "#f59e0b", "#fcd34d", paymentsAllBag.length],
-          ["monthly", "👑", "1 сарын эрх",   "#2a0550", "#a855f7", "#e9d5ff", paymentsMonthly.length],
-          ["3day",    "⏱", "3 хоногийн эрх","#061220", "#38bdf8", "#7dd3fc", payments3Day.length],
-          ["film",    "🎬", "1 кино эрх",    "#031a0e", "#16a34a", "#4ade80", paymentsFilm.length],
+          ["allbag",  "🌟", "Бүх кино · 72 цаг",   "#1a0a3a", "#f59e0b", "#fcd34d", paymentsAllBag.length],
+          ["package", "👑", "Ангилал · 72 цаг",    "#2a0550", "#a855f7", "#e9d5ff", paymentsPackage.length],
+          ["film",    "🎬", "1 кино эрх",           "#031a0e", "#16a34a", "#4ade80", paymentsFilm.length],
         ] as any[]).map(([k, icon, label, bg, border, color, count]) => (
           <div key={k} onClick={() => { setFilterTab(k); setSearch(""); }}
             style={{ background: bg, border: `${filterTab === k ? "2px" : "0.5px"} solid ${border}`, borderRadius: 10, padding: "11px 10px", cursor: "pointer" }}>
