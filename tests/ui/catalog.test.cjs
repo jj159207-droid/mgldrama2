@@ -27,6 +27,7 @@ beforeEach(()=>{
   if(url.pathname==='/api/auth'){
    if(opts.method==='POST'){
     const body=JSON.parse(opts.body);authWrites.push(body);
+    if(body.action==='logout'){session={};return Response.json({ok:true});}
     if(body.action!=='admin'||body.password!=='test-existing-admin-password')return Response.json({message:'Нууц үг буруу байна.'},{status:401});
     session={admin:true};
    }
@@ -98,13 +99,17 @@ test('expired taps and clicks on the name do not unlock the admin entry',async t
  await act(async()=>new Promise(resolve=>{window.addEventListener("hashchange",resolve,{once:true});document.querySelector('[aria-label="ТАЗА САЙТ нүүр"]').click();}));assert.equal(document.querySelector('[aria-label="Админы нууц үг"]'),null);
  now=8002;await logo();assert.ok(document.querySelector('[aria-label="Админы нууц үг"]'));
 });
-test('an existing admin session chooses between management and movie sections after the hidden gesture',async()=>{
+test('an existing admin session chooses a destination and movie-section logout ends admin mode',async()=>{
  session={admin:true};await render();assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
  for(let i=0;i<5;i++)await logo();
  assert.ok(document.querySelector('[aria-label="Админ удирдах хэсэг"]'));assert.ok(document.querySelector('[aria-label="Кино хэсэг"]'));
  assert.equal(authWrites.length,0);
- await click('[aria-label="Кино хэсэг"]');assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
- for(let i=0;i<5;i++)await logo();await click('[aria-label="Админ удирдах хэсэг"]');assert.ok(document.querySelector('.admin-surface'));
+ await click('[aria-label="Кино хэсэг"]');
+ assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
+ const logout=[...document.querySelectorAll('.header-actions button')].find(b=>b.textContent==='Гарах');assert.ok(logout);
+ await act(async()=>logout.click());
+ assert.deepEqual(authWrites.at(-1),{action:'logout'});
+ assert.equal(document.querySelector('[aria-label="Админ удирдах хэсэг"]'),null);
 });
 test('reconnection retries only a failed catalog and clears the offline notice',async()=>{
  failed=true;await render();const previous=filmRequests;
