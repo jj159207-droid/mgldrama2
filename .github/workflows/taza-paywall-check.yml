@@ -1,0 +1,18 @@
+name: TAZA paywall release check
+on:
+  push:
+    branches: [multi-site]
+jobs:
+  verify-paywall:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: node --test tests/ui/movie-details.test.cjs
+      - run: npm run build
