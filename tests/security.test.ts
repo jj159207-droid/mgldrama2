@@ -224,14 +224,16 @@ test('free and unlocked movies remain behind the TAZA entry payment',async()=>{
  assert.equal((await guest()).status,403);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
 });
-test('3-day, 72-hour and yearly plans, invalid dates and maximum expiry correct',()=>{
+test('all package plans use 72-hour expiry while single and yearly stay distinct',()=>{
  const time=Date.parse('2026-01-01T00:00:00Z');const base={status:'confirmed',confirmed_at:new Date(time).toISOString()};
- assert.equal(paymentExpiry({...base,plan:'3day'}),time+3*86400000);
+ assert.equal(paymentExpiry({...base,plan:'3day'}),time+72*3600000);
  assert.equal(paymentExpiry({...base,plan:'all_48h'}),time+72*3600000);
+ assert.equal(paymentExpiry({...base,plan:'entry_72h'}),time+72*3600000);
+ assert.equal(paymentExpiry({...base,plan:'gadaad_1month'}),time+72*3600000);
  assert.equal(paymentExpiry({...base,plan:'1year'}),time+365*86400000);
  assert.equal(paymentExpiry({...base,confirmed_at:'bad'}),0);
  const a=accessFromPayments([{...base,plan:'gadaad_1month'},{...base,plan:'all_1month',confirmed_at:new Date(time-86400000).toISOString()},{...base,plan:'all_48h'}],time);
- assert.equal(a.cat_gadaad,time+30*86400000);
+ assert.equal(a.cat_gadaad,time+72*3600000);
  assert.equal(a.monthly,time+72*3600000);
  assert.equal(canWatch({id:1,locked:true,badge:'Хэлтэй|Орос'},[{...base,plan:'all_48h'}],time),true);
  assert.equal(canWatch({id:1,locked:true},[],time),false);
@@ -248,10 +250,10 @@ test('SMS cannot self-confirm; missing/wrong amount blocked; valid signed SMS wo
  assert.equal(tables.pending_payments[0].confirmed_at,confirmed);
  assert.equal(parseBankSms('ZARLAGA:5000MNT Utga:123456'),null);
 });
-test('matched TAZA all-movie reference accepts any bank income above 5000 and opens every movie',async()=>{
+test('matched TAZA entry reference accepts any bank income above 5000 and opens every movie',async()=>{
  const cookie=await register();const uid=tables.users[0].id;
  tables.films.push({...tables.films[0],id:2,title:'Second movie'});
- tables.pending_payments.push({id:77,user_id:uid,ref_code:'567890',film_id:null,plan:'all_48h',amount:7900,status:'pending',created_at:now(),site_id:'taza'});
+ tables.pending_payments.push({id:77,user_id:uid,ref_code:'567890',film_id:null,plan:'entry_72h',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
  assert.equal((await bankSms('567890','5,000.00')).status,400);
  assert.equal(tables.pending_payments[0].status,'pending');
  assert.equal((await bankSms('567890','5,001.00')).status,200);
