@@ -32,6 +32,13 @@ beforeEach(()=>{
    }
    return Response.json(session);
   }
+  if(url.pathname==='/api/device'){
+   if(!session.user)session={user:{id:12,phone:'',user_id:'GTESTCATALOG',guest:true}};
+   return Response.json(session);
+  }
+  if(url.pathname==='/api/entry-access')return Response.json({allowed:true,reason:'paid'});
+  if(url.pathname==='/api/access')return Response.json({access:{}});
+  if(url.pathname==='/api/wallet')return Response.json({balance:6000});
   if(url.pathname==='/api/settings')return Response.json({});
   if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/chat')return Response.json({unread:0,threads:[]});
