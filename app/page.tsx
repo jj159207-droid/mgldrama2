@@ -2508,27 +2508,9 @@ export default function Home() {
       if(!viewer && !adminAuth)viewer=await ensureDeviceUser();
       if(adminAuth && !viewer){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
       if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
-      if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup")return;
+      if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup" || plan==="entry_72h")return;
       if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
-      const viewerId=Number(viewer.id);
-      const wallet=await purchasePlanWithWallet(plan,viewerId);
-      if(accessOwner.current!==viewerId)return;
-      if(wallet.ok){
-        setPayFilm(null);
-        if(sourceFilm)await playFilm(sourceFilm,()=>accessOwner.current===viewerId);
-        else setPage("home");
-        return;
-      }
-      const needed=Math.max(0,wallet.price-wallet.balance);
-      const topupAmount=Math.max(5000,Math.ceil(needed/1000)*1000);
-      if(sourceFilm)setPage("film");
-      else navigateTo("payment");
-      setPayFilm({
-        id:0,title:"Үлдэгдэл цэнэглэх",price:topupAmount,topupAmount,
-        monthly:true,plan:"wallet_topup",locked:true,
-        returnPlan:plan,returnPrice:wallet.price,returnFilm:sourceFilm,
-        walletBefore:wallet.balance
-      });
+      openPlanCheckout(plan,sourceFilm);
     } catch(error) {setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
   };
   const openLoginOverlay = () => {
