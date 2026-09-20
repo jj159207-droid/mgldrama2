@@ -10,7 +10,7 @@ export function planLabel(plan: string): string {
   const names: Record<string,string> = {
     erotic_3day:'Эротик · 3 хоног', gadaad_3day:'Гадаад · 3 хоног', hyatad_3day:'Хятад · 3 хоног', oros_3day:'Орос · 3 хоног',
     erotic_1month:'Эротик · 30 хоног', gadaad_1month:'Гадаад · 30 хоног', hyatad_1month:'Хятад · 30 хоног', oros_1month:'Орос · 30 хоног',
-    all_1month:'Бүх багц · 1 сар', all_48h:'Бүх кино · 48 цаг', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'Сарын багц', '1month':'Сарын багц', '3day':'3 хоногийн багц', '1year':'Жилийн багц', single:'Нэг кино',
+    all_1month:'Бүх багц · 1 сар', all_48h:'Бүх кино · 72 цаг', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'Сарын багц', '1month':'Сарын багц', '3day':'3 хоногийн багц', '1year':'Жилийн багц', single:'Нэг кино',
   };
   return names[plan] || plan;
 }
@@ -19,7 +19,7 @@ export function paymentExpiry(p: Row): number {
   const plan = String(p.plan || 'single');
   const date = Date.parse(String(p.confirmed_at || p.created_at || ''));
   if (!Number.isFinite(date)) return 0;
-  if (plan === 'all_48h') return date + 48 * 3600000;
+  if (plan === 'all_48h') return date + 72 * 3600000;
   const days = plan === 'single' || plan === '3day' || plan.endsWith('_3day') ? 3 : plan === '1year' ? 365 : 30;
   return date + days * 86400000;
 }
