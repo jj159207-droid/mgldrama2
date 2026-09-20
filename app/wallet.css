@@ -761,17 +761,20 @@
 }
 
 .wallet-video-start-animation {
-  width: min(230px, 78vw);
-  margin: 12px auto 2px;
-  display: grid;
-  gap: 8px;
+  width: calc(100% + 24px);
+  max-width: none;
+  margin: 12px -12px 0;
+  display: block;
 }
 
 .wallet-video-screen {
   position: relative;
   display: grid;
   place-items: center;
-  height: 92px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  min-height: 150px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 12px;
@@ -784,8 +787,8 @@
 .wallet-video-play {
   position: relative;
   z-index: 3;
-  width: 38px;
-  height: 38px;
+  width: clamp(54px, 15vw, 76px);
+  height: clamp(54px, 15vw, 76px);
   border-radius: 50%;
   background: rgba(74,222,128,.16);
   border: 1px solid rgba(74,222,128,.70);
@@ -796,20 +799,21 @@
 .wallet-video-play::after {
   content: "";
   position: absolute;
-  left: 15px;
-  top: 11px;
+  left: 42%;
+  top: 50%;
   width: 0;
   height: 0;
-  border-top: 8px solid transparent;
-  border-bottom: 8px solid transparent;
-  border-left: 12px solid #86efac;
+  transform: translate(-30%,-50%);
+  border-top: clamp(10px, 3vw, 15px) solid transparent;
+  border-bottom: clamp(10px, 3vw, 15px) solid transparent;
+  border-left: clamp(15px, 4vw, 22px) solid #86efac;
   filter: drop-shadow(0 0 5px rgba(134,239,172,.35));
 }
 
 .wallet-video-wave {
   position: absolute;
-  width: 62px;
-  height: 62px;
+  width: clamp(88px, 24vw, 124px);
+  height: clamp(88px, 24vw, 124px);
   border: 1px solid rgba(74,222,128,.28);
   border-radius: 50%;
   opacity: 0;
@@ -819,38 +823,6 @@
 .wallet-video-wave-two {
   animation-delay: 1s;
 }
-
-.wallet-video-progress {
-  display: flex;
-  gap: 5px;
-  justify-content: center;
-  align-items: flex-end;
-  height: 12px;
-}
-
-.wallet-video-progress i {
-  display: block;
-  width: 22px;
-  height: 3px;
-  border-radius: 999px;
-  background: rgba(148,163,184,.24);
-  overflow: hidden;
-  position: relative;
-}
-
-.wallet-video-progress i::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-110%);
-  background: linear-gradient(90deg, transparent, #4ade80, transparent);
-  animation: wallet-video-progress 1.4s linear infinite;
-}
-
-.wallet-video-progress i:nth-child(2)::after { animation-delay: .16s; }
-.wallet-video-progress i:nth-child(3)::after { animation-delay: .32s; }
-.wallet-video-progress i:nth-child(4)::after { animation-delay: .48s; }
-.wallet-video-progress i:nth-child(5)::after { animation-delay: .64s; }
 
 @keyframes wallet-video-play-pulse {
   0% { transform: scale(.94); box-shadow: 0 0 0 0 rgba(74,222,128,.34); }
@@ -863,15 +835,9 @@
   100% { transform: scale(1.65); opacity: 0; }
 }
 
-@keyframes wallet-video-progress {
-  0% { transform: translateX(-110%); }
-  100% { transform: translateX(110%); }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .wallet-video-play,
-  .wallet-video-wave,
-  .wallet-video-progress i::after {
+  .wallet-video-wave {
     animation: none !important;
   }
 }
