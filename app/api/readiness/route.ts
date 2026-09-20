@@ -4,7 +4,8 @@ import {APP_VERSION,configurationChecks} from '@/lib/readiness';
 export const runtime='nodejs';
 export async function GET(req:NextRequest){
   try{
-    if(!(await session(req))?.admin)throw new ApiError(403,'Админы эрх шаардлагатай.');
+    const s=await session(req);
+    if(!s?.admin||!s.masterAdmin)throw new ApiError(403,'Үндсэн админы эрх шаардлагатай.');
     const labels:Record<string,string>={tables_private:'Өгөгдлийн сангийн шууд хандалт хаалттай',poster_bucket:'Зургийн сан бэлэн',poster_policies:'Зургийг нийтэд өөрчлөх эрх хаалттай',payment_refs_unique:'Гүйлгээний код давхцахгүй',inline_posters:'Хуучин том зургууд шилжсэн',private_functions:'Серверийн функцүүд нийтэд хаалттай'};
     const checks=configurationChecks();
     try{
