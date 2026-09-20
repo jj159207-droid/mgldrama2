@@ -155,7 +155,7 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const isWalletTopup=film.plan==="wallet_topup";
   const isSimpleMovieTopup=isWalletTopup&&!film.returnPlan;
-  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):5000);
+  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isSimpleMovieTopup?6000:5000));
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup || isSimpleMovieTopup);
@@ -2241,7 +2241,7 @@ export default function Home() {
               if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
             }else{
               const needed=Math.max(0,wallet.price-wallet.balance);
-              const topupAmount=Math.max(5000,Math.ceil(needed/1000)*1000);
+              const topupAmount=Math.max(6000,Math.ceil(needed/1000)*1000);
               trackSiteEvent("payment_open",Number(film.id));
               setPayFilm({id:0,title:"Үлдэгдэл цэнэглэх",price:topupAmount,topupAmount,monthly:true,plan:"wallet_topup",locked:true,returnFilm:film,walletBefore:wallet.balance});
               setPage("film");
