@@ -916,7 +916,8 @@ function AdminOrdersTab() {
     return true;
   });
 
-  const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + Number(o.amount || 0), 0);
+  const confirmedOrderAmount = (o: any) => Number(o?.confirmed_amount || o?.amount || 0);
+  const totalRevenue = orders.filter(o => o.status === "confirmed").reduce((s, o) => s + confirmedOrderAmount(o), 0);
   const pendingCount = orders.filter(o => o.status === "pending").length;
   const confirmedCount = orders.filter(o => o.status === "confirmed").length;
   const monthlyCount = orders.filter(o => o.plan && o.plan !== "single" && o.plan !== "wallet_topup" && o.plan !== "wallet_admin" && o.status === "confirmed").length;
@@ -978,7 +979,7 @@ function AdminOrdersTab() {
                 {o.plan && o.plan !== "single" && <div style={{ fontSize: 11, color: "#a855f7", marginTop: 2 }}>👑 Үзэх багц</div>}
               </div>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{o.amount?.toLocaleString()}₮</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.gold }}>{(o.status === "confirmed" ? confirmedOrderAmount(o) : Number(o.amount || 0)).toLocaleString()}₮</div>
                 <div style={{ fontSize: 11, color: statusColor(o.status), marginTop: 2 }}>{statusLabel(o.status)}</div>
               </div>
             </div>
