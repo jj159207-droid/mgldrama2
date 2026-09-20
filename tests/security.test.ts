@@ -224,15 +224,15 @@ test('free and unlocked movies remain behind the TAZA entry payment',async()=>{
  assert.equal((await guest()).status,403);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
 });
-test('3-day, 48-hour and yearly plans, invalid dates and maximum expiry correct',()=>{
+test('3-day, 72-hour and yearly plans, invalid dates and maximum expiry correct',()=>{
  const time=Date.parse('2026-01-01T00:00:00Z');const base={status:'confirmed',confirmed_at:new Date(time).toISOString()};
  assert.equal(paymentExpiry({...base,plan:'3day'}),time+3*86400000);
- assert.equal(paymentExpiry({...base,plan:'all_48h'}),time+48*3600000);
+ assert.equal(paymentExpiry({...base,plan:'all_48h'}),time+72*3600000);
  assert.equal(paymentExpiry({...base,plan:'1year'}),time+365*86400000);
  assert.equal(paymentExpiry({...base,confirmed_at:'bad'}),0);
  const a=accessFromPayments([{...base,plan:'gadaad_1month'},{...base,plan:'all_1month',confirmed_at:new Date(time-86400000).toISOString()},{...base,plan:'all_48h'}],time);
  assert.equal(a.cat_gadaad,time+30*86400000);
- assert.equal(a.monthly,time+48*3600000);
+ assert.equal(a.monthly,time+72*3600000);
  assert.equal(canWatch({id:1,locked:true,badge:'Хэлтэй|Орос'},[{...base,plan:'all_48h'}],time),true);
  assert.equal(canWatch({id:1,locked:true},[],time),false);
 });
