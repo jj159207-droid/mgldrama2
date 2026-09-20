@@ -108,7 +108,12 @@ export async function POST(req:NextRequest) {
     });
   }
 
-  if(!Number.isFinite(Number(payment.amount))||Number(payment.amount)<=0||parsed.amount!==Number(payment.amount)){
+  if(payment.plan==='all_48h'){
+    if(!Number.isSafeInteger(parsed.amount)||parsed.amount<=5000){
+      outcome='amount_rejected';
+      throw new ApiError(400,'Бүх киноны эрх нээх шилжүүлэг 5,000₮-өөс дээш байна.');
+    }
+  }else if(!Number.isFinite(Number(payment.amount))||Number(payment.amount)<=0||parsed.amount!==Number(payment.amount)){
     outcome='amount_mismatch';
     throw new ApiError(400,'Шилжүүлсэн дүн захиалгын дүнтэй таарахгүй байна.');
   }
