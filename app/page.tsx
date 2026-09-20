@@ -152,9 +152,10 @@ function SmsVerifyModal({ onClose, onFound }: { onClose: () => void; onFound: (r
 // ══════════════════════════════════════════════
 // ТӨЛБӨРИЙН MODAL — автомат polling + дансны мэдээлэл
 // ══════════════════════════════════════════════
-function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
+function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any) {
   const isWalletTopup=film.plan==="wallet_topup";
   const isSimpleMovieTopup=isWalletTopup&&!film.returnPlan;
+  const isEntryGate=film.entryGate===true;
   const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isSimpleMovieTopup?6000:5000));
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
@@ -317,9 +318,9 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 72, marginBottom: 12 }}>✅</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
-          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>Үзэх эрх нээгдэж байна...</div>
+          <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>{isEntryGate ? "Кино сан нээгдэж байна..." : "Үзэх эрх нээгдэж байна..."}</div>
           {paymentError && <><p role="alert">{paymentError}</p><p>Холболт сэргэхэд дахин оролдоно. Дахин мөнгө шилжүүлэх шаардлагагүй.</p></>}
-          <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
+          {!isEntryGate && <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>}
         </div>
       </div>
     );
@@ -328,10 +329,15 @@ function BankModal({ film, onClose, onPaid, user, inline = false }: any) {
   const checkout = <>
     {isSimpleMovieTopup ? <>
       <div className="wallet-single-topbar">
-        <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>
-        <strong>Киноны данс цэнэглэх</strong>
+        {isEntryGate ? <AdminEntryLogo onOpen={()=>onAdmin?.()} /> : <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>}
+        <strong>{isEntryGate ? "ТАЗА САЙТ нээх" : "Киноны данс цэнэглэх"}</strong>
         <span />
       </div>
+
+      {isEntryGate && <section className="wallet-single-instructions" aria-label="ТАЗА САЙТ нээх">
+        <p><strong>Кинонууд төлбөр баталгаажсаны дараа харагдана.</strong></p>
+        <p>6,000₮ таны киноны дансанд орж, 2,000₮-ийн 3 кино үзэх боломжтой.</p>
+      </section>}
 
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
