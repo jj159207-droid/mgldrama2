@@ -168,10 +168,17 @@ export default function CinematicHeroMount() {
   const [packageFilmCount,setTotalFilms]=useState(0);
   const [brandName,setBrandName]=useState("ТАЗА САЙТ");
   const [walletBalance, setWalletBalance] = useState(0);
+  const [entryRefresh,setEntryRefresh]=useState(0);
 
   useEffect(()=>{
     const id=siteFromPathname(window.location.pathname);
     setBrandName(SITES[id].name);
+  },[]);
+
+  useEffect(()=>{
+    const refresh=()=>setEntryRefresh(value=>value+1);
+    window.addEventListener("tazaEntryAccessChanged",refresh);
+    return()=>window.removeEventListener("tazaEntryAccessChanged",refresh);
   },[]);
 
   useEffect(() => {
@@ -199,13 +206,17 @@ export default function CinematicHeroMount() {
             img: typeof film.img === "string" ? film.img : "",
             badge: typeof film.badge === "string" ? film.badge : "",
           }));
-        setTotalFilms(clean.length);
+        const eroticCount=clean.filter(film=>{
+          const category=String(film.badge||"").split("|")[1]?.trim() || "Эротик";
+          return category==="Эротик";
+        }).length;
+        setTotalFilms(eroticCount);
         const withPosters = clean.filter(film => film.img);
         setFilms((withPosters.length >= 3 ? withPosters : clean).slice(0, MAX_HERO_FILMS));
       })
-      .catch(() => {});
+      .catch(() => {if(!cancelled){setFilms([]);setTotalFilms(0);}});
     return () => { cancelled = true; };
-  }, []);
+  }, [entryRefresh]);
 
   useEffect(() => {
     const sync = () => {
