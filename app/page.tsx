@@ -361,10 +361,14 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </div>
 
       <div className="wallet-single-wait" role="status">
-        <span className="status-ring" aria-hidden="true"/>
+        {!isEntryGate && <span className="status-ring" aria-hidden="true"/>}
         <div>
           <strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Төлбөр шалгаж байна…" : "Төлбөрийн SMS хүлээж байна"}</strong>
-          <p>{autoStatus === "timeout" ? "Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу." : "Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ."}</p>
+          <p>{autoStatus === "timeout"
+            ? "Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу."
+            : isEntryGate
+              ? "Төлбөр автоматаар баталгаажиж, кинонууд нээгдэнэ."
+              : "Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ."}</p>
         </div>
       </div>
     </> : <>
