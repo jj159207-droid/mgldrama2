@@ -1,3 +1,4 @@
+import { siteFromPathname } from './site';
 export class RequestError extends Error {
   constructor(message: string, public status: number, public code = 'REQUEST_FAILED') { super(message); }
 }
@@ -19,6 +20,10 @@ export async function requestJson(path: string, opts: RequestInit = {}, quiet = 
   try {
     const headers = new Headers(opts.headers);
     if (!headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
+    if (!headers.has('X-Taza-Site')) {
+      const site = typeof window === 'undefined' ? 'taza' : siteFromPathname(window.location.pathname);
+      headers.set('X-Taza-Site', site);
+    }
     const res = await fetch(path, { ...opts, headers, credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
     const text = await res.text();
     let data;
