@@ -72,7 +72,7 @@ beforeEach(()=>{
        const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
        if(existingTopup)return Response.json([existingTopup]);
      }
-     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan==='all_48h'?8000:body.plan.endsWith('_3day')?8000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan==='all_48h'?12500:body.plan.endsWith('_3day')?8000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -91,17 +91,19 @@ const pop=async(url,state={page:'home'})=>act(async()=>{window.history.replaceSt
 const movie=()=>document.querySelector('.full-player video')?.getAttribute('src');
 const title=()=>document.querySelector('#selected-film-title')?.textContent;
 
-test('TAZA hides every movie until the 8000 MNT 48-hour package is confirmed',async()=>{
+test('TAZA hides every movie until the 12500 MNT 48-hour package is confirmed',async()=>{
  entryAllowed=false;walletBalance=0;
  await render('/?film=7&fbclid=tracking');
  assert.equal(document.querySelector('#selected-film-title'),null);
  assert.equal(document.querySelectorAll('.movie-card').length,0);
  assert.match(document.body.textContent,/Автоматаар баталгаажиж кинонууд нээгдэнэ/);
  const pricing=document.querySelector('.wallet-entry-pricing');assert.ok(pricing);
- assert.match(pricing.textContent,/1 кино - 2,000₮/);
- assert.match(pricing.textContent,/41 кино - 8,000₮ \/ шилжүүлснээр бүх киног үзэх эрх/);
+ assert.match(pricing.textContent,/Шилжүүлэх дүн 12,500₮/);
+ assert.match(pricing.textContent,/Бүх киног үзэх эрх/);
+ assert.doesNotMatch(pricing.textContent,/1 кино - 2,000₮/);
+ assert.doesNotMatch(pricing.textContent,/41 кино/);
  assert.doesNotMatch(pricing.textContent,/48 цаг/);
- assert.equal(orders.length,1);assert.equal(orders[0].plan,'all_48h');assert.equal(orders[0].amount,8000);
+ assert.equal(orders.length,1);assert.equal(orders[0].plan,'all_48h');assert.equal(orders[0].amount,12500);
  orders[0].status='confirmed';entryAllowed=true;entitled=true;
  await act(async()=>window.dispatchEvent(new dom.window.Event('focus')));
  await act(async()=>new Promise(resolve=>setTimeout(resolve,0)));
