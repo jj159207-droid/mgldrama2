@@ -337,11 +337,11 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
   const checkout = <>
     {isSimpleMovieTopup ? <>
-      <div className="wallet-single-topbar">
-        {isEntryGate ? <AdminEntryLogo onOpen={()=>onAdmin?.()} /> : <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>}
-        <strong>{isEntryGate ? "ТАЗА САЙТ нээх" : "Киноны данс цэнэглэх"}</strong>
+      {!isEntryGate && <div className="wallet-single-topbar">
+        <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>
+        <strong>Киноны данс цэнэглэх</strong>
         <span />
-      </div>
+      </div>}
 
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
@@ -399,6 +399,12 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
               : <p>Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ.</p>}
         </div>
       </div>
+
+      {isEntryGate && <div className="wallet-single-topbar wallet-single-bottom-banner">
+        <AdminEntryLogo onOpen={()=>onAdmin?.()} />
+        <strong>ТАЗА САЙТ нээх</strong>
+        <span />
+      </div>}
     </> : <>
       <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>
       {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
