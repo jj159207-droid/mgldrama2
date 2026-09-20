@@ -1,3 +1,4 @@
+import { siteFromPathname, sitePath } from "./site";
 export type FilmDestination = {kind: "none"} | {kind: "invalid"} | {kind: "film"; id: number};
 
 export function readFilmDestination(search: string): FilmDestination {
@@ -14,7 +15,9 @@ export function filmShareUrl(siteUrl: string, id: number): string {
   if (!Number.isSafeInteger(id) || id <= 0 || !["https:", "http:"].includes(site.protocol)) {
     throw new Error("Киноны холбоос үүсгэж чадсангүй.");
   }
-  return `${site.origin}/${id}`;
+  const currentSite=siteFromPathname(site.pathname);
+  const base=sitePath(currentSite);
+  return currentSite==="taza" ? `${site.origin}/${id}` : `${site.origin}${base}/${id}`;
 }
 
 // Keep attribution parameters in the visitor's address while changing films.
