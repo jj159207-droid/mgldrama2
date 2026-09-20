@@ -108,7 +108,7 @@ export async function POST(req:NextRequest) {
     });
   }
 
-  if(payment.plan==='all_48h'){
+  if(payment.plan==='all_48h'||payment.plan==='entry_72h'){
     if(!Number.isSafeInteger(parsed.amount)||parsed.amount<=5000){
       outcome='amount_rejected';
       throw new ApiError(400,'Бүх киноны эрх нээх шилжүүлэг 5,000₮-өөс дээш байна.');
@@ -138,7 +138,7 @@ export async function POST(req:NextRequest) {
   const rows=await db(`pending_payments?id=eq.${payment.id}&status=eq.pending`,'PATCH',{
     status:'confirmed',
     confirmed_at:new Date().toISOString(),
-    ...(payment.plan==='all_48h'?{confirmed_amount:parsed.amount}:{})
+    ...((payment.plan==='all_48h'||payment.plan==='entry_72h')?{confirmed_amount:parsed.amount}:{})
   });
   if(rows.length!==1){
     const [current]=await lookup();
