@@ -137,7 +137,8 @@ export async function POST(req:NextRequest) {
 
   const rows=await db(`pending_payments?id=eq.${payment.id}&status=eq.pending`,'PATCH',{
     status:'confirmed',
-    confirmed_at:new Date().toISOString()
+    confirmed_at:new Date().toISOString(),
+    ...(payment.plan==='all_48h'?{confirmed_amount:parsed.amount}:{})
   });
   if(rows.length!==1){
     const [current]=await lookup();
