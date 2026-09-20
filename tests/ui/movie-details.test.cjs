@@ -65,8 +65,13 @@ beforeEach(()=>{
    if(table==='pending_payments'){
     if(opts.method==='POST'){
      assert.ok(session.user,'must authenticate before creating an order');
-     const body=JSON.parse(opts.body),old=orders.find(o=>o.ref_code===body.ref_code);
-     if(old)return Response.json([old]);
+     const body=JSON.parse(opts.body);
+     const existingByRef=orders.find(o=>o.ref_code===body.ref_code);
+     if(existingByRef)return Response.json([existingByRef]);
+     if(body.plan==='wallet_topup'){
+       const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
+       if(existingTopup)return Response.json([existingTopup]);
+     }
      const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan.endsWith('_3day')?8000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
