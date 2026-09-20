@@ -402,7 +402,6 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       {isEntryGate && <div className="wallet-single-topbar wallet-single-bottom-banner">
         <AdminEntryLogo onOpen={()=>onAdmin?.()} />
-        <strong>ТАЗА САЙТ нээх</strong>
         <span />
       </div>}
     </> : <>
