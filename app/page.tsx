@@ -364,10 +364,10 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <b>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</b>
       </button>
 
-      <div className="wallet-single-balance">
+      {!isEntryGate && <div className="wallet-single-balance">
         Таны кино сайтын дансны одоогийн үлдэгдэл
         <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong>
-      </div>
+      </div>}
 
       <div className="wallet-single-wait" role="status">
         {!isEntryGate && <span className="status-ring" aria-hidden="true"/>}
