@@ -1949,9 +1949,16 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
 export default function Home() {
   const {appearance,apply:applyAppearance}=useSiteAppearance();
   const [siteId,setSiteId]=useState<SiteId>("taza");
+  const [siteResolved,setSiteResolved]=useState(false);
   const brandName=SITES[siteId].name;
   const [masterAdmin,setMasterAdmin]=useState(false);
-  useEffect(()=>{setSiteId(siteFromPathname(window.location.pathname));},[]);
+  const [entryReady,setEntryReady]=useState(false);
+  const [entryAllowed,setEntryAllowed]=useState(false);
+  const [entryError,setEntryError]=useState("");
+  useEffect(()=>{
+    setSiteId(siteFromPathname(window.location.pathname));
+    setSiteResolved(true);
+  },[]);
   const [appError,setAppError]=useState("");
   useEffect(()=>{
     const show=(event:Event)=>setAppError(String((event as CustomEvent).detail||"Алдаа гарлаа."));
@@ -2019,6 +2026,15 @@ export default function Home() {
     const balance=Number(data?.balance || 0);
     if(accessOwner.current===userId && Number.isSafeInteger(balance) && balance>=0)setWalletBalance(balance);
     return balance;
+  };
+
+  const syncEntryAccess = async () => {
+    const data=await requestJson("/api/entry-access",{},true);
+    const allowed=data?.allowed===true;
+    setEntryAllowed(allowed);
+    setEntryReady(true);
+    setEntryError("");
+    return allowed;
   };
 
   const ensureDeviceUser = async () => {
