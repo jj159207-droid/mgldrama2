@@ -107,7 +107,9 @@ export async function session(req:NextRequest):Promise<Session|null> {
   };
 }
 export function canAdminSite(s:Session|null|undefined,site:SiteId) {
-  return !!s?.admin && (s.masterAdmin || s.adminSiteId===site);
+  // Sessions issued before multi-site support have no admin_site_id. They were
+  // global admins already, so keep them as master-compatible during rollout.
+  return !!s?.admin && (s.masterAdmin || s.adminSiteId===null || s.adminSiteId===site);
 }
 export async function issueSession(
   req:NextRequest,userId:number|null,admin:boolean,ageOverride?:number,
