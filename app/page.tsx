@@ -156,7 +156,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const isWalletTopup=film.plan==="wallet_topup";
   const isEntryGate=film.entryGate===true;
   const isSimpleMovieTopup=(isWalletTopup&&!film.returnPlan)||isEntryGate;
-  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?7900:isSimpleMovieTopup?6000:5000));
+  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?12500:isSimpleMovieTopup?6000:5000));
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup || isSimpleMovieTopup);
@@ -355,7 +355,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </button>
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
-        <p><strong>Шилжүүлэх дүн 7,900₮</strong></p>
+        <p><strong>Шилжүүлэх дүн 12,500₮</strong></p>
         <p><strong>Бүх киног үзэх эрх</strong></p>
       </section>
 
@@ -418,7 +418,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <p className="wallet-spend-note">Сонгосон <strong>{planLabel(film.returnPlan)}</strong> багцыг кино сайтын дансны үлдэгдлээр авна.</p>
         <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮ ба түүнээс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
       </section>}
-      <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? (film.plan?.endsWith("_3day") ? "3 хоногийн үзэх эрх" : "30 хоногийн үзэх эрх") : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+      <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? "72 цагийн үзэх эрх" : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
       {isWalletTopup && !showTransferDetails && <div className="wallet-topup-preview"><span className="wallet-current-balance">Таны кино сайтын дансны үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span>{film.returnPlan ? <><span>Багцын үнэ <strong>{Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0).toLocaleString()}₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд багц авбал <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)).toLocaleString()}₮ үлдэнэ</strong></span></> : <><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></>}</div>}
       {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
       {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
@@ -648,11 +648,11 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
 function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsReady = true }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; films?: any[]; countsReady?: boolean }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("gadaad");
-  const [duration, setDuration] = useState("3day");
+  const [duration, setDuration] = useState("72h");
   const dialogRef = useRef<HTMLDialogElement>(null);
   const categories = [{key:"gadaad",label:"Гадаад"},{key:"hyatad",label:"Хятад"},{key:"oros",label:"Орос"},{key:"erotic",label:"Эротик"},{key:"all",label:"Бүх ангилал"}];
   const countFor = (key: string) => films.filter(f => key === "all" ? ["Гадаад","Хятад","Орос","Эротик"].includes(decodeCat(f.badge)) : decodeCat(f.badge) === categories.find(c => c.key === key)?.label).length;
-  const plan = category === "all" ? "all_48h" : `${category}_${duration}`;
+  const plan = category === "all" ? "all_48h" : `${category}_3day`;
   const price = PLAN_PRICES[plan];
   const selectedCount = countFor(category);
   const ensurePlanHistory = useCallback(() => {
@@ -666,7 +666,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
       if(detail.category==="erotic" || detail.category==="all"){
         ensurePlanHistory();
         setCategory(detail.category);
-        setDuration(detail.category==="all"?"72h":detail.duration==="1month"?"1month":"3day");
+        setDuration("72h");
         setOpen(true);
       }
     };
@@ -694,14 +694,14 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
       <div className="dialog-heading"><div><span className="eyebrow">ҮЗЭХ ЭРХ</span><h2 id="package-dialog-title">Багцаа сонгоорой</h2></div><button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button></div>
       <fieldset className="package-fieldset"><legend>1. Ямар кино үзэх вэ?</legend><div className="package-choices">
         {categories.map(c => <label key={c.key} className={`package-choice ${category === c.key ? "selected" : ""}`}>
-          <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);if(c.key === "all")setDuration("72h");}} />
+          <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);setDuration("72h");}} />
           <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">21+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
         </label>)}
       </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, орос, эротик — дөрвөн ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
       <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
-        {(category === "all" ? ["72h"] : ["3day","1month"]).map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
+        {["72h"].map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
           <input type="radio" name="package-duration" value={d} checked={duration === d} onChange={() => setDuration(d)} />
-          <span><strong>{d === "72h" ? "72 цаг" : d === "3day" ? "3 хоног" : "1 сар"}</strong><span>{PLAN_PRICES[category === "all" ? "all_48h" : `${category}_${d}`].toLocaleString()}₮</span></span>
+          <span><strong>72 цаг</strong><span>{PLAN_PRICES[category === "all" ? "all_48h" : `${category}_3day`].toLocaleString()}₮</span></span>
         </label>)}
       </div><p className="package-hint">Төлбөр баталгаажсан үеэс үзэх хугацаа эхэлнэ.</p></fieldset>
       <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>Сонгосон багцын кинонууд</span></span><strong>{price.toLocaleString()}₮</strong></div>
@@ -2585,8 +2585,8 @@ export default function Home() {
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
   const entryBarrier=siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed&&page!=="adminlogin";
   const entryPaymentFilm={
-    id:0,title:"ТАЗА САЙТ нээх",price:7900,
-    monthly:true,plan:"all_48h",locked:true,entryGate:true,walletBefore:walletBalance
+    id:0,title:"ТАЗА САЙТ нээх",price:12500,
+    monthly:true,plan:"entry_72h",locked:true,entryGate:true,walletBefore:walletBalance
   };
 
   return (
