@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextRequest } from "next/server";
 import { isRow } from "@/lib/domain";
-import { ApiError, bodyJson, db, fail, json, originCheck, session } from "@/lib/server";
+import { ApiError, bodyJson, canAdminSite, db, fail, json, originCheck, requestSite, session } from "@/lib/server";
 
 export const runtime = "nodejs";
 
@@ -13,12 +13,12 @@ const SOURCES = new Set(["facebook","direct","other"]);
 export async function POST(req: NextRequest) {
   try {
     originCheck(req);
-    const body = await bodyJson(req,4096);
+    const site=requestSite(req),body = await bodyJson(req,4096);
     if(body.action==="reset"){
       const s=await session(req);
-      if(!s?.admin)throw new ApiError(403,"Админы эрх шаардлагатай.");
-      const [reset]=await db("rpc/kino_analytics_reset","POST",{});
-      return json({ok:true,resetAt:reset?.reset_at||new Date().toISOString()});
+      if(!canAdminSite(s,site))throw new ApiError(403,"Энэ сайтын админы эрх шаардлагатай.");
+      const [reset]=await db("rpc/kino_analytics_reset_site","POST",{p_site:site});
+      return json({ok:true,resetAt:reset?.reset_at||new Date().toISOString(),site});
     }
     const eventType = String(body.event || "");
     if(!EVENTS.has(eventType)) throw new ApiError(400,"Статистикийн үйлдэл буруу.");
@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       event_type:eventType,
       film_id:FILM_EVENTS.has(eventType) ? filmId : null,
       source,
+      site_id:site,
     });
 
     const res = json({ok:true});
@@ -59,27 +60,13 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
   try {
-    const s = await session(req);
-    if(!s?.admin) throw new ApiError(403,"Админы эрх шаардлагатай.");
+    const site=requestSite(req),s = await session(req);
+    if(!canAdminSite(s,site)) throw new ApiError(403,"Энэ сайтын админы эрх шаардлагатай.");
     const daysRaw = Number(new URL(req.url).searchParams.get("days") || 30);
     const days = Number.isSafeInteger(daysRaw) ? Math.min(365,Math.max(1,daysRaw)) : 30;
-    const [mainRows,copyRows] = await Promise.all([
-      db("rpc/kino_analytics_summary","POST",{p_days:days}),
-      db("rpc/kino_analytics_copy_summary","POST",{p_days:days}),
-    ]);
-    const baseRaw=mainRows?.[0]?.summary;
-    const copiesRaw=copyRows?.[0]?.summary;
-    const base=isRow(baseRaw)?baseRaw:{days,today:{},period:{},topFilms:[]};
-    const copies=isRow(copiesRaw)?copiesRaw:{};
-    const baseToday=isRow(base.today)?base.today:{};
-    const basePeriod=isRow(base.period)?base.period:{};
-    const copyToday=isRow(copies.today)?copies.today:{};
-    const copyPeriod=isRow(copies.period)?copies.period:{};
-    return json({
-      ...base,
-      today:{...baseToday,...copyToday},
-      period:{...basePeriod,...copyPeriod},
-    });
+    const [row] = await db("rpc/kino_analytics_summary_site","POST",{p_site:site,p_days:days});
+    const summary=isRow(row?.summary)?row.summary:{days,today:{},period:{},topFilms:[],daily:[],site};
+    return json(summary);
   } catch(error) {
     return fail(error);
   }
