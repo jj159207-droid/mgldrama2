@@ -138,7 +138,7 @@ test('category, three-day and monthly grants confer only the selected scope and 
     assert.equal(response.status,200,await response.clone().text());
     const rows=(await pg.query<Row>('select * from pending_payments')).rows;
     const access=accessFromPayments(rows),keys=Object.keys(access);
-    assert.deepEqual(keys.sort(),plan==='all_1month'?['cat_erotic','cat_gadaad','cat_hyatad']:plan==='3day'?['monthly']:[`cat_${plan.split('_')[0]}`]);
+    assert.deepEqual(keys.sort(),plan==='all_1month'?['cat_erotic','cat_gadaad','cat_hyatad','cat_oros']:plan==='3day'?['monthly']:[`cat_${plan.split('_')[0]}`]);
     assert.equal(Object.values(access)[0]-Date.parse(String(rows[0].confirmed_at)),(plan.endsWith('3day')?3:30)*86400000);
     assert.deepEqual(accessFromPayments(rows,Date.now()+31*86400000),{});
   }
