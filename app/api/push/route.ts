@@ -29,14 +29,14 @@ export async function POST(req:NextRequest) {
     const p256dh=text(keys.p256dh,500),auth=text(keys.auth,300);
     if(!validPushEndpoint(endpoint)||!p256dh||!auth)throw new ApiError(400,'Push subscription буруу байна.');
 
-    const [old]=await db(`push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}&select=id&limit=1`);
+    const [old]=await db(`push_subscriptions?site_id=eq.${site}&endpoint=eq.${encodeURIComponent(endpoint)}&select=id&limit=1`);
     const payload={user_id:s.userId,site_id:site,endpoint,p256dh,auth,updated_at:new Date().toISOString()};
     if(old?.id)await db(`push_subscriptions?id=eq.${old.id}`,'PATCH',payload);
     else {
       try {await db('push_subscriptions','POST',payload);}
       catch(error) {
         if(!(error instanceof ApiError)||error.code!=='23505')throw error;
-        const [saved]=await db(`push_subscriptions?endpoint=eq.${encodeURIComponent(endpoint)}&select=id&limit=1`);
+        const [saved]=await db(`push_subscriptions?site_id=eq.${site}&endpoint=eq.${encodeURIComponent(endpoint)}&select=id&limit=1`);
         if(!saved?.id)throw error;
         await db(`push_subscriptions?id=eq.${saved.id}`,'PATCH',payload);
       }
