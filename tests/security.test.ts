@@ -21,16 +21,42 @@ let counters:Record<string,number>;
 let nextId=1;
 const now=()=>new Date().toISOString();
 beforeEach(()=>{
- delete process.env.SMS_ALLOWED_SENDER;nextId=100;counters={};tables={users:[],films:[{id:1,title:'Test',price:5000,locked:true,free:false,url:'https://video.example/movie.mp4',preview_url:'https://video.example/trailer.mp4',badge:'Хэлтэй|Гадаад'}],pending_payments:[],app_sessions:[],contact_messages:[],sms_logs:[],site_appearance:[{id:1,layout:1,tone:25,revision:0}]};
+ delete process.env.SMS_ALLOWED_SENDER;nextId=100;counters={};tables={
+  users:[],
+  films:[{id:1,title:'Test',price:5000,locked:true,free:false,url:'https://video.example/movie.mp4',preview_url:'https://video.example/trailer.mp4',badge:'Хэлтэй|Гадаад',site_id:'taza'}],
+  pending_payments:[],
+  app_sessions:[],
+  guest_device_tokens:[],
+  site_user_memberships:[],
+  contact_messages:[],
+  sms_logs:[],
+  site_settings:[{site_id:'taza',messenger_url:'',bank_name:'Хаан банк',bank_account:'5251258979',account_name:'Т.Жаргалбаяр',bank_iban:'MN03000500'}],
+  site_appearance:[{id:1,layout:1,tone:25,revision:0,site_id:'taza'}],
+  wallet_ledger:[],
+  push_subscriptions:[]
+ };
  global.fetch=async(input,init)=>{
   const u=new URL(String(input));assert.equal(u.origin,'https://test.invalid','test must never access real service');
   const name=u.pathname.replace('/rest/v1/','');const method=init?.method||'GET';const body=init?.body?JSON.parse(String(init.body)):null;
   if(name==='rpc/kino_claim_attempt'){const n=(counters[body.bucket_key]||0)+1;counters[body.bucket_key]=n;return Response.json([{allowed:n<=5}]);}
+  if(name==='rpc/kino_touch_site_user'){
+    const site=String(body.p_site||'taza'),user=Number(body.p_user);
+    const found=tables.site_user_memberships.find(r=>r.site_id===site&&Number(r.user_id)===user);
+    if(found)found.last_seen_at=now();else tables.site_user_memberships.push({site_id:site,user_id:user,first_seen_at:now(),last_seen_at:now()});
+    return Response.json([{ok:true}]);
+  }
   assert.ok(name in tables,`unknown table ${name}`);
   tables[name].forEach(r=>{if(r.id===undefined)r.id=nextId++;});
   const match=(row:Row)=>[...u.searchParams].every(([k,v])=>{
    if(['select','order','limit'].includes(k))return true;
-   if(v.startsWith('eq.'))return String(row[k])===v.slice(3);
+   if(v.startsWith('eq.')){
+     const value=row[k]===undefined&&k==='site_id'?'taza':row[k];
+     return String(value)===v.slice(3);
+   }
+   if(v.startsWith('in.(')){
+     const values=v.slice(4,-1).split(',');
+     return values.includes(String(row[k]));
+   }
    if(v.startsWith('gt.'))return k==='id'?Number(row[k])>Number(v.slice(3)):String(row[k])>v.slice(3);
    if(v.startsWith('neq.'))return String(row[k])!==v.slice(4);
    return true;
@@ -407,19 +433,13 @@ test('announcement deletion selects one row and preserves unrelated messages',as
  assert.equal((await api.DELETE(dbReq('contact_messages?id=eq.1','DELETE'))).status,403);
 });
 
-test('settings writes require admin, validate URLs and call only the settings RPC',async()=>{
+test('settings writes require admin, validate URLs and stay scoped to TAZA settings',async()=>{
  assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'https://m.me/test'}))).status,403);
  const c=await admin();assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'javascript:alert(1)'},c))).status,400);
- const original=global.fetch;
- let writes=0;
- global.fetch=async(input,init)=>{
-  const url=new URL(String(input));
-  if(url.pathname.endsWith('/rpc/kino_save_settings')){
-    writes++;assert.deepEqual(JSON.parse(JSON.parse(String(init?.body)).settings_value),{messengerUrl:'https://m.me/test'});return Response.json([]);
-  }
-  return original(input,init);
- };
- assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'https://m.me/test'},c))).status,200);assert.equal(writes,1);
+ assert.equal((await settings.PUT(req('/api/settings','PUT',{messengerUrl:'https://m.me/test'},c))).status,200);
+ assert.equal(tables.site_settings.length,1);
+ assert.equal(tables.site_settings[0].site_id,'taza');
+ assert.equal(tables.site_settings[0].messenger_url,'https://m.me/test');
 });
 
 test('admin cannot save a filter label as the movie category',async()=>{
@@ -477,13 +497,13 @@ test('appearance is public but only an admin may update its bounded settings',as
  assert.deepEqual(await result.json(),{appearance:{layout:4,tone:77,revision:1}});
  assert.deepEqual(await (await appearance.GET()).json(),{appearance:{layout:4,tone:77,revision:1}});
  assert.equal((await appearance.PUT(req('/api/appearance','PUT',{...settings,layout:2},cookie))).status,409);
- assert.deepEqual(tables.site_appearance,[{id:1,layout:4,tone:77,revision:1}]);
+ assert.deepEqual(tables.site_appearance,[{id:1,layout:4,tone:77,revision:1,site_id:'taza'}]);
 });
 test('appearance rejects unbounded or executable input without changing settings',async()=>{
  const cookie=await admin(),base={layout:1,tone:25,revision:0};
  const invalid=[null,[],{}, {...base,layout:0},{...base,layout:5},{...base,layout:'2'}, {...base,tone:-1},{...base,tone:101},{...base,tone:1.5},{...base,tone:'50'}, {...base,revision:-1},{...base,revision:0.1},{...base,css:'url(https://evil.test)'},{...base,id:2}];
  for(const value of invalid)assert.equal((await appearance.PUT(req('/api/appearance','PUT',value,cookie))).status,400);
- assert.deepEqual(tables.site_appearance,[{id:1,...base}]);
+ assert.deepEqual(tables.site_appearance,[{id:1,...base,site_id:'taza'}]);
  tables.site_appearance=[];
  assert.equal((await appearance.GET()).status,503);
 });
