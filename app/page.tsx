@@ -156,7 +156,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const isWalletTopup=film.plan==="wallet_topup";
   const isEntryGate=film.entryGate===true;
   const isSimpleMovieTopup=(isWalletTopup&&!film.returnPlan)||isEntryGate;
-  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?8000:isSimpleMovieTopup?6000:5000));
+  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?12500:isSimpleMovieTopup?6000:5000));
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup || isSimpleMovieTopup);
@@ -355,8 +355,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </button>
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
-        <p><strong>1 кино - 2,000₮</strong></p>
-        <p><strong>41 кино - 8,000₮ / шилжүүлснээр бүх киног үзэх эрх</strong></p>
+        <p><strong>Шилжүүлэх дүн 12,500₮</strong></p>
+        <p><strong>Бүх киног үзэх эрх</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -2584,7 +2584,7 @@ export default function Home() {
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
   const entryBarrier=siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed&&page!=="adminlogin";
   const entryPaymentFilm={
-    id:0,title:"ТАЗА САЙТ нээх",price:8000,
+    id:0,title:"ТАЗА САЙТ нээх",price:12500,
     monthly:true,plan:"all_48h",locked:true,entryGate:true,walletBefore:walletBalance
   };
 
