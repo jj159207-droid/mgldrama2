@@ -28,7 +28,7 @@ function heroPackageLabel(film: HeroFilm) {
   return `${language} · ${category} багц`;
 }
 
-function Carousel({ films, onOpenPlans, walletBalance, packageFilmCount, brandName }: { films: HeroFilm[]; onOpenPlans: () => void; walletBalance: number; packageFilmCount:number; brandName:string }) {
+function Carousel({ films, onOpenPlans, packageFilmCount, brandName }: { films: HeroFilm[]; onOpenPlans: () => void; packageFilmCount:number; brandName:string }) {
   const [active, setActive] = useState(0);
   const [failed, setFailed] = useState<Record<number, true>>({});
   const swipe = useRef({ startX: 0, moved: false });
@@ -146,17 +146,12 @@ function Carousel({ films, onOpenPlans, walletBalance, packageFilmCount, brandNa
         </div>
       )}
 
-      <div className="cinematic-wallet-balance" aria-live="polite">
-        <span>Таны кино сайтын үлдэгдэл</span>
-        <strong>{walletBalance.toLocaleString("mn-MN")}₮</strong>
-      </div>
-
-      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`${packageFilmCount} кино 8000 төгрөгийн үзэх багц сонгох`}>
+      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`Сайтын бүх ${packageFilmCount} кино 7900 төгрөгөөр 72 цаг үзэх эрх`}>
         <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
           <path d="m12 10 1.5 2.5M15 15l1.5 2.5M18 20l1.5 2.5" />
         </svg>
-        <span><strong>{packageFilmCount}</strong> кино <strong>8000</strong> төгрөг үзэх багц</span>
+        <span>Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>7900</strong> төгрөг · <strong>72 цаг</strong></span>
       </button>
     </section>
   );
@@ -167,7 +162,6 @@ export default function CinematicHeroMount() {
   const [films, setFilms] = useState<HeroFilm[]>([]);
   const [packageFilmCount,setTotalFilms]=useState(0);
   const [brandName,setBrandName]=useState("ТАЗА САЙТ");
-  const [walletBalance, setWalletBalance] = useState(0);
   const [entryRefresh,setEntryRefresh]=useState(0);
 
   useEffect(()=>{
@@ -182,18 +176,6 @@ export default function CinematicHeroMount() {
   },[]);
 
   useEffect(() => {
-    const readBalance = (value?: unknown) => {
-      const raw = value ?? document.documentElement.dataset.tazaWalletBalance ?? "0";
-      const next = Number(raw);
-      if (Number.isSafeInteger(next) && next >= 0) setWalletBalance(next);
-    };
-    readBalance();
-    const onBalance = (event: Event) => readBalance((event as CustomEvent).detail);
-    window.addEventListener("tazaWalletBalanceChanged", onBalance);
-    return () => window.removeEventListener("tazaWalletBalanceChanged", onBalance);
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
     dbAll("films?select=id,title,img,badge&order=id.desc", {}, true)
       .then(rows => {
@@ -206,11 +188,7 @@ export default function CinematicHeroMount() {
             img: typeof film.img === "string" ? film.img : "",
             badge: typeof film.badge === "string" ? film.badge : "",
           }));
-        const eroticCount=clean.filter(film=>{
-          const category=String(film.badge||"").split("|")[1]?.trim() || "Эротик";
-          return category==="Эротик";
-        }).length;
-        setTotalFilms(eroticCount);
+        setTotalFilms(clean.length);
         const withPosters = clean.filter(film => film.img);
         setFilms((withPosters.length >= 3 ? withPosters : clean).slice(0, MAX_HERO_FILMS));
       })
@@ -236,9 +214,9 @@ export default function CinematicHeroMount() {
   }, [target, films.length]);
 
   const openPlans = useCallback(() => {
-    window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"erotic",duration:"3day"}}));
+    window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"all",duration:"72h"}}));
   }, []);
 
-  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} walletBalance={walletBalance} packageFilmCount={packageFilmCount} brandName={brandName} /> : null, [films, openPlans, walletBalance, packageFilmCount, brandName]);
+  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} packageFilmCount={packageFilmCount} brandName={brandName} /> : null, [films, openPlans, packageFilmCount, brandName]);
   return target && content ? createPortal(content, target) : null;
 }
