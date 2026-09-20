@@ -187,8 +187,16 @@ async function handler(req:NextRequest) {
         });
         return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
       }
+      if(['all_48h','entry_72h'].includes(String(target?.plan)) && b.status==='confirmed'){
+        if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
+        if(target.status!=='pending')throw new ApiError(409,'Төлбөрийн төлөв өөрчлөгдсөн байна.');
+        const actualAmount=Number(b.confirmed_amount);
+        if(!Number.isSafeInteger(actualAmount)||actualAmount<=5000||actualAmount>200000)throw new ApiError(400,'5,000₮-өөс дээш бодитоор орсон дүнг оруулна уу.');
+        b={status:'confirmed',confirmed_amount:actualAmount};
+      }else{
+        b={status:b.status};
+      }
     }
-    b={status:b.status};
   }
   if(table==='pending_payments'&&admin&&req.method==='POST'&&b) {
     const uid=Number(b.user_id),plan=String(b.plan||'single');
