@@ -97,7 +97,10 @@ test('TAZA hides every movie until the 8000 MNT 48-hour package is confirmed',as
  assert.equal(document.querySelector('#selected-film-title'),null);
  assert.equal(document.querySelectorAll('.movie-card').length,0);
  assert.match(document.body.textContent,/Автоматаар баталгаажиж кинонууд нээгдэнэ/);
- assert.match(document.body.textContent,/34 кино бүгд 8,000₮ \/ 48 цаг/);
+ const pricing=document.querySelector('.wallet-entry-pricing');assert.ok(pricing);
+ assert.match(pricing.textContent,/1 кино - 2,000₮/);
+ assert.match(pricing.textContent,/41 кино - 8,000₮/);
+ assert.doesNotMatch(pricing.textContent,/48 цаг/);
  assert.equal(orders.length,1);assert.equal(orders[0].plan,'all_48h');assert.equal(orders[0].amount,8000);
  orders[0].status='confirmed';entryAllowed=true;entitled=true;
  await act(async()=>window.dispatchEvent(new dom.window.Event('focus')));
