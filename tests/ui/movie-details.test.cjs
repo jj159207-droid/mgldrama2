@@ -15,11 +15,11 @@ require('esbuild').buildSync({entryPoints:[path.join(repo,'app/page.tsx')],bundl
 const React=require('react'),{act}=React,{createRoot}=require('react-dom/client');
 const App=require(outfile).default;
 const films=[{id:7,title:'Гэрэл',img:'https://images.test/poster7.webp',description:'Хоёр найзын аялал. <b>Хадмалтай</b>',preview_url:'https://video.test/trailer7.mp4',views:20,free:false,locked:true,price:5000,badge:'Хадмал|Гадаад',url:'https://video.test/private7.mp4'},{id:34,title:'Алсын зам',preview_url:'https://video.test/trailer34.mp4',views:10,free:true,locked:false,price:0,badge:'Хэлтэй|Хятад',url:'https://video.test/free34.mp4'}];
-let root,session,entitled,orders,requests,failCatalog,failPlayback,authGate,filmGate,loginGate,deviceGate,playbackGate,clipboard;
+let root,session,entitled,orders,requests,failCatalog,failPlayback,authGate,filmGate,loginGate,deviceGate,playbackGate,clipboard,entryAllowed,walletBalance;
 const originalFetch=global.fetch;
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
 beforeEach(()=>{
- session={};entitled=false;orders=[];requests=[];failCatalog=false;failPlayback=false;authGate=null;filmGate=null;loginGate=null;deviceGate=null;playbackGate=null;clipboard=[];
+ session={};entitled=false;orders=[];requests=[];failCatalog=false;failPlayback=false;authGate=null;filmGate=null;loginGate=null;deviceGate=null;playbackGate=null;clipboard=[];entryAllowed=true;walletBalance=6000;
  window.history.replaceState({page:'home'},'', '/');
  Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>clipboard.push(value)},configurable:true});
  root=createRoot(document.getElementById('root'));
@@ -40,7 +40,9 @@ beforeEach(()=>{
    if(!session.user)session={user:{id:12,phone:'',user_id:'GTESTDEVICE',guest:true}};
    return Response.json(session);
   }
+  if(url.pathname==='/api/entry-access')return Response.json({allowed:entryAllowed,reason:entryAllowed?'paid':'payment_required'});
   if(url.pathname==='/api/access')return Response.json({access:entitled?{film_7:Date.now()+86400000}:{}});
+  if(url.pathname==='/api/wallet')return Response.json({balance:walletBalance});
   if(url.pathname==='/api/settings')return Response.json({});
   if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/playback'){
@@ -65,7 +67,7 @@ beforeEach(()=>{
      assert.ok(session.user,'must authenticate before creating an order');
      const body=JSON.parse(opts.body),old=orders.find(o=>o.ref_code===body.ref_code);
      if(old)return Response.json([old]);
-     const order={...body,id:90+orders.length,amount:body.plan==='single'?5000:body.plan.endsWith('_3day')?8000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan.endsWith('_3day')?8000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -83,6 +85,21 @@ const login=async()=>{await fill('#user-phone','99112233');await fill('#user-pin
 const pop=async(url,state={page:'home'})=>act(async()=>{window.history.replaceState(state,'',url);window.dispatchEvent(new dom.window.PopStateEvent('popstate',{state}));});
 const movie=()=>document.querySelector('.full-player video')?.getAttribute('src');
 const title=()=>document.querySelector('#selected-film-title')?.textContent;
+
+test('TAZA hides every movie until the 6000 MNT entry topup is confirmed',async()=>{
+ entryAllowed=false;walletBalance=0;
+ await render('/?film=7&fbclid=tracking');
+ assert.equal(document.querySelector('#selected-film-title'),null);
+ assert.equal(document.querySelectorAll('.movie-card').length,0);
+ assert.match(document.body.textContent,/Кинонууд төлбөр баталгаажсаны дараа харагдана/);
+ assert.match(document.body.textContent,/6,000₮/);
+ assert.equal(orders.length,1);assert.equal(orders[0].plan,'wallet_topup');assert.equal(orders[0].amount,6000);
+ orders[0].status='confirmed';entryAllowed=true;walletBalance=6000;
+ await act(async()=>window.dispatchEvent(new dom.window.Event('focus')));
+ await act(async()=>new Promise(resolve=>setTimeout(resolve,0)));
+ assert.equal(title(),'Гэрэл');
+ assert.ok(requests.some(r=>r.path==='/api/entry-access'));
+});
 
 test('poster starts only the public trailer; full playback requires its own button',async()=>{
  await render('/?film=7&fbclid=tracking');
