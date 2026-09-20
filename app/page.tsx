@@ -373,7 +373,6 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
                     <span className="wallet-video-wave wallet-video-wave-one"/>
                     <span className="wallet-video-wave wallet-video-wave-two"/>
                   </span>
-                  <span className="wallet-video-progress"><i/><i/><i/><i/><i/></span>
                 </div>
               : <p>Гүйлгээ баталгаажмагц үлдэгдэл автоматаар нэмэгдэнэ.</p>}
         </div>
