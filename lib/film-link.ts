@@ -17,7 +17,7 @@ export function filmShareUrl(siteUrl: string, id: number): string {
   }
   const currentSite=siteFromPathname(site.pathname);
   const base=sitePath(currentSite);
-  return currentSite==="taza" ? `${site.origin}/${id}` : `${site.origin}${base}/${id}`;
+  return currentSite==="taza" ? `${site.origin}/?film=${id}` : `${site.origin}${base}/${id}`;
 }
 
 // Keep attribution parameters in the visitor's address while changing films.
