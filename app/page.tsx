@@ -2361,6 +2361,37 @@ export default function Home() {
     else{setPayFilm(null);setPage("home");}
   };
 
+  const handleEntryPaid = async (stillActive = () => true) => {
+    if(!user?.id||!stillActive())return;
+    const owner=Number(user.id);
+    await syncWalletFromDB(owner);
+    if(!stillActive())return;
+    const allowed=await syncEntryAccess();
+    if(!stillActive())return;
+    if(!allowed)throw new Error("Төлбөр баталгаажсан боловч сайтын эрх шинэчлэгдсэнгүй. Дахин төлөхгүй, түр хүлээгээд шалгана уу.");
+    setEntryAllowed(true);setEntryReady(true);setEntryError("");
+    window.dispatchEvent(new Event("tazaEntryAccessChanged"));
+    if(filmTarget.kind==="film")setPage("film");
+    else{
+      const homeUrl=filmNavigationUrl(window.location.href,null);
+      window.history.replaceState({page:"home"},"",homeUrl);
+      setPage("home");
+      window.scrollTo?.({top:0,behavior:"instant"});
+    }
+  };
+
+  const retryEntry = async () => {
+    setEntryReady(false);setEntryError("");
+    try{
+      const viewer=user?.id?user:await ensureDeviceUser();
+      if(!viewer?.id)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+      await syncEntryAccess();
+    }catch(error){
+      setEntryAllowed(false);setEntryReady(true);
+      setEntryError(error instanceof Error?error.message:"Төлбөрийн эрхийг шалгаж чадсангүй.");
+    }
+  };
+
   const openPlanCheckout = (plan: string, sourceFilm: FilmDetails | null = null) => {
     if (plan === "show_plan") {
       window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
@@ -2446,7 +2477,9 @@ export default function Home() {
     playRequest.current++;
     try {
       await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"logout"})});
-      accessOwner.current=null;setUser(null);setAdminAuth(false);setMasterAdmin(false);setAccessMap({});setWalletBalance(0);navigateTo("home");void loadFilms();
+      accessOwner.current=null;setUser(null);setAdminAuth(false);setMasterAdmin(false);setAccessMap({});setWalletBalance(0);
+      setEntryAllowed(siteId!=="taza");setEntryReady(siteId!=="taza");setEntryError("");
+      navigateTo("home");
     } catch {} // Keep the signed-in state visible if server-side logout failed.
   };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
@@ -2460,7 +2493,7 @@ export default function Home() {
       {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
-      {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); void loadFilms(); navigateTo("admin"); }} onBack={() => navigateTo("home")} />}
+      {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); navigateTo("admin"); }} onBack={() => navigateTo("home")} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={handleLogout} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       <PushNotificationSetup key={user?.id||"none"} enabled={!!user?.id&&!adminAuth} />
