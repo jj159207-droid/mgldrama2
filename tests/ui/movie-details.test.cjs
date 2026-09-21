@@ -100,6 +100,7 @@ test('TAZA hides every movie until the 12500 MNT 72-hour entry package is confir
  const pricing=document.querySelector('.wallet-entry-pricing');assert.ok(pricing);
  assert.match(pricing.textContent,/Шилжүүлэх дүн 12,500₮/);
  assert.match(pricing.textContent,/Бүх киног үзэх эрх/);
+ assert.doesNotMatch(pricing.textContent,/72 цаг/);
  assert.doesNotMatch(pricing.textContent,/1 кино - 2,000₮/);
  assert.doesNotMatch(pricing.textContent,/41 кино/);
  assert.doesNotMatch(pricing.textContent,/48 цаг/);
