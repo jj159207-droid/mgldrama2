@@ -11,7 +11,7 @@ export async function GET(req:NextRequest) {
   const [film]=await db(`films?id=eq.${id}&site_id=eq.${site}&select=*`);if(!film)throw new ApiError(404,'Кино олдсонгүй.');
   const s=await session(req);
   if(!s?.userId)throw new ApiError(403,'Кино үзэхийн тулд хэрэглэгчийн горимоор нэвтэрнэ үү.');
-  const payments=film.free!==true && film.locked!==false ? await entitlementPayments(s.userId,site) : [];
+  const payments=site==='taza' || (film.free!==true && film.locked!==false) ? await entitlementPayments(s.userId,site) : [];
   // TAZA sells the complete catalog as one 12,500₮ bundle. A legacy
   // free/unlocked flag must not bypass the current film-level paywall; valid
   // already-paid individual/category entitlements remain honored.
