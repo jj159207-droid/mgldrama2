@@ -330,6 +330,26 @@ test('admin grants a package with null film ID and free grant amount, then playb
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,userCookie))).status,200);
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'555556',user_id:tables.users[0].id,film_id:0,plan:'single',status:'confirmed'},c))).status,400);
 });
+test('MacroDroid JSON sms_message and X-SMS-Sender confirm 12,000 MNT once',async()=>{
+ const cookie=await register();
+ const created=await api.POST(dbReq('pending_payments','POST',{ref_code:'889999',plan:'all_30d_12000'},cookie));
+ assert.equal(created.status,200);
+ process.env.SMS_ALLOWED_SENDER='Khan Bank';
+ const message='Tany dansand ORLOGO:12,000.00MNT orj bolloo. Utga:889999';
+ const send=(sender='Khan Bank')=>sms.POST(req('/api/sms','POST',{sms_message:message},undefined,{
+  authorization:`Bearer ${process.env.SMS_WEBHOOK_SECRET}`,
+  'x-sms-sender':sender,
+ }));
+ assert.equal((await send('unknown sender')).status,403);
+ assert.equal(tables.pending_payments[0].status,'pending');
+ assert.equal((await send()).status,200);
+ const confirmedAt=tables.pending_payments[0].confirmed_at;
+ assert.equal(tables.pending_payments[0].amount,12000);
+ assert.equal(tables.pending_payments[0].status,'confirmed');
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+ assert.equal((await send()).status,200);
+ assert.equal(tables.pending_payments[0].confirmed_at,confirmedAt);
+});
 test('MacroDroid plain text validates sender and opens only purchased movie; duplicate does not extend',async()=>{
  const cookie=await register();await api.POST(dbReq('pending_payments','POST',{ref_code:'888888',film_id:1,plan:'all_30d_12000'},cookie));
  process.env.SMS_ALLOWED_SENDER='BANK_TEST';

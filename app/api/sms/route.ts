@@ -52,11 +52,14 @@ export async function POST(req:NextRequest) {
 
   // Plain text avoids broken JSON when a bank SMS contains quotes or newlines.
   const plain=(req.headers.get('content-type')||'').split(';')[0].trim()==='text/plain';
-  const b=plain
+  const b:Record<string,unknown>=plain
     ? {text:(await bodyBytes(req,12000)).toString('utf8'),sender:req.headers.get('x-sms-sender')}
     : await bodyJson(req,16000);
-  sender=b.sender;
-  rawText=typeof b.text==='string'?b.text:'';
+  // MacroDroid macros may send plain text or JSON with sms_message instead
+  // of text. Accept both while still requiring the private Bearer secret.
+  sender=b.sender || req.headers.get('x-sms-sender');
+  const forwarded=[b.text,b.sms_message,b.message].find(value=>typeof value==='string');
+  rawText=typeof forwarded==='string'?forwarded:'';
 
   const allowed=process.env.SMS_ALLOWED_SENDER?.trim();
   if(allowed && !senderMatches(allowed,sender)){
