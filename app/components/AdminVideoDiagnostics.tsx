@@ -2,7 +2,7 @@
 import {useState} from 'react';
 
 type FilmRow={id:number;title:string;state:string;kind:string};
-type Probe=FilmRow & {probe:string;httpStatus?:number;hint?:string};
+type Probe=FilmRow & {probe:string;httpStatus?:number;headStatus?:number;method?:'GET'|'HEAD';hint?:string};
 
 export default function AdminVideoDiagnostics(){
   const [films,setFilms]=useState<FilmRow[]>([]);
@@ -54,8 +54,9 @@ export default function AdminVideoDiagnostics(){
       <p style={{color:result.httpStatus===404||result.state!=='configured'?'#fca5a5':'#fbbf24'}}>
         {result.httpStatus? `Bunny HTTP: ${result.httpStatus}`:result.state==='missing'?'Видео холбоос байхгүй':result.state==='invalid_bunny_url'?'Bunny холбоосын бүтэц буруу':'Алсын шалгалт боломжгүй'}
       </p>
+      {result.headStatus!==undefined&&<p style={{color:'#cbd5e1',fontSize:11}}>HEAD шалгалт: {result.headStatus} · {result.method==='GET'?'GET давтан шалгалт: '+result.httpStatus:'GET шаардлагагүй'}</p>}
       <p style={{color:'#cbd5e1'}}>{result.hint}</p>
-      <p style={{fontSize:11,color:'#94a3b8'}}>HTTP 200 гарсан ч видео файлыг тоглуулж шалгах хэрэгтэй. Төлбөрийн эрхийг энэ шалгалт өөрчлөхгүй.</p>
+      <p style={{fontSize:11,color:'#94a3b8'}}>GET/HEAD нь тоглуулагчийн хариуг шалгана; жинхэнэ видео тоглох эсэхийг зөвхөн Bunny Player дээр батална. Төлбөрийн эрх өөрчлөгдөхгүй.</p>
     </div>}
   </section>;
 }
