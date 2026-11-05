@@ -7,6 +7,7 @@ import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 
 type Props = {
   film: FilmDetails | null;
+  freeCatalog?: boolean;
   films: FilmDetails[];
   loading: boolean;
   error: string;
@@ -69,11 +70,11 @@ export default function FilmLanding(props:Props) {
 
   const category = filmCategory(film);
   const related = relatedFilms(props.films, film);
-  const packages = filmPlans(film);
+  const packages = props.freeCatalog ? [] : filmPlans(film);
   const preview = trailerUrl(film);
-  const busy = props.watching || !props.authReady;
+  const busy = props.watching || (!props.freeCatalog && !props.authReady);
   const description = film.description?.trim() || "";
-  const priceLabel = film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
+  const priceLabel = props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
 
   return <main className="film-destination catalog-shell film-reference-page">
@@ -101,7 +102,7 @@ export default function FilmLanding(props:Props) {
           </button>
         </div>
       </div>
-      {props.available && <p className="film-landing-note">Танд энэ киног үзэх эрх байна.</p>}
+      {props.available && <p className="film-landing-note">{props.freeCatalog ? "Бүртгэл, төлбөргүйгээр бүтэн үзэх боломжтой." : "Танд энэ киног үзэх эрх байна."}</p>}
       {props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}
     </section>
 
@@ -123,7 +124,7 @@ export default function FilmLanding(props:Props) {
         <span>{category}{category === "Эротик" ? " · 21+" : ""}</span>
       </div>
 
-      {!film.free && film.locked !== false && <p className="film-wallet-balance"><span>Таны кино сайтын дансны үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
+      {!props.freeCatalog && !film.free && film.locked !== false && <p className="film-wallet-balance"><span>Таны кино сайтын дансны үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
 
       {description && <div className="detail-summary">
         <p id="film-description" className={`detail-description${descriptionExpanded ? " expanded" : ""}`}>{description}</p>
@@ -131,7 +132,7 @@ export default function FilmLanding(props:Props) {
       </div>}
     </section>
 
-    {props.payment && <section id="film-payment" className="detail-payment" aria-label="Данс цэнэглэх">
+    {!props.freeCatalog && props.payment && <section id="film-payment" className="detail-payment" aria-label="Данс цэнэглэх">
       {props.payment}
     </section>}
 
