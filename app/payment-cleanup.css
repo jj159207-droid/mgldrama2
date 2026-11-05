@@ -157,3 +157,28 @@
     font-size: 25px !important;
   }
 }
+
+/* Keep IBAN above the legacy account, each with a separate accessible copy target. */
+.bank-details .copy-iban > span:first-child,
+.bank-details .copy-bank-number > span:first-child {
+  min-width: 0;
+}
+.bank-details .copy-iban strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(14px, 3.8vw, 20px);
+  letter-spacing: .008em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.bank-details .copy-bank-number {
+  margin-top: 10px;
+  border-color: rgba(148, 163, 184, .35);
+  background: rgba(148, 163, 184, .05);
+}
+.bank-details .copy-bank-number strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: clamp(20px, 5.5vw, 25px);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .02em;
+  overflow-wrap: anywhere;
+}

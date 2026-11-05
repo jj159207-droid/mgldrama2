@@ -8,6 +8,10 @@ on:
       - 'next.config.js'
       - 'tests/security.test.ts'
       - 'tests/security-headers.test.ts'
+      - 'lib/bank-details.ts'
+      - 'app/api/settings/route.ts'
+      - 'app/api/readiness/route.ts'
+      - 'tests/bank-details.test.ts'
       - '.github/workflows/taza-security-regression.yml'
   workflow_dispatch:
 permissions:

@@ -165,7 +165,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT);
   const tazaTransfer=typeof window!=="undefined" && siteFromPathname(window.location.pathname)==="taza";
   const transferIban=normalizeMongolianIban(bankAccount.iban);
-  const transferReady=!tazaTransfer || !!transferIban;
+  const transferIbanDisplay=tazaTransfer?transferIban.slice(2,10):(transferIban.match(/.{1,4}/g)?.join(" ") || "");
+  const transferReady=!tazaTransfer || !!(transferIban && /^\d{10}$/.test(bankAccount.number) && transferIban.endsWith(bankAccount.number));
   const transferDestination=tazaTransfer?transferIban:(transferIban||bankAccount.number);
   useEffect(()=>{
     let alive=true;
@@ -222,7 +223,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
   const copiedSuccessfully = (key: string) => {
     setCopied(key); setTimeout(() => setCopied(null), 2000);
-    if(key==="account")trackSiteEvent("bank_account_copy");
+    if(key==="account" || key==="iban")trackSiteEvent("bank_account_copy");
     else if(key==="ref")trackSiteEvent("ref_code_copy");
   };
 
@@ -353,16 +354,20 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </div>}
 
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
-      {!transferReady&&<p role="alert" className="checkout-error wallet-single-error">Банкны бүрэн 20 тэмдэгттэй IBAN хараахан тохируулагдаагүй. Админ засах хүртэл төлбөр шилжүүлэхгүй байна уу.</p>}
+      {!transferReady&&<p role="alert" className="checkout-error wallet-single-error">IBAN болон дансны дугаар тохироогүй байна. Админ засах хүртэл төлбөр шилжүүлэхгүй байна уу.</p>}
 
       <section className="wallet-single-instructions wallet-entry-auto-open" aria-label="Төлбөр автоматаар баталгаажих мэдээлэл">
         <p><strong>Автоматаар баталгаажиж кинонууд нээгдэнэ</strong></p>
       </section>
 
-      <button type="button" className="wallet-single-copy" disabled={!transferReady||!orderReady} onClick={() => copyText(transferDestination,"account")}>
-        <span><small>{bankAccount.bank} · {bankAccount.name} · {tazaTransfer?"IBAN":"Данс"}</small><strong>{transferDestination||"IBAN тохируулаагүй"}</strong></span>
-        <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
+      <button type="button" className={`wallet-single-copy${tazaTransfer ? " wallet-single-iban" : ""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?transferIbanDisplay:transferDestination,tazaTransfer?"iban":"account")}>
+        <span><small>{tazaTransfer?"IBN (код) · ":"Данс · "}{bankAccount.bank} · {bankAccount.name}</small><strong>{(tazaTransfer?transferIbanDisplay:transferDestination)||"IBAN тохируулаагүй"}</strong></span>
+        <b>{copied === (tazaTransfer?"iban":"account") ? "Хуулагдлаа ✓" : "Хуулах"}</b>
       </button>
+      {tazaTransfer && <button type="button" className="wallet-single-copy wallet-single-account" disabled={!transferReady||!orderReady} onClick={() => copyText(bankAccount.number,"account")}>
+        <span><small>Дансны дугаар</small><strong>{bankAccount.number}</strong></span>
+        <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
+      </button>}
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
         <p><strong>Шилжүүлэх дүн {Number(orderAmount??film.price??12000).toLocaleString("mn-MN")}₮</strong></p>
@@ -417,7 +422,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
     </> : <>
       <div className="dialog-heading"><div><span className="eyebrow">ЗАХИАЛГА / {orderReady ? refCode : "…"}</span><h2>Үзэх эрх авах</h2></div><button className="icon-button" onClick={onClose} aria-label="Төлбөрийн цонх хаах"><UiIcon name="close" /></button></div>
       {paymentError && <p role="alert" className="checkout-error">{paymentError}</p>}
-      {!transferReady&&<p role="alert" className="checkout-error">Банкны бүрэн IBAN байхгүй. Одоогоор төлбөр шилжүүлэхгүй; админтай холбогдоно уу.</p>}
+      {!transferReady&&<p role="alert" className="checkout-error">IBAN болон дансны дугаар тохироогүй байна. Одоогоор төлбөр шилжүүлэхгүй; админтай холбогдоно уу.</p>}
       {isWalletTopup && !showTransferDetails && <section className="wallet-topup-box" aria-label="Киноны данс цэнэглэх">
         <h2>Киноны дансаа 5,000₮ ба түүнээс дээш дүнгээр цэнэглэнэ үү</h2>
         <p className="wallet-topup-warning">5,000₮-өөс бага дүнгээр цэнэглэлт орохгүй.</p>
@@ -433,7 +438,18 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
       {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
         {isWalletTopup && <div className="wallet-transfer-head wallet-transfer-head-note"><span>5,000₮-өөс дээш дүнгээр цэнэглэнэ үү</span></div>}
-        <section className="bank-details"><h3>1. {tazaTransfer?"IBAN дансаар":"Дансаар"} шилжүүлэх</h3><dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl><button className="copy-account" disabled={!transferReady||!orderReady} onClick={() => copyText(transferDestination,"account")}><span><span className="account-label-line">{tazaTransfer?"20 тэмдэгттэй IBAN":"Дансны дугаар"}</span><strong>{transferDestination||"IBAN тохируулаагүй"}</strong></span><span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span></button></section>
+        <section className="bank-details">
+          <h3>1. {tazaTransfer?"IBAN дансаар":"Дансаар"} шилжүүлэх</h3>
+          <dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl>
+          <button type="button" className={`copy-account${tazaTransfer?" copy-iban":""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?transferIbanDisplay:transferDestination,tazaTransfer?"iban":"account")}>
+            <span><span className="account-label-line">{tazaTransfer?"IBN (код)":"Дансны дугаар"}</span><strong>{(tazaTransfer?transferIbanDisplay:transferDestination)||"IBAN тохируулаагүй"}</strong></span>
+            <span>{copied === (tazaTransfer?"iban":"account") ? "Хуулагдлаа ✓" : "Хуулах"}</span>
+          </button>
+          {tazaTransfer && <button type="button" className="copy-account copy-bank-number" disabled={!transferReady||!orderReady} onClick={() => copyText(bankAccount.number,"account")}>
+            <span><span className="account-label-line">Дансны дугаар</span><strong>{bankAccount.number}</strong></span>
+            <span>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</span>
+          </button>}
+        </section>
         <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady||!transferReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
       </div>}
       <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
