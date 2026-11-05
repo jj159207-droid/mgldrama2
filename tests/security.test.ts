@@ -11,6 +11,7 @@ import * as sms from '../app/api/sms/route';
 import * as settings from '../app/api/settings/route';
 import * as access from '../app/api/access/route';
 import * as appearance from '../app/api/appearance/route';
+import * as macroDownload from '../app/api/admin/macrodroid/route';
 process.env.SUPABASE_URL='https://test.invalid';
 process.env.SUPABASE_SERVICE_ROLE_KEY='fake.service.jwt';
 process.env.ADMIN_PASSWORD='test-admin-password-long-enough';
@@ -643,4 +644,42 @@ test('appearance rejects unbounded or executable input without changing settings
  assert.deepEqual(tables.site_appearance,[{id:1,...base,site_id:'taza'}]);
  tables.site_appearance=[];
  assert.equal((await appearance.GET()).status,503);
+});
+
+test('temporary MacroDroid download denies visitors and ordinary members',async(t)=>{
+ t.mock.method(Date,'now',()=>Date.parse('2026-11-06T08:00:00Z'));
+ const stranger=await macroDownload.GET(req('/api/admin/macrodroid'));
+ assert.equal(stranger.status,403);
+ assert.ok(!(await stranger.text()).includes(process.env.SMS_WEBHOOK_SECRET!));
+ const user=await register();
+ const member=await macroDownload.GET(req('/api/admin/macrodroid','GET',undefined,user));
+ assert.equal(member.status,403);
+});
+
+test('master admin downloads matching SMS macro with private, noncacheable credentials',async(t)=>{
+ t.mock.method(Date,'now',()=>Date.parse('2026-11-06T08:00:00Z'));
+ const cookie=await admin();
+ const response=await macroDownload.GET(req('/api/admin/macrodroid','GET',undefined,cookie));
+ assert.equal(response.status,200);
+ assert.match(response.headers.get('content-disposition')||'',/attachment; filename="TAZA_MacroDroid_SMS_12000.macro"/);
+ assert.match(response.headers.get('cache-control')||'',/private.*no-store/);
+ assert.equal(response.headers.get('content-type'),'application/octet-stream');
+ const macro=(await response.json()).macro;
+ const config=macro.m_actionList[0].requestConfig;
+ assert.equal(config.urlToOpen,'https://taza.site/api/sms');
+ assert.equal(config.contentType,'text/plain');
+ assert.equal(config.contentBodyText,'{sms_message}');
+ assert.equal(config.allowAnyCertificate,false);
+ assert.equal(config.headerParams.find((v:{paramName:string})=>v.paramName==='Authorization')?.paramValue,`Bearer ${process.env.SMS_WEBHOOK_SECRET}`);
+ assert.equal(config.headerParams.find((v:{paramName:string})=>v.paramName==='X-SMS-Sender')?.paramValue,'{sms_number}');
+ assert.equal(macro.m_triggerList[0].m_smsNumber,'Khan Bank');
+ assert.equal(macro.m_triggerList[0].m_smsContent,'ORLOGO');
+});
+
+test('MacroDroid download expires automatically after its temporary window',async(t)=>{
+ t.mock.method(Date,'now',()=>Date.parse('2026-11-13T00:00:00Z'));
+ const cookie=await admin();
+ const expired=await macroDownload.GET(req('/api/admin/macrodroid','GET',undefined,cookie));
+ assert.equal(expired.status,410);
+ assert.ok(!(await expired.text()).includes(process.env.SMS_WEBHOOK_SECRET!));
 });
