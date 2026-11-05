@@ -224,15 +224,17 @@ test('wallet credit alone and expired legacy entry purchases never open a locked
   tables.pending_payments.push({id:3,user_id:uid,ref_code:'654321',film_id:null,plan:'entry_72h',amount:12500,status:'confirmed',created_at:now(),confirmed_at:now(),site_id:'taza'});
   assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
 });
-test('free and unlocked movies need a device session, not an entry payment',async()=>{
+test('previously free/unlocked TAZA movies now require the same all-movies entitlement',async()=>{
   const guest=()=>playback.GET(req('/api/playback?id=1'));
   tables.films[0].free=true;
   assert.equal((await guest()).status,403);
-  const c=await register();
-  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
+  const cookie=await register();
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
   tables.films[0].free=false;tables.films[0].locked=false;
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+  markEntryPaid(Number(tables.users[0].id));
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
   assert.equal((await guest()).status,403);
-  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
 });
 test('all package plans use 72-hour expiry while single and yearly stay distinct',()=>{
  const time=Date.parse('2026-01-01T00:00:00Z');const base={status:'confirmed',confirmed_at:new Date(time).toISOString()};
