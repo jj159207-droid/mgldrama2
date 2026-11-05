@@ -13,6 +13,7 @@ import * as access from '../app/api/access/route';
 import * as appearance from '../app/api/appearance/route';
 import * as macroDownload from '../app/api/admin/macrodroid/route';
 import * as smsDiagnostics from '../app/api/admin/sms-diagnostics/route';
+import * as videoDiagnostics from '../app/api/admin/video-diagnostics/route';
 process.env.SUPABASE_URL='https://test.invalid';
 process.env.SUPABASE_SERVICE_ROLE_KEY='fake.service.jwt';
 process.env.ADMIN_PASSWORD='test-admin-password-long-enough';
@@ -714,4 +715,50 @@ test('SMS diagnostics show pending 12000 orders without user phone or secrets',a
  assert.equal(report.recentPending[0].ref,'894321');
  assert.equal(report.recentPending[0].amount,12000);
  assert.equal('phone' in report.recentPending[0],false);
+});
+
+test('video source diagnoses actual Bunny HTTP 404 privately for master admin',async()=>{
+ const stranger=await videoDiagnostics.GET(req('/api/admin/video-diagnostics?id=1'));
+ assert.equal(stranger.status,403);
+ const userCookie=await register();
+ assert.equal((await videoDiagnostics.GET(req('/api/admin/video-diagnostics?id=1','GET',undefined,userCookie))).status,403);
+ const adminCookie=await admin();
+ const sample='https://player.mediadelivery.net/play/617966/7088fc08-ea3d-4126-840d-c47aa324b637?token=private';
+ tables.films[0].url=sample;
+ const native=global.fetch;
+ let probed='';
+ global.fetch=async(input,init)=>{
+   if(String(input).startsWith('https://player.mediadelivery.net/')){
+     probed=String(input);
+     assert.equal(init?.method,'HEAD');
+     assert.equal(init?.redirect,'manual');
+     return new Response(null,{status:404});
+   }
+   return native(input,init);
+ };
+ try {
+   const listing=await videoDiagnostics.GET(req('/api/admin/video-diagnostics','GET',undefined,adminCookie));
+   assert.equal(listing.status,200);
+   const list=await listing.json();
+   assert.ok(list.films.some((f:{id:number})=>f.id===1));
+   assert.ok(!JSON.stringify(list).includes('token=private'));
+   const checked=await videoDiagnostics.GET(req('/api/admin/video-diagnostics?id=1','GET',undefined,adminCookie));
+   assert.equal(checked.status,200);
+   const data=await checked.json();
+   assert.equal(data.httpStatus,404);
+   assert.equal(data.probe,'http');
+   assert.match(probed,/\/embed\/617966\//);
+   assert.ok(!JSON.stringify(data).includes('token=private'));
+ } finally {global.fetch=native;}
+});
+
+test('confirmed TAZA viewers see a descriptive missing-video 404, not another payment request',async()=>{
+ const cookie=await register();
+ const userId=Number(tables.users[0].id);
+ tables.pending_payments.push({user_id:userId,site_id:'taza',plan:'all_30d_12000',amount:12000,status:'confirmed',confirmed_at:now()});
+ tables.films[0].url='';
+ const result=await playback.GET(req('/api/playback?id=1','GET',undefined,cookie));
+ assert.equal(result.status,404);
+ assert.equal((await result.json()).code,'VIDEO_SOURCE_MISSING');
+ assert.equal((await videoDiagnostics.GET(req('/api/admin/video-diagnostics?id=1','GET',undefined,cookie))).status,403);
 });

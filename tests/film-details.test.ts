@@ -38,3 +38,24 @@ test('video embeds handle signed media and supported provider links without unsa
   assert.deepEqual(getVideoEmbed('javascript:alert(1)'),{type:'iframe',src:''});
   assert.equal(getVideoEmbed('https://youtube.com.evil.test/watch?v=abcdefghijk').type,'iframe');
 });
+
+test('Bunny direct-play pages are embedded with the matching library player and tokens preserved',()=>{
+  const guid='7088fc08-ea3d-4126-840d-c47aa324b637';
+  assert.deepEqual(
+    getVideoEmbed(`https://player.mediadelivery.net/play/617966/${guid}?autoplay=true`),
+    {type:'iframe',src:`https://player.mediadelivery.net/embed/617966/${guid}?autoplay=true`}
+  );
+  assert.deepEqual(
+    getVideoEmbed(`https://iframe.mediadelivery.net/play/617966/${guid}`),
+    {type:'iframe',src:`https://iframe.mediadelivery.net/embed/617966/${guid}`}
+  );
+  assert.deepEqual(
+    getVideoEmbed(`https://vz-617966.b-cdn.net/${guid}/playlist.m3u8`),
+    {type:'iframe',src:`https://player.mediadelivery.net/embed/617966/${guid}`}
+  );
+  assert.equal(
+    getVideoEmbed(`https://vz-617966.b-cdn.net/${guid}/playlist.m3u8?token=private`).src,
+    `https://vz-617966.b-cdn.net/${guid}/playlist.m3u8?token=private`,
+    'Do not silently discard signed media token'
+  );
+});

@@ -7,7 +7,7 @@ export async function GET(req:NextRequest) {
  try {
   const site=requestSite(req),id=Number(new URL(req.url).searchParams.get('id'));
   if(!Number.isSafeInteger(id)||id<=0)throw new ApiError(400,'Киноны ID буруу.');
-  const [film]=await db(`films?id=eq.${id}&site_id=eq.${site}&select=*`);if(!film)throw new ApiError(404,'Кино олдсонгүй.');
+  const [film]=await db(`films?id=eq.${id}&site_id=eq.${site}&select=*`);if(!film)throw new ApiError(404,'Киноны бүртгэл олдсонгүй. Админ киноны ID-г шалгана уу.','FILM_NOT_FOUND');
   // Browsing is public, but *full movie URLs* are always protected.
   // Paid TAZA access is tied to the viewer's session/device; old valid grants
   // continue to work. Admin access remains authenticated and separate.
@@ -21,7 +21,7 @@ export async function GET(req:NextRequest) {
       throw new ApiError(403,site==='taza'?'Бүх киног үзэх 12,000₮ / 30 хоногийн эрх шаардлагатай.':'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.','SUBSCRIPTION_REQUIRED');
   }
   const url=safeUrl(String(film.url||'').split('|||')[0]);
-  if(!url)throw new ApiError(404,'Видео холбоос байхгүй эсвэл буруу байна.');
+  if(!url)throw new ApiError(404,'Энэ киноны бүтэн видео холбоос байхгүй эсвэл буруу байна. Дахин төлбөр хийхгүй, админд киноны нэрийг мэдэгдэнэ үү.','VIDEO_SOURCE_MISSING');
   return json({...film,url,locked:false,site_id:site});
  }catch(e){return fail(e);}
 }
