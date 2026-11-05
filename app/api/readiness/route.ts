@@ -3,6 +3,7 @@ import {ApiError,db,fail,json,requestSite,session} from '@/lib/server';
 import {APP_VERSION,configurationChecks} from '@/lib/readiness';
 import {auditCatalogMedia,type CatalogReadiness} from '@/lib/media-audit';
 import {normalizeMongolianIban} from '@/lib/iban';
+import {paymentBankSettings} from '@/lib/bank-details';
 import type {Row} from '@/lib/domain';
 export const runtime='nodejs';
 
@@ -36,7 +37,7 @@ export async function GET(req:NextRequest){
 
     try{
       const [bank]=await db(`site_settings?site_id=eq.${site}&select=bank_iban&limit=1`);
-      checks.push({name:'payment_iban',ok:!!normalizeMongolianIban(bank?.bank_iban),label:'Банкны 20 тэмдэгттэй хүчинтэй IBAN тохируулсан'});
+      checks.push({name:'payment_iban',ok:!!normalizeMongolianIban(paymentBankSettings(bank,site)?.bank_iban),label:'Банкны 20 тэмдэгттэй хүчинтэй IBAN тохируулсан'});
     }catch{checks.push({name:'payment_iban',ok:false,label:'Банкны IBAN тохиргоог шалгаж чадсангүй'});}
     let catalog:CatalogReadiness|null=null;
     try{
