@@ -4,7 +4,7 @@ export const ALL_MOVIES_PRICE = 12500;
 export const ALL_MOVIES_PLAN = 'entry_30d';
 export const ALL_MOVIES_DAYS = 30;
 export const ALL_MOVIES_DURATION_LABEL = '1 сарын';
-export const ALL_MOVIES_TITLE = 'Бүх киног үзэх эрх';
+export const ALL_MOVIES_TITLE = '1 сарын турш бүх киног үзэх эрх';
 export const plans: Record<string, number> = {
   erotic_3day:12500,gadaad_3day:12500,hyatad_3day:12500,oros_3day:12500,
   erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,oros_1month:12500,all_1month:12500,
