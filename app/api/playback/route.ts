@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { ApiError,db,fail,json,requestSite,session,siteEntryAllowed } from '@/lib/server';
 import { canWatch,safeUrl } from '@/lib/domain';
 import { entitlementPayments } from '@/lib/payments';
+import { isR2MovieReference, signR2PlaybackUrl } from '@/lib/r2';
 export const runtime='nodejs';
 export async function GET(req:NextRequest) {
  try {
@@ -14,7 +15,8 @@ export async function GET(req:NextRequest) {
     throw new ApiError(402,'Эхлээд ТАЗА САЙТ-ын 12,500₮ / 72 цагийн төлбөрөө баталгаажуулна уу.','SITE_PAYMENT_REQUIRED');
   const payments=film.free!==true && film.locked!==false ? await entitlementPayments(s.userId,site) : [];
   if(!canWatch(film,payments))throw new ApiError(403,'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.');
-  const url=safeUrl(String(film.url||'').split('|||')[0]);
+  const source=String(film.url||'').split('|||')[0];
+  const url=isR2MovieReference(source)?signR2PlaybackUrl(source):safeUrl(source);
   if(!url)throw new ApiError(404,'Видео холбоос байхгүй эсвэл буруу байна.');
   return json({...film,url,locked:false,site_id:site});
  }catch(e){return fail(e);}
