@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ApiError,db,fail,json,requestSite,session } from '@/lib/server';
+import { ApiError,canAdminSite,db,fail,json,requestSite,session } from '@/lib/server';
 import { canWatch,safeUrl } from '@/lib/domain';
 import { entitlementPayments } from '@/lib/payments';
 export const runtime='nodejs';
@@ -12,8 +12,9 @@ export async function GET(req:NextRequest) {
   // Paid TAZA access is tied to the viewer's session/device; old valid grants
   // continue to work. Admin access remains authenticated and separate.
   const s=await session(req);
-  if(!s?.userId && !s?.admin)throw new ApiError(403,'Бүх киног үзэх 12,000₮ / 30 хоногийн эрх шаардлагатай.','SUBSCRIPTION_REQUIRED');
-  if(!s?.admin){
+  const isAdmin=canAdminSite(s,site);
+  if(!s?.userId && !isAdmin)throw new ApiError(403,'Бүх киног үзэх 12,000₮ / 30 хоногийн эрх шаардлагатай.','SUBSCRIPTION_REQUIRED');
+  if(!isAdmin){
     const payments=await entitlementPayments(Number(s?.userId),site);
     const required=site==='taza'?{...film,free:false,locked:true}:film;
     if(!canWatch(required,payments))
