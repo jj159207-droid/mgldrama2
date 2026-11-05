@@ -124,6 +124,17 @@ async function handler(req:NextRequest) {
           const [film]=await db(`films?id=eq.${filmId}&site_id=eq.${site}&select=id,price,free,locked`);
           if(!film || film.free===true || film.locked===false)throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
           amount=Number(film.price);
+
+          // Re-open the exact same pending movie checkout instead of issuing
+          // another bank reference each time the phone page reloads.
+          // Never reuse a different movie, amount, site or user's payment.
+          if(Number.isSafeInteger(amount)&&amount>0) {
+            const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
+            const existing=await db(
+              `pending_payments?site_id=eq.${site}&user_id=eq.${s.userId}&plan=eq.single&film_id=eq.${filmId}&amount=eq.${amount}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
+            );
+            if(existing.length)return json(existing);
+          }
         }
         if(!Number.isSafeInteger(amount)||amount<=0)throw new ApiError(400,'Багц эсвэл үнэ буруу.');
         b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan,site_id:site};
