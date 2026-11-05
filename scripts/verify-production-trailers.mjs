@@ -1,6 +1,6 @@
 // Read-only production probes. No user credentials, account changes or movie writes.
 import assert from 'node:assert/strict';
-const origin='https://kino-uzeh.vercel.app';
+const origin='https://taza.site';
 const options={redirect:'error',cache:'no-store'};
 const get=(path,init={})=>fetch(origin+path,{...options,...init,signal:AbortSignal.timeout(15000)});
 const probe=process.argv.includes('--probe');
@@ -17,8 +17,12 @@ for(let attempt=0;attempt<(probe?1:30);attempt++){
   const catalog=await get('/api/db?path='+encodeURIComponent('films?select=*&limit=2'));
   assert.equal(catalog.status,200,'catalog must stay readable');const rows=await catalog.json();assert.ok(Array.isArray(rows));
   for(const film of rows)assert.ok(!film.url||film.url.startsWith('|||'),'public catalog must not expose full movies');
+  if(rows.length){
+    const paid=await get('/api/playback?id='+encodeURIComponent(rows[0].id));
+    assert.equal(paid.status,403,'anonymous full-movie playback must require a confirmed 12,000 MNT subscription');
+  }
   const home=await get('/');assert.equal(home.status,200,'home must load');assert.match(await home.text(),/ТАЗА САЙТ/);
-  console.log(JSON.stringify({origin,health:200,trailerRoute:405,anonymousGeneration:403,appearance:200,catalog:200,home:200,paidSourcesHidden:true}));
+  console.log(JSON.stringify({origin,health:200,trailerRoute:405,anonymousGeneration:403,appearance:200,catalog:200,home:200,paidSourcesHidden:true,subscriptionRequired:true}));
   break;
  }catch(error){if(attempt===(probe?0:29))throw error;await new Promise(resolve=>setTimeout(resolve,10000));}
 }
