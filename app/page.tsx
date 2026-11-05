@@ -20,6 +20,7 @@ import {appearanceStyle} from "@/lib/appearance";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
+import ScrollCardPreview from "@/app/components/ScrollCardPreview";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
 import { INITIAL_CATALOG, type CatalogState } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, type FilmDetails } from "@/lib/film-details";
@@ -562,6 +563,7 @@ function FilmCard({ film, onClick, expiry, brandName }: any) {
     <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — дэлгэрэнгүй үзэх`}>
       <div className="movie-poster">
         <Poster key={film.img || "no-image"} film={film} brandName={brandName} />
+        <ScrollCardPreview film={film} />
         <span className="movie-badge">{decodeBadge(film.badge)}</span>
         {isErotic && <span className="movie-age21">+21</span>}
         {film.free && <span className="movie-free">Үнэгүй</span>}
