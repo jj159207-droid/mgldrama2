@@ -2390,10 +2390,10 @@ export default function Home() {
             if(wallet.ok){
               if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
             }else{
-              const needed=Math.max(0,wallet.price-wallet.balance);
-              const topupAmount=Math.max(6000,Math.ceil(needed/1000)*1000);
+              // Do not force a minimum wallet top-up when the user chose
+              // one movie. The payment amount must be that movie's real price.
               trackSiteEvent("payment_open",Number(film.id));
-              setPayFilm({id:0,title:"Үлдэгдэл цэнэглэх",price:topupAmount,topupAmount,monthly:true,plan:"wallet_topup",locked:true,returnFilm:film,walletBefore:wallet.balance});
+              setPayFilm({id:film.id,title:film.title,price:wallet.price,monthly:false,plan:"single",locked:true,returnFilm:film});
               setPage("film");
             }
           }catch(walletError){
