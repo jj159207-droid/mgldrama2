@@ -131,7 +131,7 @@ test('chat grants are admin-only, owner-bound, atomic with a receipt, and retry-
   assert.ok(summary.access.film_33);assert.equal(summary.films.length,2);
 });
 
-test('category, three-day and monthly grants confer only the selected scope and duration',async()=>{
+test('legacy category and monthly grants retain their original 72-hour duration and scope',async()=>{
   for(const plan of ['gadaad_3day','hyatad_1month','erotic_3day','all_1month','3day']){
     await pg.exec('delete from support_messages;delete from pending_payments;');
     const response=await accessRoute.POST(req('/api/chat/access','POST',{user:1,plan,request_id:randomUUID()},'admin'));
@@ -139,7 +139,7 @@ test('category, three-day and monthly grants confer only the selected scope and 
     const rows=(await pg.query<Row>('select * from pending_payments')).rows;
     const access=accessFromPayments(rows),keys=Object.keys(access);
     assert.deepEqual(keys.sort(),plan==='all_1month'?['cat_erotic','cat_gadaad','cat_hyatad','cat_oros']:plan==='3day'?['monthly']:[`cat_${plan.split('_')[0]}`]);
-    assert.equal(Object.values(access)[0]-Date.parse(String(rows[0].confirmed_at)),(plan.endsWith('3day')?3:30)*86400000);
+    assert.equal(Object.values(access)[0]-Date.parse(String(rows[0].confirmed_at)),3*86400000);
     assert.deepEqual(accessFromPayments(rows,Date.now()+31*86400000),{});
   }
   await pg.exec('update support_threads set rate_start=now(),rate_count=60;');
