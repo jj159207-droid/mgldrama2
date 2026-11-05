@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ApiError,db,fail,json,requestSite,session,siteEntryAllowed } from '@/lib/server';
+import { ApiError,db,fail,json,requestSite,session } from '@/lib/server';
 import { canWatch,safeUrl } from '@/lib/domain';
 import { entitlementPayments } from '@/lib/payments';
 import { isR2MovieReference, signR2PlaybackUrl } from '@/lib/r2';
@@ -11,8 +11,6 @@ export async function GET(req:NextRequest) {
   const [film]=await db(`films?id=eq.${id}&site_id=eq.${site}&select=*`);if(!film)throw new ApiError(404,'Кино олдсонгүй.');
   const s=await session(req);
   if(!s?.userId)throw new ApiError(403,'Кино үзэхийн тулд хэрэглэгчийн горимоор нэвтэрнэ үү.');
-  if(site==='taza'&&!(await siteEntryAllowed(s.userId,site)))
-    throw new ApiError(402,'Эхлээд ТАЗА САЙТ-ын 12,500₮ / 72 цагийн төлбөрөө баталгаажуулна уу.','SITE_PAYMENT_REQUIRED');
   const payments=film.free!==true && film.locked!==false ? await entitlementPayments(s.userId,site) : [];
   if(!canWatch(film,payments))throw new ApiError(403,'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.');
   const source=String(film.url||'').split('|||')[0];
