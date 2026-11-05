@@ -197,9 +197,9 @@ test('legacy admin description writes report required update without dropping da
  assert.equal(writes,1);assert.equal(tables.films[0].description,undefined);
 });
 test('payment price/status/owner are server controlled and retries idempotent',async()=>{
- const c=await register();const body={ref_code:'123456',film_id:1,plan:'single',amount:1,status:'confirmed',user_id:999};
+ const c=await register();const body={ref_code:'123456',film_id:1,plan:'all_30d_12000',amount:1,status:'confirmed',user_id:999};
  let r=await api.POST(dbReq('pending_payments','POST',body,c));assert.equal(r.status,200);
- const p=(await r.json())[0];assert.equal(p.amount,5000);assert.equal(p.status,'pending');assert.equal(p.user_id,tables.users[0].id);
+ const p=(await r.json())[0];assert.equal(p.amount,12000);assert.equal(p.status,'pending');assert.equal(p.user_id,tables.users[0].id);
  r=await api.POST(dbReq('pending_payments','POST',body,c));assert.equal(r.status,200);assert.equal(tables.pending_payments.length,1);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.123456','PATCH',{status:'confirmed'},c))).status,403);
 });
@@ -307,7 +307,7 @@ test('concurrent payment creates return one order; other owners and changed purc
    }
    return mock(input,init);
  };
- const body={ref_code:'654321',film_id:1,plan:'single'};
+ const body={ref_code:'654321',film_id:1,plan:'all_30d_12000'};
  const responses=await Promise.all([api.POST(dbReq('pending_payments','POST',body,c)),api.POST(dbReq('pending_payments','POST',body,c))]);
  assert.deepEqual(responses.map(r=>r.status),[200,200]);
  assert.deepEqual(await responses[0].json(),await responses[1].json());
@@ -315,7 +315,7 @@ test('concurrent payment creates return one order; other owners and changed purc
  assert.equal((await api.POST(dbReq('pending_payments','POST',body,other))).status,409);
  tables.pending_payments[0].amount=4000;
  assert.equal((await api.POST(dbReq('pending_payments','POST',body,c))).status,409);
- tables.pending_payments[0].amount=5000;tables.pending_payments[0].status='confirmed';
+ tables.pending_payments[0].amount=12000;tables.pending_payments[0].status='confirmed';
  assert.equal((await api.POST(dbReq('pending_payments','POST',body,c))).status,200);
  assert.equal(tables.pending_payments.length,1);
  tables.pending_payments[0].status='revoked';
@@ -331,9 +331,9 @@ test('admin grants a package with null film ID and free grant amount, then playb
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'555556',user_id:tables.users[0].id,film_id:0,plan:'single',status:'confirmed'},c))).status,400);
 });
 test('MacroDroid plain text validates sender and opens only purchased movie; duplicate does not extend',async()=>{
- const cookie=await register();await api.POST(dbReq('pending_payments','POST',{ref_code:'888888',film_id:1,plan:'single'},cookie));
+ const cookie=await register();await api.POST(dbReq('pending_payments','POST',{ref_code:'888888',film_id:1,plan:'all_30d_12000'},cookie));
  process.env.SMS_ALLOWED_SENDER='BANK_TEST';
- const send=(sender:string,text='ORLOGO:5,000.00MNT Utga:888888')=>sms.POST(new NextRequest('https://app.test/api/sms',{method:'POST',headers:{'content-type':'text/plain',authorization:`Bearer ${process.env.SMS_WEBHOOK_SECRET}`,'x-sms-sender':sender},body:text}));
+ const send=(sender:string,text='ORLOGO:12,000.00MNT Utga:888888')=>sms.POST(new NextRequest('https://app.test/api/sms',{method:'POST',headers:{'content-type':'text/plain',authorization:`Bearer ${process.env.SMS_WEBHOOK_SECRET}`,'x-sms-sender':sender},body:text}));
  assert.equal((await send('OTHER')).status,403);
  assert.equal((await send('BANK_TEST')).status,200);
  const stamp=tables.pending_payments[0].confirmed_at;
@@ -356,23 +356,23 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  process.env.SMS_ALLOWED_SENDER='Khan Bank';
  const owner=await register('99110001'),other=await register('99110002');
  tables.films.push({...tables.films[0],id:2,title:'Unpurchased film'});
- assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'410001',film_id:1,plan:'single'},owner))).status,200);
+ assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'410001',film_id:1,plan:'all_30d_12000'},owner))).status,200);
  // The order already existed for two hours when the forwarding phone lost service.
  t.mock.timers.setTime(start+2*3600000);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,403);
  // No webhook is delivered during the next four hours. Then the original SMS arrives.
  const receivedAt=start+6*3600000;
  t.mock.timers.setTime(receivedAt);
- assert.equal((await bankSms('410001')).status,200);
+ assert.equal((await bankSms('410001','12,000.00')).status,200);
  const payment=tables.pending_payments[0];
  assert.equal(payment.created_at,new Date(start).toISOString());
  assert.equal(payment.confirmed_at,new Date(receivedAt).toISOString());
- assert.equal(paymentExpiry(payment),receivedAt+3*86400000);
+ assert.equal(paymentExpiry(payment),receivedAt+30*86400000);
  const rights=await (await access.GET(req('/api/access','GET',undefined,owner))).json();
- assert.equal(rights.access.film_1,receivedAt+3*86400000);
+ assert.equal(rights.access.monthly,receivedAt+30*86400000);
  assert.equal(rights.access.film_2,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,403);
 });
 
@@ -471,14 +471,16 @@ test('revoking one purchase preserves other rights and allows later purchases',a
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.234567','PATCH',{status:'revoked'},ac))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
- assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',plan:'single',film_id:1},cookie))).status,200);
+ assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',plan:'all_30d_12000',film_id:1},cookie))).status,200);
  tables.films[0].free=true;
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await bankSms('654321','12,000.00')).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
 
 
 test('expired pending order cannot be reused, requiring a fresh reference',async()=>{
- const c=await register();const body={ref_code:'123456',film_id:1,plan:'single'};
+ const c=await register();const body={ref_code:'123456',film_id:1,plan:'all_30d_12000'};
  await api.POST(dbReq('pending_payments','POST',body,c));
  tables.pending_payments[0].created_at=new Date(Date.now()-25*3600000).toISOString();
  assert.equal((await api.POST(dbReq('pending_payments','POST',body,c))).status,409);
@@ -548,7 +550,7 @@ test('oversized auth and SMS requests are bounded before parsing',async()=>{
 });
 
 test('order creation retries acknowledge an already-confirmed same purchase without renewing rights',async()=>{
- const c=await register();const body={ref_code:'234567',film_id:1,plan:'single'};
+ const c=await register();const body={ref_code:'234567',film_id:1,plan:'all_30d_12000'};
  await api.POST(dbReq('pending_payments','POST',body,c));const confirmedAt=new Date(Date.now()-3600000).toISOString();tables.pending_payments[0].status='confirmed';tables.pending_payments[0].confirmed_at=confirmedAt;
  const r=await api.POST(dbReq('pending_payments','POST',body,c));assert.equal(r.status,200);assert.equal(tables.pending_payments.length,1);assert.equal((await r.json())[0].confirmed_at,confirmedAt);
  tables.pending_payments[0].user_id=999;const conflict=await api.POST(dbReq('pending_payments','POST',body,c));assert.equal(conflict.status,409);assert.equal((await conflict.json()).code,'REF_CONFLICT');
