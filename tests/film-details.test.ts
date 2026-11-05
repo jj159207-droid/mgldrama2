@@ -13,13 +13,12 @@ test('recommendations are the three most viewed other movies in the same categor
   assert.deepEqual(relatedFilms([selected],selected),[]);
 });
 
-test('only the selected category 72-hour package is offered for 12,500',()=>{
-  for(const [category,key] of [['Эротик','erotic'],['Хятад','hyatad'],['Гадаад','gadaad'],['Орос','oros']]){
+test('every movie and category offers the exact same 12,500₮ 72-hour all-movies package',()=>{
+  for(const category of ['Эротик','Хятад','Гадаад','Орос','Unknown']){
     assert.deepEqual(filmPlans({id:1,badge:`Хадмал|${category}`}),[
-      {id:`${key}_3day`,hours:72,category,price:12500},
+      {id:'entry_72h',hours:72,category:'Бүх кино',price:12500},
     ]);
   }
-  assert.deepEqual(filmPlans({id:1,badge:'Хэлтэй|Unknown'}),[]);
 });
 
 test('a trailer must be explicit and safe, never the full movie URL',()=>{
