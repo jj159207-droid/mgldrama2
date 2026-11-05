@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { siteFromPathname } from "@/lib/site";
 
 const TRAILER_REQUEST_KEY = "taza_open_trailer";
 const PACKAGE_PRESET_KEY = "taza_package_preset";
@@ -32,6 +33,7 @@ export default function CatalogCardTuning() {
     };
 
     const applyPackagePreset = () => {
+      if (siteFromPathname(window.location.pathname)==="taza") return;
       let requested = false;
       try { requested = sessionStorage.getItem(PACKAGE_PRESET_KEY) === "all_48h"; } catch {}
       if (!requested) return;
@@ -51,17 +53,20 @@ export default function CatalogCardTuning() {
     };
 
     const tunePromotions = () => {
+      const freeCatalog=siteFromPathname(window.location.pathname)==="taza";
       document.querySelectorAll<HTMLButtonElement>(".cinema-site .catalog-plan-banner").forEach(banner => {
         const copy = banner.firstElementChild as HTMLElement | null;
         const lead = copy?.querySelector<HTMLElement>("strong");
         const sub = copy ? Array.from(copy.children).find(child => child.tagName === "SPAN") as HTMLElement | undefined : undefined;
         const cta = banner.querySelector<HTMLElement>(".banner-cta");
 
-        if (lead && lead.textContent !== "Сайтын бүх киног 7,900 төгрөгөөр") lead.textContent = "Сайтын бүх киног 7,900 төгрөгөөр";
-        if (sub && sub.textContent !== "72 цаг үзэх эрх") sub.textContent = "72 цаг үзэх эрх";
+        const title=freeCatalog?"Бүх киног үнэгүй үзэх":"Сайтын бүх киног 7,900 төгрөгөөр";
+        if (lead && lead.textContent !== title) lead.textContent = title;
+        const subtitle=freeCatalog?"Бүртгэл, төлбөр шаардахгүй":"72 цаг үзэх эрх";
+        if (sub && sub.textContent !== subtitle) sub.textContent = subtitle;
         if (cta && cta.textContent !== "ЭНД ДАРЖ ҮЗЭХ →") cta.textContent = "ЭНД ДАРЖ ҮЗЭХ →";
 
-        if (banner.dataset.packagePresetBound !== "1") {
+        if (!freeCatalog && banner.dataset.packagePresetBound !== "1") {
           banner.dataset.packagePresetBound = "1";
           banner.addEventListener("click", () => {
             try { sessionStorage.setItem(PACKAGE_PRESET_KEY, "all_48h"); } catch {}
@@ -79,7 +84,7 @@ export default function CatalogCardTuning() {
       document.querySelectorAll<HTMLElement>(".cinema-site .movie-card").forEach(card => {
         const badge = card.querySelector<HTMLElement>(".movie-badge");
         const category = card.querySelector<HTMLElement>(".movie-category")?.textContent?.trim();
-        if (badge && category) badge.dataset.packageName = `${category} багц`;
+        if (badge && category) badge.dataset.packageName = siteFromPathname(window.location.pathname)==="taza" ? "Үнэгүй" : `${category} багц`;
 
         if (!card.querySelector(".catalog-trailer-button")) {
           const button = document.createElement("button");
