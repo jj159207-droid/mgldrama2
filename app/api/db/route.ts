@@ -91,6 +91,9 @@ async function handler(req:NextRequest) {
         const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
+        // TAZA offers one public subscription: all films, 30 days, exact 12,000₮.
+        // Legacy grants remain readable but cannot be purchased again.
+        if(site==='taza' && plan!=='all_30d_12000')throw new ApiError(400,'Бүх киноны 30 хоногийн эрх 12,000₮.');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {
