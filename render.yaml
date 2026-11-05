@@ -1,0 +1,23 @@
+# TAZA low-traffic, no-monthly-platform-fee preview.
+# Deploy this Blueprint as a new Render service; do NOT switch taza.site yet.
+# The current Vercel production deployment and Bunny videos are unchanged.
+services:
+  - type: web
+    name: taza-free-preview
+    runtime: node
+    plan: free
+    branch: infra/render-free-preview-20261105
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start -- -H 0.0.0.0 -p $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      # Use the exact https://<service>.onrender.com origin during preview.
+      # Replace only after verifying the custom-domain migration.
+      - key: SITE_URL
+        sync: false
