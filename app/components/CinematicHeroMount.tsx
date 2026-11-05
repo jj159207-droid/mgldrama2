@@ -25,7 +25,7 @@ function heroPackageLabel(film: HeroFilm) {
   const [languageRaw, categoryRaw] = String(film.badge || "").split("|");
   const language = languageRaw?.trim() || "Хэлтэй";
   const category = categoryRaw?.trim() || "Эротик";
-  return `${language} · ${category} багц`;
+  return `${language} · ${category}`;
 }
 
 function Carousel({ films, onOpenPlans, packageFilmCount, brandName }: { films: HeroFilm[]; onOpenPlans: () => void; packageFilmCount:number; brandName:string }) {
@@ -146,12 +146,12 @@ function Carousel({ films, onOpenPlans, packageFilmCount, brandName }: { films: 
         </div>
       )}
 
-      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`Сайтын бүх ${packageFilmCount} кино 7900 төгрөгөөр 72 цаг үзэх эрх`}>
+      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`Сайтын бүх ${packageFilmCount} киног үнэгүй үзэх`}>
         <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
           <path d="m12 10 1.5 2.5M15 15l1.5 2.5M18 20l1.5 2.5" />
         </svg>
-        <span>Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>7900</strong> төгрөг · <strong>72 цаг</strong></span>
+        <span>Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>ҮНЭГҮЙ</strong> · Бүртгэлгүй үзэх</span>
       </button>
     </section>
   );
