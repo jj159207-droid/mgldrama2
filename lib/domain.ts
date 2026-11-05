@@ -1,19 +1,21 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
 export const ALL_MOVIES_PRICE = 12500;
-export const ALL_MOVIES_PLAN = 'entry_72h';
+export const ALL_MOVIES_PLAN = 'entry_30d';
+export const ALL_MOVIES_DAYS = 30;
+export const ALL_MOVIES_DURATION_LABEL = '1 сарын';
 export const ALL_MOVIES_TITLE = 'Бүх киног үзэх эрх';
 export const plans: Record<string, number> = {
   erotic_3day:12500,gadaad_3day:12500,hyatad_3day:12500,oros_3day:12500,
   erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,oros_1month:12500,all_1month:12500,
-  all_48h:ALL_MOVIES_PRICE,entry_72h:ALL_MOVIES_PRICE,
+  all_48h:ALL_MOVIES_PRICE,entry_72h:ALL_MOVIES_PRICE,entry_30d:ALL_MOVIES_PRICE,
   wallet_topup:5000,
 };
 export function planLabel(plan: string): string {
   const names: Record<string,string> = {
     erotic_3day:'Эротик · 72 цаг', gadaad_3day:'Гадаад · 72 цаг', hyatad_3day:'Хятад · 72 цаг', oros_3day:'Орос · 72 цаг',
     erotic_1month:'Эротик · 72 цаг', gadaad_1month:'Гадаад · 72 цаг', hyatad_1month:'Хятад · 72 цаг', oros_1month:'Орос · 72 цаг',
-    all_1month:'Бүх киног үзэх эрх · 72 цаг', all_48h:'Бүх киног үзэх эрх · 72 цаг', entry_72h:'Бүх киног үзэх эрх · 72 цаг', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'72 цагийн багц', '1month':'72 цагийн багц', '3day':'72 цагийн багц', '1year':'Жилийн багц', single:'Нэг кино',
+    all_1month:'Бүх киног үзэх эрх · 72 цаг', all_48h:'Бүх киног үзэх эрх · 72 цаг', entry_72h:'Бүх киног үзэх эрх · 72 цаг', entry_30d:'1 сарын турш бүх киног үзэх эрх', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'72 цагийн багц', '1month':'72 цагийн багц', '3day':'72 цагийн багц', '1year':'Жилийн багц', single:'Нэг кино',
   };
   return names[plan] || plan;
 }
@@ -22,6 +24,7 @@ export function paymentExpiry(p: Row): number {
   const plan = String(p.plan || 'single');
   const date = Date.parse(String(p.confirmed_at || p.created_at || ''));
   if (!Number.isFinite(date)) return 0;
+  if (plan === 'entry_30d') return date + ALL_MOVIES_DAYS * 86400000;
   if (plan === 'all_48h' || plan === 'entry_72h' || plan === 'all_1month' || plan === 'monthly' || plan === '1month' || plan === '3day' || /^(erotic|gadaad|hyatad|oros)_(3day|1month)$/.test(plan)) return date + 72 * 3600000;
   if (plan === '1year') return date + 365 * 86400000;
   if (plan === 'single') return date + 3 * 86400000;
@@ -33,7 +36,7 @@ export function accessFromPayments(payments: Row[], now = Date.now()): Record<st
   for (const p of payments) {
     const expiry = paymentExpiry(p); if (expiry <= now) continue;
     const plan = String(p.plan || 'single');
-    if (['monthly','1month','3day','1year','all_48h','entry_72h'].includes(plan)) add('monthly', expiry);
+    if (['monthly','1month','3day','1year','all_48h','entry_72h','entry_30d'].includes(plan)) add('monthly', expiry);
     else if (plan === 'all_1month') for (const cat of ['erotic','gadaad','hyatad','oros']) add(`cat_${cat}`,expiry);
     else if (/^(erotic|gadaad|hyatad|oros)_(3day|1month)$/.test(plan)) add(`cat_${plan.split('_')[0]}`, expiry);
     else if (plan === 'single' && p.film_id) add(`film_${p.film_id}`, expiry);
