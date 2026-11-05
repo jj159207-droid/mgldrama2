@@ -128,7 +128,7 @@ export default function FilmLanding(props:Props) {
       </div>}
     </section>
 
-    {props.payment && <section id="film-payment" className="detail-payment" aria-label="Бүх киноны 12,500₮ төлбөр">
+    {props.payment && <section id="film-payment" className="detail-payment" aria-label="Бүх киноны 12,000₮ төлбөр">
       {props.payment}
     </section>}
 
