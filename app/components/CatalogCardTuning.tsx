@@ -44,8 +44,6 @@ export default function CatalogCardTuning() {
         if (cta && cta.textContent !== "ЭНД ДАРЖ ҮЗЭХ →") cta.textContent = "ЭНД ДАРЖ ҮЗЭХ →";
 
       });
-        }
-      });
     };
 
     const tuneCards = () => {
