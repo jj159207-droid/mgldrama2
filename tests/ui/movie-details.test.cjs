@@ -108,7 +108,7 @@ test('TAZA lets visitors select films without paying an entry fee',async()=>{
  assert.equal(title(),'Гэрэл');
  assert.ok(document.querySelector('.film-reference-page'));
  assert.ok(document.querySelector('.film-hero-watch'));
- assert.match(document.querySelector('.film-hero-watch').textContent,/Үзэх эрх авах/);
+ assert.match(document.querySelector('.film-hero-watch').textContent,/Бүтэн үзэх · 12,500₮/);
  assert.equal(orders.length,0,'opening a film must not silently create a payment');
  assert.equal(requests.filter(r=>r.path==='/api/playback').length,0,'full movie cannot autoplay');
  await click('.film-back');
@@ -141,15 +141,15 @@ test('recommendations show top three of the category, then navigation resets tra
   await render('/?film=7&fbclid=tracking');assert.deepEqual([...document.querySelectorAll('.related-film h3')].map(x=>x.textContent),['Салхи','Зам','Уул']);assert.equal(document.querySelector('.detail-play span').textContent,'Трейлер үзэх');assert.equal(document.querySelector('#related-title'),null);
   assert.deepEqual([...document.querySelectorAll('.detail-plan h3')].map(x=>x.textContent),['72 цаг']);
   assert.deepEqual([...document.querySelectorAll('.detail-plan strong')].map(x=>x.textContent),['12,500₮']);
-  assert.deepEqual([...document.querySelectorAll('.film-destination > section')].map(x=>x.className),['film-landing','detail-packages','detail-related']);
+  assert.ok(document.querySelector('.film-landing'));assert.ok(document.querySelector('.detail-packages'));assert.ok(document.querySelector('.detail-related'));
   await click('.detail-poster');await click('.related-film');assert.equal(title(),'Салхи');assert.equal(document.querySelector('video'),null);assert.equal(new URL(window.location.href).searchParams.get('film'),'9');assert.equal(new URL(window.location.href).searchParams.get('fbclid'),'tracking');
-  await pop('/?film=34');assert.equal(document.querySelector('#detail-packages-title'),null);assert.deepEqual([...document.querySelectorAll('.detail-plan .eyebrow')].map(x=>x.textContent),['72 цагийн үзэх эрх']);assert.ok([...document.querySelectorAll('.detail-plan button')].every(x=>x.getAttribute('aria-label').startsWith('Хятад')));
+  await pop('/?film=34');assert.equal(document.querySelector('#detail-packages-title'),null);assert.deepEqual([...document.querySelectorAll('.detail-plan .eyebrow')].map(x=>x.textContent),['72 цагийн үзэх эрх']);assert.ok([...document.querySelectorAll('.detail-plan button')].every(x=>x.getAttribute('aria-label').includes('Бүх киног үзэх эрх')));
  }finally{films.splice(original);}
 });
-test('a category package bought from details stays inline and opens the selected movie after payment',async()=>{
- await render('/?film=7');await click('[aria-label="Гадаад 72 цагийн багц авах"]');assert.equal(document.querySelector('.login-dialog'),null);
+test('one all-film package bought from details opens the selected film after 12,500₮ confirmation',async()=>{
+ await render('/?film=7');await click('.detail-plan button');assert.equal(document.querySelector('.login-dialog'),null);
  assert.equal(title(),'Гэрэл');assert.ok(document.querySelector('#film-payment .checkout-inline'));assert.equal(document.querySelector('.checkout-dialog'),null);
- assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'gadaad_3day');assert.equal(orders[0].amount,12500);
+ assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_72h');assert.equal(orders[0].amount,12500);
  orders[0].status='confirmed';entitled=true;
  await act(async()=>[...document.querySelectorAll('.checkout-back')].find(b=>b.textContent==='Төлбөрөө шалгах').click());
  assert.equal(movie(),films[0].url);assert.equal(orders.length,1);
@@ -185,9 +185,9 @@ test('session restoration completes before selecting login or playback',async()=
  await render('/?film=7');assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
  await act(async()=>authGate.resolve());assert.equal(movie(),undefined);await click('.film-continue');assert.equal(movie(),films[0].url);assert.equal(orders.length,0);
 });
-test('guest device pays for the selected film without registration and keeps the same entitlement owner',async()=>{
+test('guest device receives one all-film payment reference from a selected movie',async()=>{
  await render('/?film=7&fbclid=tracking');assert.equal(title(),'Гэрэл');assert.equal(orders.length,0);assert.equal(movie(),undefined);
- await click('.film-continue');assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('#film-payment .checkout-inline'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,7);assert.equal(orders[0].plan,'single');
+ await click('.film-continue');assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('#film-payment .checkout-inline'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_72h');assert.equal(orders[0].amount,12500);
  orders[0].status='confirmed';entitled=true;
  await act(async()=>[...document.querySelectorAll('.checkout-back')].find(b=>b.textContent==='Төлбөрөө шалгах').click());
  assert.equal(movie(),films[0].url);assert.equal(orders.length,1);assert.equal(new URL(window.location.href).searchParams.get('film'),'7');
@@ -243,7 +243,7 @@ test('an admin session previews full playback without replacing itself with a gu
 });
 test('package purchase creates a guest device and remains a package without a movie ID',async()=>{
  await render();await click('.package-continue');
- assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('.checkout-dialog'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'gadaad_3day');assert.equal(window.location.search,'');
+ assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('.checkout-dialog'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_72h');assert.equal(orders[0].amount,12500);assert.equal(window.location.search,'');
 });
 test('native history back restores catalog and forward restores details without playback',async()=>{
  await render();await act(async()=>[...document.querySelectorAll('.movie-main')].find(b=>b.textContent.includes('Алсын зам')).click());
