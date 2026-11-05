@@ -11,6 +11,9 @@ on:
       - 'lib/bank-details.ts'
       - 'app/api/settings/route.ts'
       - 'app/api/readiness/route.ts'
+      - 'lib/macrodroid-template.json'
+      - 'app/api/admin/macrodroid/route.ts'
+      - 'app/page.tsx'
       - 'tests/bank-details.test.ts'
       - '.github/workflows/taza-security-regression.yml'
   workflow_dispatch:

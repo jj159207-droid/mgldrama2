@@ -1,0 +1,157 @@
+{
+  "macro": {
+    "aiGenerated": 0,
+    "breakpoints": [],
+    "disabledTimestamp": 0,
+    "exportedActionBlocks": [],
+    "forceEvenIfNotEnabledTimestamp": 0,
+    "isActionBlock": false,
+    "isExtra": false,
+    "isFavourite": false,
+    "lastEditedTimestamp": 1790265300000,
+    "localVariables": [
+      {
+        "dictionary": {
+          "entries": [],
+          "isArray": false,
+          "variableType": 4,
+          "type": "Dictionary"
+        },
+        "isActionBlockWorkingVar": false,
+        "isLocalVar": true,
+        "isSecure": false,
+        "m_booleanValue": false,
+        "m_decimalValue": 0,
+        "m_intValue": 0,
+        "m_name": "q_response",
+        "m_stringValue": "",
+        "m_type": 2,
+        "supportsInput": false,
+        "supportsOutput": true
+      },
+      {
+        "dictionary": {
+          "entries": [],
+          "isArray": false,
+          "variableType": 4,
+          "type": "Dictionary"
+        },
+        "isActionBlockWorkingVar": false,
+        "isLocalVar": true,
+        "isSecure": false,
+        "m_booleanValue": false,
+        "m_decimalValue": 0,
+        "m_intValue": 0,
+        "m_name": "q_code",
+        "m_stringValue": "",
+        "m_type": 1,
+        "supportsInput": false,
+        "supportsOutput": true
+      }
+    ],
+    "localVarsAlphabetical": true,
+    "loggingLevel": 0,
+    "m_GUID": 260918235501,
+    "m_actionList": [
+      {
+        "requestConfig": {
+          "allFilesAccessPath": "",
+          "allowAnyCertificate": false,
+          "basicAuthEnabled": false,
+          "basicAuthPassword": "",
+          "basicAuthUsername": "",
+          "blockNextAction": true,
+          "clientCertEnabled": false,
+          "clientCertKeyStoreDisplayName": "",
+          "clientCertKeyStoreUri": "",
+          "clientCertPassword": "",
+          "contentBodyDynamicFileName": "",
+          "contentBodyFileDisplayName": "",
+          "contentBodyFileUri": "",
+          "contentBodyFolderDisplayName": "",
+          "contentBodyFolderUri": "",
+          "contentBodySource": 0,
+          "contentBodyText": "{sms_message}",
+          "contentType": "text/plain",
+          "followRedirects": false,
+          "headerParams": [
+            {
+              "paramName": "Authorization",
+              "paramValue": "Bearer __TAZA_SMS_SECRET_SERVER_ONLY__"
+            },
+            {
+              "paramName": "X-SMS-Sender",
+              "paramValue": "{sms_number}"
+            }
+          ],
+          "localFileUri": "",
+          "maxTotalDurationSeconds": 45,
+          "prettifyJson": false,
+          "proxyEnabled": false,
+          "proxyHost": "",
+          "proxyPort": 8080,
+          "proxyType": 0,
+          "queryParams": [],
+          "requestTimeOutSeconds": 30,
+          "requestType": 1,
+          "responseVariableName": "q_response",
+          "saveResponseAllFilesAccessPath": "",
+          "saveResponseFileName": "",
+          "saveResponseFolderPathDisplayName": "",
+          "saveResponseFolderPathUri": "",
+          "saveResponseType": 1,
+          "saveResponseUseAllFilesAccess": false,
+          "saveReturnCodeToVariable": true,
+          "saveReturnHeadersToVariable": false,
+          "urlToOpen": "https://taza.site/api/sms",
+          "useAllFilesAccess": false,
+          "useLocalFileUri": false,
+          "useStaticContentBodyFile": true,
+          "returnCodeVariableName": "q_code"
+        },
+        "disableLogging": true,
+        "m_SIGUID": 260918235503,
+        "m_classType": "HttpRequestAction",
+        "m_comment": "Send the received Khan Bank income SMS directly to TAZA SITE.",
+        "m_constraintList": [],
+        "m_isDisabled": false,
+        "m_isOrCondition": false
+      }
+    ],
+    "m_category": "Uncategorized",
+    "m_completed": true,
+    "m_constraintList": [],
+    "m_description": "TAZA 12,000 MNT / 30-day bank SMS forwarder. Requires matching private SMS_WEBHOOK_SECRET in Vercel. Import only once; disable old duplicates. This macro does not generate fake payment confirmations.",
+    "m_descriptionOpen": false,
+    "m_enabled": true,
+    "m_excludeLog": true,
+    "m_headingColor": 0,
+    "m_isOrCondition": false,
+    "m_name": "TAZA - Khan Bank SMS - 12000",
+    "m_triggerList": [
+      {
+        "enableRegex": false,
+        "enableRegexPhoneNumber": false,
+        "ignoreCase": true,
+        "isExcludeContact": false,
+        "m_exactMatch": false,
+        "m_excludes": false,
+        "m_groupIdList": [],
+        "m_groupNameList": [],
+        "m_option": 2,
+        "m_smsContent": "ORLOGO",
+        "m_smsFromList": [],
+        "m_smsNumber": "Khan Bank",
+        "m_smsNumberExclude": false,
+        "subscriptionId": -1,
+        "disableLogging": false,
+        "m_SIGUID": 260918235502,
+        "m_classType": "IncomingSMSTrigger",
+        "m_comment": "",
+        "m_constraintList": [],
+        "m_isDisabled": false,
+        "m_isOrCondition": false
+      }
+    ]
+  }
+}
