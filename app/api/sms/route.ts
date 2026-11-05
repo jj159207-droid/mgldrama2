@@ -108,10 +108,11 @@ export async function POST(req:NextRequest) {
     });
   }
 
-  if(payment.plan==='entry_72h'||payment.plan==='entry_30d'){
-    if(parsed.amount!==ALL_MOVIES_PRICE || Number(payment.amount)!==ALL_MOVIES_PRICE){
+  if(payment.plan==='entry_30d'||payment.plan==='entry_72h'){
+    const required=payment.plan==='entry_30d'?ALL_MOVIES_PRICE:12500;
+    if(parsed.amount!==required || Number(payment.amount)!==required){
       outcome='amount_mismatch';
-      throw new ApiError(400,'1 сарын бүх киноны эрх нээх гүйлгээ яг 12,500₮ байх ёстой. Өөр дүн ирсэн бол админ шалгана.');
+      throw new ApiError(400,`Бүх киноны эрх нээх гүйлгээ яг ${required.toLocaleString('mn-MN')}₮ байх ёстой. Өөр дүн ирсэн бол админ шалгана.`);
     }
   }else if(payment.plan==='all_48h'){
     // Legacy package: preserve existing transfers, do not apply the new price
