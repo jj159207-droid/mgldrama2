@@ -42,7 +42,18 @@ beforeEach(()=>{
   }
   if(url.pathname==='/api/entry-access')return Response.json({allowed:entryAllowed,reason:entryAllowed?'paid':'payment_required'});
   if(url.pathname==='/api/access')return Response.json({access:entitled?{film_7:Date.now()+86400000}:{}});
-  if(url.pathname==='/api/wallet')return Response.json({balance:walletBalance});
+  if(url.pathname==='/api/wallet') {
+    if(opts.method==='POST') {
+      const body=JSON.parse(opts.body);
+      if(body.action==='purchase') {
+        if(entitled)return Response.json({result:'owned',balance:walletBalance,price:5000});
+        if(walletBalance>=5000){walletBalance-=5000;entitled=true;return Response.json({result:'purchased',balance:walletBalance,price:5000});}
+        return Response.json({result:'insufficient',balance:walletBalance,price:5000});
+      }
+      if(body.action==='purchase_plan')return Response.json({result:'insufficient',balance:walletBalance,price:12500});
+    }
+    return Response.json({balance:walletBalance});
+  }
   if(url.pathname==='/api/settings')return Response.json({});
   if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/playback'){
