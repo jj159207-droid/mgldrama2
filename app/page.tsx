@@ -2412,7 +2412,7 @@ export default function Home() {
     finally{setWatching(false);}
   };
   const continueFilm = () => {
-    if(!selectedFilm || filmOpening || watching || !authReady)return;
+    if(!selectedFilm || filmOpening || watching || (siteId!=="taza" && !authReady))return;
     trackSiteEvent("watch_click",Number(selectedFilm.id));
     void watchFilm(selectedFilm);
   };
