@@ -27,8 +27,10 @@ test('checkout loads the latest saved bank settings instead of only hardcoded da
 test('package purchase dialog does not reveal movie counts',()=>{
   assert.doesNotMatch(page,/\$\{countFor\(c\.key\)\} кино/);
   assert.doesNotMatch(page,/\$\{selectedCount\} кино үзэх эрх/);
-  assert.match(page,/Тухайн ангиллын бүх кино/);
-  assert.match(page,/Сонгосон багцын кинонууд/);
+  assert.match(page,/Бүх киног үзэх эрх/);
+  assert.match(page,/НЭГ БАГЦ · БҮХ КИНО/);
+  assert.match(page,/ALL_MOVIES_PRICE/);
+  assert.doesNotMatch(page,/Сайтын бүх кино 7,900₮/);
 });
 
 test('login and registration are presented as two clear choices with large numeric inputs',()=>{
