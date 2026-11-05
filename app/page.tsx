@@ -330,7 +330,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>{isEntryGate ? "Кино сан нээгдэж байна..." : "Үзэх эрх нээгдэж байна..."}</div>
           {paymentError && <><p role="alert">{paymentError}</p><p>Холболт сэргэхэд дахин оролдоно. Дахин мөнгө шилжүүлэх шаардлагагүй.</p></>}
-          {!isEntryGate && <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>}
+          <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>}
         </div>
       </div>
     );
@@ -401,6 +401,10 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         </div>
       </div>
 
+      {isEntryGate && <div className="wallet-entry-confirm-actions">
+        <button type="button" className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
+        <button type="button" className="secondary-button checkout-back" onClick={onClose}>Кино руу буцах</button>
+      </div>}
       {isEntryGate && <div className="wallet-single-topbar wallet-single-bottom-banner">
         <AdminEntryLogo onOpen={()=>onAdmin?.()} />
         <span />
@@ -2509,8 +2513,8 @@ export default function Home() {
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
   const entryBarrier=false; // No admission fee: film access is checked only on playback.
   const entryPaymentFilm={
-    id:0,title:"ТАЗА САЙТ нээх",price:12500,
-    monthly:true,plan:"entry_72h",locked:true,entryGate:true,walletBefore:walletBalance
+    id:0,title:ALL_MOVIES_TITLE,price:ALL_MOVIES_PRICE,
+    monthly:true,plan:ALL_MOVIES_PLAN,locked:true,entryGate:true,walletBefore:walletBalance
   };
 
   return (
