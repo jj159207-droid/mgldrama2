@@ -2048,8 +2048,8 @@ export default function Home() {
   const [siteResolved,setSiteResolved]=useState(false);
   const brandName=SITES[siteId].name;
   const [masterAdmin,setMasterAdmin]=useState(false);
-  const [entryReady,setEntryReady]=useState(false);
-  const [entryAllowed,setEntryAllowed]=useState(false);
+  const [entryReady,setEntryReady]=useState(true);
+  const [entryAllowed,setEntryAllowed]=useState(true);
   const [entryError,setEntryError]=useState("");
   useEffect(()=>{
     setSiteId(siteFromPathname(window.location.pathname));
@@ -2162,37 +2162,14 @@ export default function Home() {
     return()=>{active=false;};
   }, []);
 
+  // Catalog access is free. Device registration is deferred until the user
+  // chooses a paid movie or requests another account-only action.
   useEffect(() => {
-    if(!mounted||!authReady||!siteResolved)return;
-    if(siteId!=="taza"){
-      setEntryAllowed(true);setEntryReady(true);setEntryError("");
-      return;
-    }
-    if(adminAuth){
-      setEntryAllowed(true);setEntryReady(true);setEntryError("");
-      return;
-    }
-    let cancelled=false;
-    const run=async()=>{
-      setEntryReady(false);setEntryError("");
-      try{
-        const viewer=user?.id?user:await ensureDeviceUser();
-        if(cancelled)return;
-        if(!viewer?.id)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
-        const data=await requestJson("/api/entry-access",{},true);
-        if(cancelled)return;
-        setEntryAllowed(data?.allowed===true);
-        setEntryReady(true);
-      }catch(error){
-        if(cancelled)return;
-        setEntryAllowed(false);
-        setEntryReady(true);
-        setEntryError(error instanceof Error?error.message:"Төлбөрийн эрхийг шалгаж чадсангүй.");
-      }
-    };
-    void run();
-    return()=>{cancelled=true;};
-  },[mounted,authReady,siteResolved,siteId,adminAuth,user?.id]);
+    if (!siteResolved) return;
+    setEntryAllowed(true);
+    setEntryReady(true);
+    setEntryError("");
+  }, [siteResolved]);
 
   useEffect(()=>{
     if(!mounted||!authReady||!user?.id)return;
@@ -2249,7 +2226,7 @@ export default function Home() {
   }, []);
   useEffect(() => {
     if(!siteResolved)return;
-    const mayLoad=adminAuth || siteId!=="taza" || entryAllowed;
+    const mayLoad=siteResolved;
     if(!mayLoad){
       filmLoadController.current?.abort();
       setFilms([]);setLoading(false);setLoadError("");
@@ -2314,7 +2291,7 @@ export default function Home() {
   // Visiting a movie link loads public details only. Playback always needs a click.
   useEffect(() => {
     if(filmTarget.kind==="none")return;
-    if(siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed){setFilmOpening(false);return;}
+    /* Public film metadata is always available; playback remains paid. */
     setPage("film");setFilmError("");setFilmOpening(true);
     if(filmTarget.kind==="invalid"){
       setSelectedFilm(null);setFilmError("Киноны холбоос буруу байна. Бүх кино хэсгээс киногоо сонгоно уу.");setFilmOpening(false);return;
@@ -2563,12 +2540,12 @@ export default function Home() {
     try {
       await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"logout"})});
       accessOwner.current=null;setUser(null);setAdminAuth(false);setMasterAdmin(false);setAccessMap({});setWalletBalance(0);
-      setEntryAllowed(siteId!=="taza");setEntryReady(siteId!=="taza");setEntryError("");
+      setEntryAllowed(true);setEntryReady(true);setEntryError("");
       navigateTo("home");
     } catch {} // Keep the signed-in state visible if server-side logout failed.
   };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
-  const entryBarrier=siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed&&page!=="adminlogin";
+  const entryBarrier=false; // No admission fee: film access is checked only on playback.
   const entryPaymentFilm={
     id:0,title:"ТАЗА САЙТ нээх",price:12500,
     monthly:true,plan:"entry_72h",locked:true,entryGate:true,walletBefore:walletBalance
