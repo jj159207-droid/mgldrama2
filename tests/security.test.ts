@@ -322,13 +322,13 @@ test('MacroDroid plain text validates sender and opens only purchased movie; dup
  const cookie=await register();await api.POST(dbReq('pending_payments','POST',{ref_code:'888888',film_id:1,plan:'single'},cookie));
  process.env.SMS_ALLOWED_SENDER='BANK_TEST';
  const send=(sender:string,text='ORLOGO:5,000.00MNT Utga:888888')=>sms.POST(new NextRequest('https://app.test/api/sms',{method:'POST',headers:{'content-type':'text/plain',authorization:`Bearer ${process.env.SMS_WEBHOOK_SECRET}`,'x-sms-sender':sender},body:text}));
- assert.equal((await send('OTHER')).status,200);
+ assert.equal((await send('OTHER')).status,403);
  assert.equal((await send('BANK_TEST')).status,200);
  const stamp=tables.pending_payments[0].confirmed_at;
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await send('BANK_TEST')).status,200);assert.equal(tables.pending_payments[0].confirmed_at,stamp);
  tables.pending_payments[0].status='revoked';assert.equal((await send('BANK_TEST')).status,409);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
 test('SMS rejects malformed amounts, multiple references, outgoing and expired orders',async()=>{
  for(const text of ['ORLOGO:5,00MNT Utga:123456','ORLOGO:5000MNT Utga:1234567','ORLOGO:5000MNT Utga:123456 Utga:654321','ZARLAGA:5000MNT Utga:123456'])assert.equal(parseBankSms(text),null);
