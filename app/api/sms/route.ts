@@ -108,10 +108,10 @@ export async function POST(req:NextRequest) {
     });
   }
 
-  if(payment.plan==='entry_72h'){
+  if(payment.plan==='entry_72h'||payment.plan==='entry_30d'){
     if(parsed.amount!==ALL_MOVIES_PRICE || Number(payment.amount)!==ALL_MOVIES_PRICE){
       outcome='amount_mismatch';
-      throw new ApiError(400,'Бүх киноны эрх нээх гүйлгээ яг 12,500₮ байх ёстой. Өөр дүн ирсэн бол админ шалгана.');
+      throw new ApiError(400,'1 сарын бүх киноны эрх нээх гүйлгээ яг 12,500₮ байх ёстой. Өөр дүн ирсэн бол админ шалгана.');
     }
   }else if(payment.plan==='all_48h'){
     // Legacy package: preserve existing transfers, do not apply the new price
@@ -145,7 +145,7 @@ export async function POST(req:NextRequest) {
   const rows=await db(`pending_payments?id=eq.${payment.id}&status=eq.pending`,'PATCH',{
     status:'confirmed',
     confirmed_at:new Date().toISOString(),
-    ...((payment.plan==='all_48h'||payment.plan==='entry_72h')?{confirmed_amount:parsed.amount}:{})
+    ...((['all_48h','entry_72h','entry_30d'].includes(String(payment.plan)))?{confirmed_amount:parsed.amount}:{})
   });
   if(rows.length!==1){
     const [current]=await lookup();
