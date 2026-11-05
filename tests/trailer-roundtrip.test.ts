@@ -27,7 +27,7 @@ test('real trailer generation, storage, visibility and retry form one safe round
   global.fetch=async(input,init={})=>{
    const url=new URL(String(input));
    if(url.origin==='https://trailer-roundtrip.invalid'){
-    if(url.pathname==='/rest/v1/app_sessions')return Response.json([{user_id:null,is_admin:true}]);
+    if(url.pathname==='/rest/v1/app_sessions')return Response.json([{user_id:null,is_admin:true,admin_site_id:'taza',is_master_admin:false}]);
     if(url.pathname==='/rest/v1/films'){
      assert.equal(init.method,'GET','generating a preview must not update any movie or entitlement');
      return Response.json([{id:7}]);

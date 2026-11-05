@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test, beforeEach, after } from 'node:test';
 import { NextRequest } from 'next/server';
 import { accessFromPayments, canWatch, parseBankSms, paymentExpiry, safeUrl, type Row } from '../lib/domain';
-import { pinHash, pinMatches } from '../lib/server';
+import { canAdminSite, pinHash, pinMatches } from '../lib/server';
 import * as auth from '../app/api/auth/route';
 import * as device from '../app/api/device/route';
 import * as api from '../app/api/db/route';
@@ -108,6 +108,34 @@ function bankSms(ref:string,amount='5,000.00',sender='Khan Bank') {
   body:`Tany 5***0000 dansand\nORLOGO:${amount}MNT orj\nULDEGDEL:100,000.00MNT\nbolloo.Utga:${ref}`,
  }));
 }
+test('only explicit master or matching site admin can access protected sites',()=>{
+ assert.equal(canAdminSite(null,'taza'),false);
+ assert.equal(canAdminSite({userId:null,admin:false,adminSiteId:null,masterAdmin:true},'taza'),false);
+ assert.equal(canAdminSite({userId:null,admin:true,adminSiteId:null,masterAdmin:false},'taza'),false);
+ assert.equal(canAdminSite({userId:null,admin:true,adminSiteId:null,masterAdmin:false},'fire'),false);
+ assert.equal(canAdminSite({userId:null,admin:true,adminSiteId:'taza',masterAdmin:false},'taza'),true);
+ assert.equal(canAdminSite({userId:null,admin:true,adminSiteId:'taza',masterAdmin:false},'fire'),false);
+ assert.equal(canAdminSite({userId:null,admin:true,adminSiteId:null,masterAdmin:true},'fire'),true);
+});
+test('production SMS webhook requires a configured trusted sender before confirming',async()=>{
+ // Next types NODE_ENV as readonly; scope the temporary override to this test.
+ const environment=process.env as Record<string,string|undefined>;
+ const prior=environment.NODE_ENV;
+ delete environment.SMS_ALLOWED_SENDER;
+ environment.NODE_ENV='production';
+ try {
+   const response=await sms.POST(req('/api/sms','POST',{text:'ORLOGO:12,000MNT Utga:123456'},undefined,{
+     authorization:`Bearer ${process.env.SMS_WEBHOOK_SECRET}`,
+     'x-sms-sender':'Khan Bank'
+   }));
+   assert.equal(response.status,503);
+   assert.equal((await response.json()).code,'SMS_SENDER_CONFIG_REQUIRED');
+ } finally {
+   if(prior===undefined)delete environment.NODE_ENV;
+   else environment.NODE_ENV=prior;
+ }
+});
+
 test('PIN hashes are salted and verify; bad/legacy PINs handled',()=>{
  const h=pinHash('1234');assert.notEqual(h,pinHash('1234'));assert.ok(pinMatches('1234',h));assert.ok(!pinMatches('9999',h));assert.ok(pinMatches('1234','1234'));assert.ok(!pinMatches('1234','scrypt:bad:bad'));
 });
