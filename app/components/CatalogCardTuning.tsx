@@ -62,7 +62,7 @@ export default function CatalogCardTuning() {
 
         const title=freeCatalog?"Бүх кино · 12,000₮":"Сайтын бүх киног 7,900 төгрөгөөр";
         if (lead && lead.textContent !== title) lead.textContent = title;
-        const subtitle=freeCatalog?"30 хоног · MacroDroid баталгаажуулалт":"72 цаг үзэх эрх";
+        const subtitle=freeCatalog?"30 хоног үзэх эрх":"72 цаг үзэх эрх";
         if (sub && sub.textContent !== subtitle) sub.textContent = subtitle;
         if (cta && cta.textContent !== "ЭНД ДАРЖ ҮЗЭХ →") cta.textContent = "ЭНД ДАРЖ ҮЗЭХ →";
 
