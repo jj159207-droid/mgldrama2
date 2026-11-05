@@ -207,28 +207,40 @@ test('payment read is constrained to cookie owner',async()=>{
  const c=await register();tables.pending_payments.push({id:1,user_id:999,status:'confirmed'});
  const r=await api.GET(dbReq('pending_payments?user_id=eq.999&select=*','GET',undefined,c));assert.deepEqual(await r.json(),[]);
 });
-test('Taza playback is free for all film records, without registration or purchases',async()=>{
-  const r=await playback.GET(req('/api/playback?id=1'));
-  assert.equal(r.status,200);
-  const movie=await r.json();
-  assert.equal(movie.url,'https://video.example/movie.mp4');
-  assert.equal(movie.free,true);assert.equal(movie.locked,false);
-  assert.equal(tables.users.length,0);
-  assert.equal(tables.pending_payments.length,0);
+test('TAZA full playback requires a confirmed subscription and a valid session',async()=>{
+  assert.equal((await playback.GET(req('/api/playback?id=1'))).status,403);
+  const cookie=await register();
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+  const created=await api.POST(dbReq('pending_payments','POST',{ref_code:'712345',plan:'all_30d_12000'},cookie));
+  assert.equal(created.status,200);
+  assert.equal((await created.json())[0].amount,12000);
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+  assert.equal((await bankSms('712345','12,000.00')).status,200);
+  const row=tables.pending_payments[0];
+  assert.equal(row.status,'confirmed');
+  assert.equal(row.amount,12000);
+  assert.equal(paymentExpiry(row)-Date.parse(String(row.confirmed_at)),30*86400000);
+  const response=await playback.GET(req('/api/playback?id=1','GET',undefined,cookie));
+  assert.equal(response.status,200);
+  assert.equal((await response.json()).url,'https://video.example/movie.mp4');
 });
-test('Taza catalog and playback stay open despite absent or expired entry purchases',async()=>{
+test('TAZA public film catalog remains visible, paid player remains locked after expired grants',async()=>{
   assert.equal((await api.GET(dbReq('films?select=*'))).status,200);
-  assert.equal((await playback.GET(req('/api/playback?id=1'))).status,200);
-  tables.pending_payments.push({id:2,user_id:1,ref_code:'654320',film_id:null,plan:'entry_72h',amount:12500,status:'revoked',created_at:new Date(Date.now()-73*3600000).toISOString(),confirmed_at:new Date(Date.now()-73*3600000).toISOString(),site_id:'taza'});
+  assert.equal((await playback.GET(req('/api/playback?id=1'))).status,403);
+  const cookie=await register();
+  tables.pending_payments.push({id:2,user_id:tables.users[0].id,ref_code:'654320',film_id:null,plan:'all_30d_12000',amount:12000,status:'confirmed',created_at:new Date(Date.now()-31*86400000).toISOString(),confirmed_at:new Date(Date.now()-31*86400000).toISOString(),site_id:'taza'});
   assert.equal((await api.GET(dbReq('films?select=*'))).status,200);
-  assert.equal((await playback.GET(req('/api/playback?id=1'))).status,200);
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
 });
-test('free Taza player serves previously locked or free films to guests',async()=>{
-  const guest=()=>playback.GET(req('/api/playback?id=1'));
-  tables.films[0].free=true;assert.equal((await guest()).status,200);
-  tables.films[0].free=false;tables.films[0].locked=false;assert.equal((await guest()).status,200);
-  tables.films[0].locked=true;assert.equal((await guest()).status,200);
-  assert.equal(tables.users.length,0);
+test('TAZA requires one all-film entitlement even for previously free rows',async()=>{
+  tables.films[0].free=true;tables.films[0].locked=false;
+  assert.equal((await playback.GET(req('/api/playback?id=1'))).status,403);
+  const cookie=await register();
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+  tables.pending_payments.push({id:10,user_id:tables.users[0].id,plan:'all_30d_12000',amount:12000,status:'confirmed',confirmed_at:now(),site_id:'taza'});
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+  tables.films[0].free=false;tables.films[0].locked=true;
+  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
 test('all package plans use 72-hour expiry while single and yearly stay distinct',()=>{
  const time=Date.parse('2026-01-01T00:00:00Z');const base={status:'confirmed',confirmed_at:new Date(time).toISOString()};
@@ -328,7 +340,7 @@ test('MacroDroid plain text validates sender and opens only purchased movie; dup
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await send('BANK_TEST')).status,200);assert.equal(tables.pending_payments[0].confirmed_at,stamp);
  tables.pending_payments[0].status='revoked';assert.equal((await send('BANK_TEST')).status,409);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
 });
 test('SMS rejects malformed amounts, multiple references, outgoing and expired orders',async()=>{
  for(const text of ['ORLOGO:5,00MNT Utga:123456','ORLOGO:5000MNT Utga:1234567','ORLOGO:5000MNT Utga:123456 Utga:654321','ZARLAGA:5000MNT Utga:123456'])assert.equal(parseBankSms(text),null);
@@ -347,7 +359,7 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'410001',film_id:1,plan:'single'},owner))).status,200);
  // The order already existed for two hours when the forwarding phone lost service.
  t.mock.timers.setTime(start+2*3600000);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,403);
  // No webhook is delivered during the next four hours. Then the original SMS arrives.
  const receivedAt=start+6*3600000;
  t.mock.timers.setTime(receivedAt);
@@ -360,8 +372,8 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal(rights.access.film_1,receivedAt+3*86400000);
  assert.equal(rights.access.film_2,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,403);
 });
 
 test('a burst of delayed SMS and concurrent duplicates confirms every matching order once',async(t)=>{
@@ -458,7 +470,7 @@ test('revoking one purchase preserves other rights and allows later purchases',a
  assert.equal(tables.pending_payments[1].status,'confirmed');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.234567','PATCH',{status:'revoked'},ac))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',plan:'single',film_id:1},cookie))).status,200);
  tables.films[0].free=true;
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
@@ -481,7 +493,7 @@ test('entitlements beyond the database page cap authorize playback and stay owne
  assert.ok(rows.access.film_1>Date.now());assert.equal(rows.access.film_3,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
  tables.pending_payments.find(p=>p.id===405)!.status='revoked';
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,403);
 });
 
 test('announcement deletion selects one row and preserves unrelated messages',async()=>{
