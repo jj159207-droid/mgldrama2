@@ -330,7 +330,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>{isEntryGate ? "Кино сан нээгдэж байна..." : "Үзэх эрх нээгдэж байна..."}</div>
           {paymentError && <><p role="alert">{paymentError}</p><p>Холболт сэргэхэд дахин оролдоно. Дахин мөнгө шилжүүлэх шаардлагагүй.</p></>}
-          <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>}
+          <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
         </div>
       </div>
     );
