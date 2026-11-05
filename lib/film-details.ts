@@ -22,7 +22,7 @@ export function relatedFilms<T extends CatalogFilm>(films: T[], selected: Catalo
 export function filmPlans(_film: CatalogFilm) {
   // The entire catalog uses one all-movies bundle. Old purchases remain
   // valid in accessFromPayments for backward compatibility.
-  return [{id:ALL_MOVIES_PLAN, hours:72, category:'Бүх кино', price:ALL_MOVIES_PRICE}];
+  return [{id:ALL_MOVIES_PLAN, hours:720, category:'Бүх кино', price:ALL_MOVIES_PRICE}];
 }
 
 export function trailerUrl(film: Pick<FilmDetails, "preview_url" | "url">): string {
