@@ -561,7 +561,7 @@ function Poster({ film, brandName="ТАЗА САЙТ" }: any) {
   </div>;
 }
 function FilmCard({ film, onClick, expiry, brandName }: any) {
-  const available = film.free || film.locked === false || !!expiry;
+  const available = !!expiry; // Every TAZA movie is part of the all-movies bundle.
   const isErotic = decodeCat(film.badge) === "Эротик";
   return <article className={`movie-card${isErotic ? " erotic-card" : ""}`}>
     <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — дэлгэрэнгүй үзэх`}>
@@ -570,13 +570,13 @@ function FilmCard({ film, onClick, expiry, brandName }: any) {
         <ScrollCardPreview film={film} />
         <span className="movie-badge">{decodeBadge(film.badge)}</span>
         {isErotic && <span className="movie-age21">+21</span>}
-        {film.free && <span className="movie-free">Үнэгүй</span>}
+        {/* All films belong to the unified bundle; no public free badge. */}
         <span className="movie-play"><UiIcon name="play" size={25} /></span>
       </div>
       <div className="movie-info">
         <span className="movie-category">{decodeCat(film.badge)}</span>
         <h3>{film.title}</h3>
-        <div className="movie-price"><strong className={available ? "available" : ""}>{film.free ? "Үнэгүй үзэх" : available ? "Үзэх эрхтэй" : `${ALL_MOVIES_TITLE} · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮`}</strong>
+        <div className="movie-price"><strong className={available ? "available" : ""}>{available ? "Үзэх эрхтэй" : `${ALL_MOVIES_TITLE} · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮`}</strong>
           {/* One fixed all-movies price: no misleading film-by-film discounts. */}
         </div>
         {expiry && <span className="movie-expiry">{expiry}</span>}
@@ -2563,7 +2563,7 @@ export default function Home() {
         </main>
       ) : <>
       {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
-      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
+      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
       {page === "admin-choice" && adminAuth && <AdminDestinationChoice brandName={brandName} onAdmin={()=>navigateTo("admin")} onMovies={()=>navigateTo("home")} onLogout={handleLogout} />}
