@@ -11,7 +11,7 @@ function fixtures(){
  const calls:string[]=[];
  global.fetch=async(input,init)=>{
   const url=new URL(String(input));calls.push(url.href);assert.equal(url.origin,'https://trailertest.invalid','must never fetch a real account in tests');
-  if(url.pathname==='/rest/v1/app_sessions')return Response.json([{user_id:null,is_admin:true}]);
+  if(url.pathname==='/rest/v1/app_sessions')return Response.json([{user_id:null,is_admin:true,admin_site_id:'taza',is_master_admin:false}]);
   if(url.pathname==='/rest/v1/films')return Response.json(url.searchParams.get('id')==='eq.7'?[{id:7}]:[]);
   if(url.pathname.startsWith('/storage/v1/object/public/kino-trailers/')){assert.equal(init?.method,'HEAD');return new Response(null,{status:200});}
   throw new Error('Unexpected request');
