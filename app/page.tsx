@@ -357,7 +357,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
         <p><strong>Шилжүүлэх дүн {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></p>
-        <p><strong>{ALL_MOVIES_TITLE} · 72 цаг</strong></p>
+        <p><strong>{ALL_MOVIES_TITLE} · 12,500₮ · 30 хоног</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -680,8 +680,8 @@ function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: strin
       <div><span className="eyebrow">НЭГ БАГЦ · БҮХ КИНО</span><h2 id="package-dialog-title">{ALL_MOVIES_TITLE}</h2></div>
       <button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button>
     </div>
-    <p className="package-hint">Нэг удаа төлөөд бүх ангиллын бүх киног 72 цагийн турш үзэх эрхтэй болно. Үзэх хугацаа төлбөр баталгаажсан мөчөөс эхэлнэ.</p>
-    <div className="package-summary" aria-live="polite"><span><strong>{ALL_MOVIES_TITLE}</strong><span>Бүх ангилал · 72 цаг</span></span><strong>{ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></div>
+    <p className="package-hint">Нэг удаа 12,500₮ төлөөд бүх киног 1 сарын (30 хоногийн) турш үзэх эрхтэй болно. Хугацаа төлбөр баталгаажсан мөчөөс эхэлнэ.</p>
+    <div className="package-summary" aria-live="polite"><span><strong>{ALL_MOVIES_TITLE}</strong><span>Бүх ангилал · 1 сар (30 хоног)</span></span><strong>{ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></div>
     <p className="package-hint">Банкны данс болон 6 оронтой гүйлгээний утга төлбөрийн хэсэгт гарна.</p>
     <button type="button" className="primary-button package-continue" onClick={select}>Бүх киног үзэх эрх авах · {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</button>
   </dialog>;
@@ -734,7 +734,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Бүх киног үзэх эрх · 12,500₮</strong><span>72 цаг үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>1 сарын турш бүх киног үзэх эрх · 12,500₮</strong><span>1 сарын үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
