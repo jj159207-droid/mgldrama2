@@ -738,12 +738,18 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
 
   const openLogin = () => onOpenLogin();
 
-  const openPlans = () => freeCatalog ? document.getElementById("catalog")?.scrollIntoView({behavior:"smooth"}) : setPlanAutoOpen(true);
+  const openPlans = () => freeCatalog ? onMonthly("all_30d_12000") : setPlanAutoOpen(true);
+  useEffect(()=>{
+    if(!freeCatalog)return;
+    const subscribe=()=>onMonthly("all_30d_12000");
+    window.addEventListener("tazaSubscribe",subscribe);
+    return()=>window.removeEventListener("tazaSubscribe",subscribe);
+  },[freeCatalog,onMonthly]);
   return <div className="cinema-site">
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
     <header className="site-header"><div className="header-inner">
       <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label={`${brandName} нүүр`}>{brandName}</a></div>
-      <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>{freeCatalog ? "Бүх кино үнэгүй" : "Үзэх багц"}</button><button onClick={onContact}>Холбогдох<ChatBadge count={chatUnread} /></button></nav>
+      <nav className="header-nav" aria-label="Үндсэн цэс"><a href="#catalog" className="nav-current">Кинонууд</a><button onClick={openPlans}>{freeCatalog ? "Бүх кино · 12,000₮" : "Үзэх багц"}</button><button onClick={onContact}>Холбогдох<ChatBadge count={chatUnread} /></button></nav>
       <div className="header-actions">
       {admin
         ? <><span className="account-label"><UiIcon name="user" size={16} />Админ</span><button className="quiet-button" onClick={onLogout}>Гарах</button></>
@@ -761,7 +767,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "Бүх киног үнэгүй үзэх" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "Бүртгэл, төлбөр шаардахгүй" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "Бүх киног 12,000₮-өөр үзэх" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног · MacroDroid-оор баталгаажна" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
@@ -2201,7 +2207,6 @@ export default function Home() {
   },[user?.id]);
 
   const hasAccess = (filmId: number, category?: string): boolean => {
-    if (siteId === 'taza') return true;
     if (!user) return false;
     const now = Date.now();
     if (accessMap["monthly"] && accessMap["monthly"] > now) return true;
@@ -2372,10 +2377,27 @@ export default function Home() {
     const startedAt=playRequest.current;
     setWatching(true);setWatchError("");
     if (siteId === "taza") {
-      // Never create member accounts or place payment orders for free playback.
-      try { if (await playFilm(film)) setPayFilm(null); }
-      catch (error) { setWatchError(error instanceof Error ? error.message : "Кино тоглуулж чадсангүй."); }
-      finally { setWatching(false); }
+      // Public catalog, paid full playback. A guest device is created only when
+      // the viewer requests a movie/subscription; no phone/PIN registration.
+      try {
+        let viewer=user;
+        if (!viewer && !adminAuth) viewer=await ensureDeviceUser();
+        if (!viewer && !adminAuth) throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+        if (startedAt!==playRequest.current) return;
+        const owned=()=>!viewer || accessOwner.current===Number(viewer.id);
+        try {
+          if(await playFilm(film,owned))setPayFilm(null);
+        } catch(error) {
+          if(!owned())return;
+          if(error instanceof RequestError && error.status===403 && !adminAuth){
+            trackSiteEvent("payment_open",Number(film.id));
+            setPayFilm({id:0,title:"Бүх кино · 30 хоног",price:12000,monthly:true,plan:"all_30d_12000",locked:true,entryGate:true,returnFilm:film});
+            setPage("film");
+          }else throw error;
+        }
+      } catch(error) {
+        setWatchError(error instanceof Error ? error.message : "Кино нээж чадсангүй. Дахин оролдоно уу.");
+      } finally { setWatching(false); }
       return;
     }
     if(adminAuth && !user){
@@ -2488,10 +2510,10 @@ export default function Home() {
       window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
     }
     if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan)) return;
-    if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
+    if(sourceFilm && !(siteId==='taza' && plan==='all_30d_12000') && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
     if(sourceFilm){setPage("film");}
     else navigateTo("payment");
-    setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true,returnFilm:sourceFilm});
+    setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true,entryGate:siteId==="taza"&&plan==="all_30d_12000",returnFilm:sourceFilm});
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     try {
@@ -2500,7 +2522,7 @@ export default function Home() {
       if(adminAuth && !viewer){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
       if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
       if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup" || plan==="entry_72h")return;
-      if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
+      if(sourceFilm && !(siteId==='taza' && plan==='all_30d_12000') && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
       openPlanCheckout(plan,sourceFilm);
     } catch(error) {setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
   };
@@ -2556,12 +2578,12 @@ export default function Home() {
     } catch {} // Keep the signed-in state visible if server-side logout failed.
   };
   const filmsWithUnlock = films.map((f: any) => siteId === "taza"
-    ? { ...f, free:true, locked:false, price:0, op:0 }
+    ? { ...f, free:false, locked:!hasAccess(f.id,decodeCat(f.badge)), price:12000, op:12000 }
     : (hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked:false } : f));
   const entryBarrier=false; // TAZA is public, and the admin entry remains protected.
   const entryPaymentFilm={
-    id:0,title:"ТАЗА САЙТ нээх",price:12500,
-    monthly:true,plan:"entry_72h",locked:true,entryGate:true,walletBefore:walletBalance
+    id:0,title:"Бүх кино · 30 хоног",price:12000,
+    monthly:true,plan:"all_30d_12000",locked:true,entryGate:true,walletBefore:walletBalance
   };
 
   return (
@@ -2610,7 +2632,7 @@ export default function Home() {
         </main>
       ) : <>
       {(page === "home" || page === "payment") && <HomePage freeCatalog={siteId==="taza"} chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
-      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm && siteId==="taza" ? {...selectedFilm,free:true,locked:false,price:0,op:0} : selectedFilm} freeCatalog={siteId==="taza"} films={filmsWithUnlock} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={siteId==="taza" || (!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge))))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={siteId!=="taza" && payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
+      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm && siteId==="taza" ? {...selectedFilm,free:false,locked:!hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)),price:12000,op:12000} : selectedFilm} subscriptionCatalog={siteId==="taza"} films={filmsWithUnlock} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={siteId==="taza" || authReady} available={!!selectedFilm && (adminAuth || (siteId!=="taza" && (selectedFilm.free || selectedFilm.locked===false)) || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
       {page === "admin-choice" && adminAuth && <AdminDestinationChoice brandName={brandName} onAdmin={()=>navigateTo("admin")} onMovies={()=>navigateTo("home")} onLogout={handleLogout} />}
