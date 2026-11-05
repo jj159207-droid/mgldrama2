@@ -165,7 +165,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const [bankAccount,setBankAccount]=useState(DEFAULT_BANK_ACCOUNT);
   const tazaTransfer=typeof window!=="undefined" && siteFromPathname(window.location.pathname)==="taza";
   const transferIban=normalizeMongolianIban(bankAccount.iban);
-  const transferIbanDisplay=tazaTransfer?"44000500":(transferIban.match(/.{1,4}/g)?.join(" ") || "");
+  const transferIbanDisplay=tazaTransfer?transferIban.slice(2,10):(transferIban.match(/.{1,4}/g)?.join(" ") || "");
   const transferReady=!tazaTransfer || !!(transferIban && /^\d{10}$/.test(bankAccount.number) && transferIban.endsWith(bankAccount.number));
   const transferDestination=tazaTransfer?transferIban:(transferIban||bankAccount.number);
   useEffect(()=>{
@@ -360,7 +360,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <p><strong>Автоматаар баталгаажиж кинонууд нээгдэнэ</strong></p>
       </section>
 
-      <button type="button" className={`wallet-single-copy${tazaTransfer ? " wallet-single-iban" : ""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?"44000500":transferDestination,tazaTransfer?"iban":"account")}>
+      <button type="button" className={`wallet-single-copy${tazaTransfer ? " wallet-single-iban" : ""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?transferIbanDisplay:transferDestination,tazaTransfer?"iban":"account")}>
         <span><small>{tazaTransfer?"IBN (код) · ":"Данс · "}{bankAccount.bank} · {bankAccount.name}</small><strong>{(tazaTransfer?transferIbanDisplay:transferDestination)||"IBAN тохируулаагүй"}</strong></span>
         <b>{copied === (tazaTransfer?"iban":"account") ? "Хуулагдлаа ✓" : "Хуулах"}</b>
       </button>
@@ -441,7 +441,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <section className="bank-details">
           <h3>1. {tazaTransfer?"IBAN дансаар":"Дансаар"} шилжүүлэх</h3>
           <dl><div><dt>Банк</dt><dd>{bankAccount.bank}</dd></div><div><dt>Эзэмшигч</dt><dd>{bankAccount.name}</dd></div></dl>
-          <button type="button" className={`copy-account${tazaTransfer?" copy-iban":""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?"44000500":transferDestination,tazaTransfer?"iban":"account")}>
+          <button type="button" className={`copy-account${tazaTransfer?" copy-iban":""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?transferIbanDisplay:transferDestination,tazaTransfer?"iban":"account")}>
             <span><span className="account-label-line">{tazaTransfer?"IBN (код)":"Дансны дугаар"}</span><strong>{(tazaTransfer?transferIbanDisplay:transferDestination)||"IBAN тохируулаагүй"}</strong></span>
             <span>{copied === (tazaTransfer?"iban":"account") ? "Хуулагдлаа ✓" : "Хуулах"}</span>
           </button>
