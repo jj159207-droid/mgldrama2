@@ -674,20 +674,9 @@ test('master admin downloads matching SMS macro with private, noncacheable crede
  assert.equal(config.headerParams.find((v:{paramName:string})=>v.paramName==='Authorization')?.paramValue,`Bearer ${process.env.SMS_WEBHOOK_SECRET}`);
  assert.equal(config.headerParams.find((v:{paramName:string})=>v.paramName==='X-SMS-Sender')?.paramValue,'{sms_number}');
  assert.equal(macro.m_triggerList[0].enableRegexPhoneNumber,true);
- assert.equal(macro.m_triggerList[0].m_smsNumber,'(?i)^Khan[\\s-]*Bank
+ assert.equal(macro.m_triggerList[0].m_smsNumber,'(?i)^Khan[\\s-]*Bank$');
  assert.equal(macro.m_triggerList[0].enableRegex,true);
  assert.equal(macro.m_triggerList[0].m_smsContent,'(?i)(?:ORLOGO|Орлого)');
-});
-
-test('MacroDroid download expires automatically after its temporary window',async(t)=>{
- t.mock.method(Date,'now',()=>Date.parse('2026-11-13T00:00:00Z'));
- const cookie=await admin();
- const expired=await macroDownload.GET(req('/api/admin/macrodroid','GET',undefined,cookie));
- assert.equal(expired.status,410);
- assert.ok(!(await expired.text()).includes(process.env.SMS_WEBHOOK_SECRET!));
-});
-);
- assert.equal(macro.m_triggerList[0].m_smsContent,'ORLOGO');
 });
 
 test('MacroDroid download expires automatically after its temporary window',async(t)=>{
