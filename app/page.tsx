@@ -157,7 +157,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const isWalletTopup=film.plan==="wallet_topup";
   const isEntryGate=film.entryGate===true;
   const isSimpleMovieTopup=(isWalletTopup&&!film.returnPlan)||isEntryGate;
-  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?12500:isSimpleMovieTopup?6000:5000));
+  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?ALL_MOVIES_PRICE:isSimpleMovieTopup?6000:5000));
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup || isSimpleMovieTopup);
@@ -357,7 +357,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
         <p><strong>Шилжүүлэх дүн {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></p>
-        <p><strong>{ALL_MOVIES_TITLE} · 12,500₮ · 30 хоног</strong></p>
+        <p><strong>{ALL_MOVIES_TITLE} · {ALL_MOVIES_PRICE.toLocaleString('mn-MN')}₮ · 30 хоног</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -680,7 +680,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: strin
       <div><span className="eyebrow">НЭГ БАГЦ · БҮХ КИНО</span><h2 id="package-dialog-title">{ALL_MOVIES_TITLE}</h2></div>
       <button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button>
     </div>
-    <p className="package-hint">Нэг удаа 12,500₮ төлөөд бүх киног 1 сарын (30 хоногийн) турш үзэх эрхтэй болно. Хугацаа төлбөр баталгаажсан мөчөөс эхэлнэ.</p>
+    <p className="package-hint">Нэг удаа 12,000₮ төлөөд бүх киног 1 сарын (30 хоногийн) турш үзэх эрхтэй болно. Хугацаа төлбөр баталгаажсан мөчөөс эхэлнэ.</p>
     <div className="package-summary" aria-live="polite"><span><strong>{ALL_MOVIES_TITLE}</strong><span>Бүх ангилал · 1 сар (30 хоног)</span></span><strong>{ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></div>
     <p className="package-hint">Банкны данс болон 6 оронтой гүйлгээний утга төлбөрийн хэсэгт гарна.</p>
     <button type="button" className="primary-button package-continue" onClick={select}>Бүх киног үзэх эрх авах · {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</button>
@@ -734,7 +734,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>1 сарын турш бүх киног үзэх эрх · 12,500₮</strong><span>1 сарын үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>1 сарын турш бүх киног үзэх эрх · 12,000₮</strong><span>1 сарын үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
@@ -1868,7 +1868,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
   const unreadCount = useChatUnread("admin");
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
 
-  const empty = { title: "", description: "", views: 0, op: 12500, price: ALL_MOVIES_PRICE, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
+  const empty = { title: "", description: "", views: 0, op: ALL_MOVIES_PRICE, price: ALL_MOVIES_PRICE, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
@@ -2360,7 +2360,7 @@ export default function Home() {
       } catch(error) {
         if(!current())return;
         if(error instanceof RequestError && error.status===403){
-          // One 12,500₮ all-movies purchase, not a single-film sale.
+          // One 12,000₮ all-movies purchase, not a single-film sale.
           // The server still checks payment/entitlement before returning a URL.
           trackSiteEvent("payment_open",Number(film.id));
           setPayFilm({id:0,title:ALL_MOVIES_TITLE,price:ALL_MOVIES_PRICE,monthly:true,plan:ALL_MOVIES_PLAN,entryGate:true,locked:true,returnFilm:film});
