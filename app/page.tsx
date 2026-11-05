@@ -338,11 +338,11 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
   const checkout = <>
     {isSimpleMovieTopup ? <>
-      {!isEntryGate && <div className="wallet-single-topbar">
+      <div className="wallet-single-topbar">
         <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>
-        <strong>Киноны данс цэнэглэх</strong>
+        <strong>{isEntryGate ? ALL_MOVIES_TITLE : "Киноны данс цэнэглэх"}</strong>
         <span />
-      </div>}
+      </div>
 
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
@@ -351,13 +351,13 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </section>
 
       <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
-        <span><small>Данс · {bankAccount.bank} · IBAN-{String(bankAccount.iban || "").replace(/^MN/i,"")}</small><strong>{bankAccount.number}</strong></span>
+        <span><small>Данс · {bankAccount.bank} · {bankAccount.name} · IBAN {bankAccount.iban}</small><strong>{bankAccount.number}</strong></span>
         <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
       </button>
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
-        <p><strong>Шилжүүлэх дүн 12,500₮</strong></p>
-        <p><strong>Бүх киног үзэх эрх</strong></p>
+        <p><strong>Шилжүүлэх дүн {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></p>
+        <p><strong>{ALL_MOVIES_TITLE} · 72 цаг</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -375,7 +375,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <div className={isEntryGate ? "wallet-entry-wait-content" : undefined}>
           <strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Төлбөр шалгаж байна…" : "Төлбөрийн SMS хүлээж байна"}</strong>
           {autoStatus === "timeout"
-            ? (!isEntryGate && <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>)
+            ? <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>
             : isEntryGate
               ? <>
                   <button
