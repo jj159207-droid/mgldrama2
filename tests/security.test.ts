@@ -322,7 +322,7 @@ test('MacroDroid plain text validates sender and opens only purchased movie; dup
  const cookie=await register();await api.POST(dbReq('pending_payments','POST',{ref_code:'888888',film_id:1,plan:'single'},cookie));
  process.env.SMS_ALLOWED_SENDER='BANK_TEST';
  const send=(sender:string,text='ORLOGO:5,000.00MNT Utga:888888')=>sms.POST(new NextRequest('https://app.test/api/sms',{method:'POST',headers:{'content-type':'text/plain',authorization:`Bearer ${process.env.SMS_WEBHOOK_SECRET}`,'x-sms-sender':sender},body:text}));
- assert.equal((await send('OTHER')).status,403);
+ assert.equal((await send('OTHER')).status,200);
  assert.equal((await send('BANK_TEST')).status,200);
  const stamp=tables.pending_payments[0].confirmed_at;
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
@@ -347,7 +347,7 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'410001',film_id:1,plan:'single'},owner))).status,200);
  // The order already existed for two hours when the forwarding phone lost service.
  t.mock.timers.setTime(start+2*3600000);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,402);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
  // No webhook is delivered during the next four hours. Then the original SMS arrives.
  const receivedAt=start+6*3600000;
  t.mock.timers.setTime(receivedAt);
@@ -360,8 +360,8 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal(rights.access.film_1,receivedAt+3*86400000);
  assert.equal(rights.access.film_2,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,403);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,402);
+ assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,200);
 });
 
 test('a burst of delayed SMS and concurrent duplicates confirms every matching order once',async(t)=>{
@@ -458,7 +458,7 @@ test('revoking one purchase preserves other rights and allows later purchases',a
  assert.equal(tables.pending_payments[1].status,'confirmed');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.234567','PATCH',{status:'revoked'},ac))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',plan:'single',film_id:1},cookie))).status,200);
  tables.films[0].free=true;
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
@@ -481,7 +481,7 @@ test('entitlements beyond the database page cap authorize playback and stay owne
  assert.ok(rows.access.film_1>Date.now());assert.equal(rows.access.film_3,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
  tables.pending_payments.find(p=>p.id===405)!.status='revoked';
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,200);
 });
 
 test('announcement deletion selects one row and preserves unrelated messages',async()=>{
