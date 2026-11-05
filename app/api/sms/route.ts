@@ -62,6 +62,12 @@ export async function POST(req:NextRequest) {
   rawText=typeof forwarded==='string'?forwarded:'';
 
   const allowed=process.env.SMS_ALLOWED_SENDER?.trim();
+  // Payment webhooks are irreversible authorization events. Production must
+  // fail closed when the trusted bank sender is not configured.
+  if(process.env.NODE_ENV==='production' && !allowed){
+    outcome='sender_not_configured';
+    throw new ApiError(503,'Банкны SMS илгээгчийн хамгаалалт тохируулагдаагүй.','SMS_SENDER_CONFIG_REQUIRED');
+  }
   if(allowed && !senderMatches(allowed,sender)){
     outcome='sender_rejected';
     throw new ApiError(403,'Банкны SMS илгээгч таарахгүй байна.');
