@@ -10,6 +10,7 @@ import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
 import PosterUpload from "@/app/components/PosterUpload";
 import TrailerEditor, { type TrailerEditorHandle } from "@/app/components/TrailerEditor";
 import ReadinessCheck from "@/app/components/ReadinessCheck";
+import AdminSmsDiagnostics from "@/app/components/AdminSmsDiagnostics";
 import CatalogBrowser from "@/app/components/CatalogBrowser";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
 import AppInstallButton from "@/app/components/AppInstallButton";
@@ -1755,7 +1756,7 @@ function AdminSettingsTab({masterAdmin=false}: {masterAdmin?:boolean}) {
   };
   if(loading)return <div style={{textAlign:"center",padding:40,color:C.muted}}>Ачааллаж байна...</div>;
   return <div style={{padding:"0 14px"}}>
-    {masterAdmin&&<><ReadinessCheck /><SiteAdminManager />
+    {masterAdmin&&<><AdminSmsDiagnostics /><ReadinessCheck /><SiteAdminManager />
       <div style={{background:C.card2,border:`1px solid ${C.bd}`,borderRadius:12,padding:16,marginBottom:12}}>
         <div style={{fontSize:14,fontWeight:800,color:C.txt,marginBottom:8}}>📲 MacroDroid — SMS автоматаар баталгаажуулах</div>
         <p style={{fontSize:12,color:C.muted,lineHeight:1.65,margin:"0 0 12px"}}>TAZA-ийн ХААН Банкны орлогын SMS дамжуулах файлыг эндээс татаж, Android утсан дээр MacroDroid-д импортлоно. Өмнөх макро давхар ажиллаж байвал унтраана уу.</p>
