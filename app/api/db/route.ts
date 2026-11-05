@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session,siteEntryAllowed } from '@/lib/server';
 import { plans,safeUrl,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
+import { isR2MovieReference } from '@/lib/r2';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
 function validateFilm(b:Row) {
@@ -12,7 +13,7 @@ function validateFilm(b:Row) {
   if('badge' in b && (typeof b.badge!=='string' || !['Эротик','Гадаад','Хятад','Орос'].includes(b.badge.split('|')[1] || 'Эротик')))throw new ApiError(400,'Киноны ангиллыг сонгоно уу. Бүгд нь киноны ангилал биш.');
   for(const k of ['views','op','price'])if(k in b && (typeof b[k]!=='number'||!Number.isSafeInteger(b[k])||Number(b[k])<0))throw new ApiError(400,'Үнэ болон үзсэн тоо 0 эсвэл эерэг бүхэл тоо байна.');
   for(const k of ['free','locked'])if(k in b && typeof b[k]!=='boolean')throw new ApiError(400,'Киноны төлөв буруу.');
-  for(const k of ['url','preview_url'])if(b[k] && (typeof b[k]!=='string'||String(b[k]).split('|||').some(u=>u && !safeUrl(u))))throw new ApiError(400,'Зөв HTTPS видео холбоос оруулна уу.');
+  for(const k of ['url','preview_url'])if(b[k] && (typeof b[k]!=='string'||String(b[k]).split('|||').some((u,i)=>u && !safeUrl(u) && !(k==='url' && i===0 && isR2MovieReference(u)))))throw new ApiError(400,'Зөв HTTPS видео холбоос эсвэл хувийн R2 киноны зам оруулна уу.');
   if(b.img && !safeUrl(b.img,true))throw new ApiError(400,'Зөв зургийн холбоос эсвэл 2 MB хүртэл PNG/JPEG/WebP/GIF зураг оруулна уу.');
 }
 async function siteUsers(query:URLSearchParams,site:string) {
