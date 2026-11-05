@@ -1061,7 +1061,7 @@ function AdminMembersTab() {
   const isActive = (p: any) => paymentExpiry({...p,status:"confirmed"}) > now;
   const activePayments = allPayments.filter(p => p.plan !== "wallet_topup" && isActive(p));
 
-  const paymentsAllBag = activePayments.filter(p => ["all_1month","all_48h","entry_72h","monthly","1month","3day","1year"].includes(p.plan));
+  const paymentsAllBag = activePayments.filter(p => ["all_1month","all_48h","entry_72h","entry_30d","monthly","1month","3day","1year"].includes(p.plan));
   const paymentsPackage = activePayments.filter(p => p.plan && /_(3day|1month)$/.test(String(p.plan)) && p.plan !== "all_1month");
   const paymentsFilm = activePayments.filter(p => !p.plan || p.plan === "single");
   const revocableUserPayments = userPayments.filter((p:any) => p.plan !== "wallet_topup" && isActive(p));
@@ -1125,7 +1125,7 @@ function AdminMembersTab() {
     } finally { setGranting(false); }
   };
 
-  const tabLabel = filterTab === "allbag" ? "🌟 Бүх киноны 72 цагийн эрхтэй гишүүд" : filterTab === "package" ? "👑 Ангиллын 72 цагийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
+  const tabLabel = filterTab === "allbag" ? "🌟 Бүх киноны эрхтэй гишүүд" : filterTab === "package" ? "👑 Ангиллын 72 цагийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
 
   // ── Нийт гишүүдийн жагсаалт дэлгэц ──
   if (showAllUsers) {
@@ -1240,13 +1240,13 @@ function AdminMembersTab() {
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Эрх нэмэх:</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                   {[
-                    ["all_1month", "🌟", "Бүх кино · 72 цаг",  "#1a0a3a", "#f59e0b", "#fcd34d"],
+                    [ALL_MOVIES_PLAN, "🌟", "Бүх кино · 1 сар",  "#1a0a3a", "#f59e0b", "#fcd34d"],
                     ["3day_cat",   "👑", "Ангилал · 72 цаг",   "#061220", "#38bdf8", "#7dd3fc"],
                     ["film",       "🎬", "1 кино эрх",         "#031a0e", "#16a34a", "#4ade80"],
                   ].map(([key, icon, label, bg, border, color]) => (
                     <button key={key} disabled={granting}
                       onClick={() => {
-                        if (key === "all_1month") grantAccess("all_1month");
+                        if (key === ALL_MOVIES_PLAN) grantAccess(ALL_MOVIES_PLAN);
                         else setGrantStep(key as any);
                       }}
                       style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
