@@ -1,16 +1,19 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
+export const ALL_MOVIES_PRICE = 12500;
+export const ALL_MOVIES_PLAN = 'entry_72h';
+export const ALL_MOVIES_TITLE = 'Бүх киног үзэх эрх';
 export const plans: Record<string, number> = {
   erotic_3day:12500,gadaad_3day:12500,hyatad_3day:12500,oros_3day:12500,
   erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,oros_1month:12500,all_1month:12500,
-  all_48h:7900,entry_72h:12500,
+  all_48h:ALL_MOVIES_PRICE,entry_72h:ALL_MOVIES_PRICE,
   wallet_topup:5000,
 };
 export function planLabel(plan: string): string {
   const names: Record<string,string> = {
     erotic_3day:'Эротик · 72 цаг', gadaad_3day:'Гадаад · 72 цаг', hyatad_3day:'Хятад · 72 цаг', oros_3day:'Орос · 72 цаг',
     erotic_1month:'Эротик · 72 цаг', gadaad_1month:'Гадаад · 72 цаг', hyatad_1month:'Хятад · 72 цаг', oros_1month:'Орос · 72 цаг',
-    all_1month:'Бүх багц · 72 цаг', all_48h:'Бүх кино · 72 цаг', entry_72h:'Нэвтрэх · бүх кино · 72 цаг', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'72 цагийн багц', '1month':'72 цагийн багц', '3day':'72 цагийн багц', '1year':'Жилийн багц', single:'Нэг кино',
+    all_1month:'Бүх киног үзэх эрх · 72 цаг', all_48h:'Бүх киног үзэх эрх · 72 цаг', entry_72h:'Бүх киног үзэх эрх · 72 цаг', wallet_topup:'Үлдэгдэл цэнэглэлт', monthly:'72 цагийн багц', '1month':'72 цагийн багц', '3day':'72 цагийн багц', '1year':'Жилийн багц', single:'Нэг кино',
   };
   return names[plan] || plan;
 }
