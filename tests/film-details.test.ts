@@ -13,10 +13,10 @@ test('recommendations are the three most viewed other movies in the same categor
   assert.deepEqual(relatedFilms([selected],selected),[]);
 });
 
-test('every movie and category offers the 12,500₮ 30-day all-movies package',()=>{
+test('every movie and category offers the 12,000₮ 30-day all-movies package',()=>{
   for(const category of ['Эротик','Хятад','Гадаад','Орос','Unknown']){
     assert.deepEqual(filmPlans({id:1,badge:`Хадмал|${category}`}),[
-      {id:'entry_30d',hours:720,category:'Бүх кино',price:12500},
+      {id:'entry_30d',hours:720,category:'Бүх кино',price:12000},
     ]);
   }
 });
