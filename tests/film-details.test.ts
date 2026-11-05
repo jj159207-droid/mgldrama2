@@ -13,11 +13,10 @@ test('recommendations are the three most viewed other movies in the same categor
   assert.deepEqual(relatedFilms([selected],selected),[]);
 });
 
-test('only the selected category packages are offered with 3 and 30 day prices',()=>{
+test('legacy category helper exposes the current bounded 72-hour plan',()=>{
   for(const [category,key] of [['Эротик','erotic'],['Хятад','hyatad'],['Гадаад','gadaad']]){
     assert.deepEqual(filmPlans({id:1,badge:`Хадмал|${category}`}),[
-      {id:`${key}_3day`,days:3,category,price:8000},
-      {id:`${key}_1month`,days:30,category,price:12500},
+      {id:`${key}_3day`,hours:72,category,price:12500},
     ]);
   }
   assert.deepEqual(filmPlans({id:1,badge:'Хэлтэй|Unknown'}),[]);
