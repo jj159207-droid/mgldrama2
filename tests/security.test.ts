@@ -490,8 +490,8 @@ test('revoking one purchase preserves other rights and allows later purchases',a
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',plan:'single',film_id:1},cookie))).status,200);
  tables.films[0].free=true;
- // A free film can be watched without paying an unrelated site entry fee.
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+ // Unified TAZA prices also protect previously free movies.
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
  markEntryPaid(Number(uid));
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
