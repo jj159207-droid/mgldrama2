@@ -1,5 +1,5 @@
 import { filmCategory, type CatalogFilm } from "./catalog";
-import { plans, safeUrl } from "./domain";
+import { ALL_MOVIES_PLAN, ALL_MOVIES_PRICE, safeUrl } from "./domain";
 
 export type FilmDetails = CatalogFilm & {
   title: string;
@@ -19,11 +19,10 @@ export function relatedFilms<T extends CatalogFilm>(films: T[], selected: Catalo
   }).sort((a, b) => (Number(b.views) || 0) - (Number(a.views) || 0) || b.id - a.id).slice(0, 3);
 }
 
-export function filmPlans(film: CatalogFilm) {
-  const category = filmCategory(film);
-  const key = ({"Эротик":"erotic", "Хятад":"hyatad", "Гадаад":"gadaad", "Орос":"oros"} as Record<string,string>)[category];
-  if (!key) return [];
-  return [{id:`${key}_3day`, hours:72}].map(plan => ({...plan, category, price:plans[plan.id]}));
+export function filmPlans(_film: CatalogFilm) {
+  // The entire catalog uses one all-movies bundle. Old purchases remain
+  // valid in accessFromPayments for backward compatibility.
+  return [{id:ALL_MOVIES_PLAN, hours:72, category:'Бүх кино', price:ALL_MOVIES_PRICE}];
 }
 
 export function trailerUrl(film: Pick<FilmDetails, "preview_url" | "url">): string {
