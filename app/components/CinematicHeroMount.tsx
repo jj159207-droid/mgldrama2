@@ -193,10 +193,13 @@ export default function CinematicHeroMount() {
             badge: typeof film.badge === "string" ? film.badge : "",
           }));
         setTotalFilms(clean.length);
-        // The top carousel should never show poster-less cards while real posters exist.
-        const prioritized = clean.sort((a, b) => mediaRank(a) - mediaRank(b) || b.id - a.id);
+        // Keep the existing ranking for other sites; only TAZA promotes artwork.
+        const isTaza = siteFromPathname(window.location.pathname) === "taza";
+        const prioritized = isTaza ? clean.sort((a, b) => mediaRank(a) - mediaRank(b) || b.id - a.id) : clean;
         const withPosters = prioritized.filter(film => !!safeUrl(film.img, true));
-        setFilms((withPosters.length ? withPosters : prioritized).slice(0, MAX_HERO_FILMS));
+        setFilms((isTaza
+          ? (withPosters.length ? withPosters : prioritized)
+          : (withPosters.length >= 3 ? withPosters : clean)).slice(0, MAX_HERO_FILMS));
       })
       .catch(() => {if(!cancelled){setFilms([]);setTotalFilms(0);}});
     return () => { cancelled = true; };
