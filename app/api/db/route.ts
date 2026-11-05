@@ -119,12 +119,12 @@ async function handler(req:NextRequest) {
             }
             throw error;
           }
-        }else if(plan==='entry_72h') {
+        }else if(plan==='entry_30d') {
           // One open 12,500₮ all-film checkout per visitor. Preserve the
           // original six-digit payment reference across refresh/reentry.
           const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
           const existing=await db(
-            `pending_payments?site_id=eq.${site}&user_id=eq.${s.userId}&plan=eq.entry_72h&amount=eq.${ALL_MOVIES_PRICE}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
+            `pending_payments?site_id=eq.${site}&user_id=eq.${s.userId}&plan=eq.entry_30d&amount=eq.${ALL_MOVIES_PRICE}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
           );
           if(existing.length)return json(existing);
         }else if(plan==='single') {
@@ -205,12 +205,12 @@ async function handler(req:NextRequest) {
         });
         return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
       }
-      if(['all_48h','entry_72h'].includes(String(target?.plan)) && b.status==='confirmed'){
+      if(['all_48h','entry_72h','entry_30d'].includes(String(target?.plan)) && b.status==='confirmed'){
         if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
         if(target.status!=='pending')throw new ApiError(409,'Төлбөрийн төлөв өөрчлөгдсөн байна.');
         const actualAmount=Number(b.confirmed_amount);
-        if(target.plan==='entry_72h' && actualAmount!==ALL_MOVIES_PRICE)
-          throw new ApiError(400,'Бүх киноны эрх нээх төлбөр яг 12,500₮ байх ёстой.');
+        if(['entry_72h','entry_30d'].includes(String(target.plan)) && actualAmount!==ALL_MOVIES_PRICE)
+          throw new ApiError(400,'1 сарын бүх киноны эрх нээх төлбөр яг 12,500₮ байх ёстой.');
         if(target.plan!=='entry_72h' && (!Number.isSafeInteger(actualAmount)||actualAmount<=5000||actualAmount>200000))
           throw new ApiError(400,'5,000₮-өөс дээш бодитоор орсон дүнг оруулна уу.');
         b={status:'confirmed',confirmed_amount:actualAmount};
