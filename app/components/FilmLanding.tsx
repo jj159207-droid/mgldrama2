@@ -8,6 +8,7 @@ import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 type Props = {
   film: FilmDetails | null;
   freeCatalog?: boolean;
+  subscriptionCatalog?: boolean;
   films: FilmDetails[];
   loading: boolean;
   error: string;
@@ -70,11 +71,13 @@ export default function FilmLanding(props:Props) {
 
   const category = filmCategory(film);
   const related = relatedFilms(props.films, film);
-  const packages = props.freeCatalog ? [] : filmPlans(film);
+  const packages = props.subscriptionCatalog
+    ? [{id:"all_30d_12000",hours:720,category:"Бүх кино",price:12000}]
+    : props.freeCatalog ? [] : filmPlans(film);
   const preview = trailerUrl(film);
   const busy = props.watching || (!props.freeCatalog && !props.authReady);
   const description = film.description?.trim() || "";
-  const priceLabel = props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
+  const priceLabel = props.subscriptionCatalog ? "Бүх кино · 12,000₮ / 30 хоног" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
 
   return <main className="film-destination catalog-shell film-reference-page">
@@ -124,7 +127,7 @@ export default function FilmLanding(props:Props) {
         <span>{category}{category === "Эротик" ? " · 21+" : ""}</span>
       </div>
 
-      {!props.freeCatalog && !film.free && film.locked !== false && <p className="film-wallet-balance"><span>Таны кино сайтын дансны үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
+      {!props.subscriptionCatalog && !props.freeCatalog && !film.free && film.locked !== false && <p className="film-wallet-balance"><span>Таны кино сайтын дансны үлдэгдэл</span><strong>{Number(props.walletBalance || 0).toLocaleString("mn-MN")}₮</strong></p>}
 
       {description && <div className="detail-summary">
         <p id="film-description" className={`detail-description${descriptionExpanded ? " expanded" : ""}`}>{description}</p>
@@ -137,7 +140,7 @@ export default function FilmLanding(props:Props) {
     </section>}
 
     {packages.length > 0 && <section className="detail-packages" aria-label="Киноны багц">
-      <div className="detail-plan-grid">{packages.map((plan,index)=><article key={plan.id} className="detail-plan"><svg className="plan-calendar" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg><span className="eyebrow">72 цагийн үзэх эрх</span><h3>{plan.hours} цаг</h3><strong>{plan.price.toLocaleString("mn-MN")}₮</strong><button className="primary-button" disabled={busy} onClick={()=>choosePlan(plan.id)} aria-label={`${plan.category} ${plan.hours} цагийн багц авах`}>Багц авах</button></article>)}</div>
+      <div className="detail-plan-grid">{packages.map((plan,index)=><article key={plan.id} className="detail-plan"><svg className="plan-calendar" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg><span className="eyebrow">{props.subscriptionCatalog ? "Бүх киноны үзэх эрх" : "72 цагийн үзэх эрх"}</span><h3>{props.subscriptionCatalog ? "30 хоног · бүх кино" : `${plan.hours} цаг`}</h3><strong>{plan.price.toLocaleString("mn-MN")}₮</strong><button className="primary-button" disabled={busy} onClick={()=>choosePlan(plan.id)} aria-label={props.subscriptionCatalog ? "Бүх киноны 30 хоногийн багц авах" : `${plan.category} ${plan.hours} цагийн багц авах`}>Багц авах</button></article>)}</div>
     </section>}
   </main>;
 }
