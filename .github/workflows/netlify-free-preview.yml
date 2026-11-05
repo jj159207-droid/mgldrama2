@@ -40,9 +40,9 @@ jobs:
       - name: Unit tests
         if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm test
-      - name: UI tests
-        if: ${{ always() && steps.deps.outcome == 'success' }}
-        run: npm run test:ui
       - name: Production build
         if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run build
+      - name: UI tests
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run test:ui
