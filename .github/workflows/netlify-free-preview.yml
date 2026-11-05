@@ -1,9 +1,6 @@
 name: Netlify Free preview safety checks
 
 on:
-  push:
-    branches:
-      - infra/netlify-free-preview-20261105
   pull_request:
     branches:
       - main
@@ -14,6 +11,10 @@ on:
       - package.json
       - package-lock.json
       - tests/**
+
+concurrency:
+  group: netlify-free-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
