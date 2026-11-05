@@ -12,7 +12,7 @@ const originalFetch=global.fetch;let admin=true,uploads=0;
 const fixture=()=>sharp({create:{width:480,height:720,channels:3,background:'#af9832'}}).jpeg().toBuffer();
 beforeEach(()=>{admin=true;uploads=0;delete process.env.SITE_URL;global.fetch=async(input,init)=>{
  const u=new URL(String(input));assert.equal(u.origin,'https://posters.test.invalid');
- if(u.pathname==='/rest/v1/app_sessions')return Response.json([{user_id:admin?null:1,is_admin:admin}]);
+ if(u.pathname==='/rest/v1/app_sessions')return Response.json([{user_id:admin?null:1,is_admin:admin,admin_site_id:admin?'taza':null,is_master_admin:false}]);
  if(u.pathname.includes('/storage/v1/object/public/')){assert.equal(init?.method,'HEAD');return new Response(null,{status:200});}
  if(u.pathname.startsWith('/storage/v1/object/kino-posters/')){
   uploads++;const h=new Headers(init?.headers);assert.equal(h.get('apikey'),process.env.SUPABASE_SECRET_KEY);assert.equal(h.get('Authorization'),null);assert.equal(h.get('content-type'),'image/webp');assert.equal(h.get('x-upsert'),'false');
