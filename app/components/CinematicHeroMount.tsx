@@ -147,12 +147,12 @@ function Carousel({ films, onOpenPlans, packageFilmCount, brandName }: { films: 
         </div>
       )}
 
-      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`${ALL_MOVIES_TITLE} · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")} төгрөг · 72 цаг`}>
+      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`${ALL_MOVIES_TITLE} · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")} төгрөг · 1 сар (30 хоног)`}>
         <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
           <path d="m12 10 1.5 2.5M15 15l1.5 2.5M18 20l1.5 2.5" />
         </svg>
-        <span>{ALL_MOVIES_TITLE} · <strong>{packageFilmCount}</strong> кино · <strong>{ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong> · <strong>72 цаг</strong></span>
+        <span>{ALL_MOVIES_TITLE} · <strong>{packageFilmCount}</strong> кино · <strong>{ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong> · <strong>1 сар</strong></span>
       </button>
     </section>
   );
