@@ -1,0 +1,32 @@
+name: TAZA catalog readiness verification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/api/readiness/route.ts'
+      - 'app/api/health/route.ts'
+      - 'app/components/ReadinessCheck.tsx'
+      - 'lib/media-audit.ts'
+      - 'tests/media-audit.test.ts'
+      - '.github/workflows/catalog-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install from lockfile
+        run: npm ci
+      - name: TypeScript types
+        run: npm run typecheck
+      - name: Full unit and security suite
+        run: npm test
+      - name: User interface regression suite
+        run: npm run test:ui
