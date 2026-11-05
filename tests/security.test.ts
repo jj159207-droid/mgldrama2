@@ -12,6 +12,7 @@ import * as settings from '../app/api/settings/route';
 import * as access from '../app/api/access/route';
 import * as appearance from '../app/api/appearance/route';
 import * as macroDownload from '../app/api/admin/macrodroid/route';
+import * as smsDiagnostics from '../app/api/admin/sms-diagnostics/route';
 process.env.SUPABASE_URL='https://test.invalid';
 process.env.SUPABASE_SERVICE_ROLE_KEY='fake.service.jwt';
 process.env.ADMIN_PASSWORD='test-admin-password-long-enough';
@@ -672,8 +673,10 @@ test('master admin downloads matching SMS macro with private, noncacheable crede
  assert.equal(config.allowAnyCertificate,false);
  assert.equal(config.headerParams.find((v:{paramName:string})=>v.paramName==='Authorization')?.paramValue,`Bearer ${process.env.SMS_WEBHOOK_SECRET}`);
  assert.equal(config.headerParams.find((v:{paramName:string})=>v.paramName==='X-SMS-Sender')?.paramValue,'{sms_number}');
- assert.equal(macro.m_triggerList[0].m_smsNumber,'Khan Bank');
- assert.equal(macro.m_triggerList[0].m_smsContent,'ORLOGO');
+ assert.equal(macro.m_triggerList[0].enableRegexPhoneNumber,true);
+ assert.equal(macro.m_triggerList[0].m_smsNumber,'(?i)^Khan[\\s-]*Bank$');
+ assert.equal(macro.m_triggerList[0].enableRegex,true);
+ assert.equal(macro.m_triggerList[0].m_smsContent,'(?i)(?:ORLOGO|Орлого)');
 });
 
 test('MacroDroid download expires automatically after its temporary window',async(t)=>{
@@ -682,4 +685,33 @@ test('MacroDroid download expires automatically after its temporary window',asyn
  const expired=await macroDownload.GET(req('/api/admin/macrodroid','GET',undefined,cookie));
  assert.equal(expired.status,410);
  assert.ok(!(await expired.text()).includes(process.env.SMS_WEBHOOK_SECRET!));
+});
+
+test('SMS diagnostics are master-admin-only and never include raw bank messages',async()=>{
+ const anonymous=await smsDiagnostics.GET(req('/api/admin/sms-diagnostics'));
+ assert.equal(anonymous.status,403);
+ const user=await register();
+ assert.equal((await smsDiagnostics.GET(req('/api/admin/sms-diagnostics','GET',undefined,user))).status,403);
+ const adminCookie=await admin();
+ const response=await smsDiagnostics.GET(req('/api/admin/sms-diagnostics','GET',undefined,adminCookie));
+ assert.equal(response.status,200);
+ assert.match(response.headers.get('cache-control')||'',/no-store/);
+ const report=await response.json();
+ assert.equal(report.smsEventsAvailable,false);
+ assert.deepEqual(report.events,[]);
+ assert.ok(Array.isArray(report.recentPending));
+ assert.ok(!JSON.stringify(report).includes(process.env.SMS_WEBHOOK_SECRET!));
+});
+test('SMS diagnostics show pending 12000 orders without user phone or secrets',async()=>{
+ const user=await register();
+ const create=await api.POST(dbReq('pending_payments','POST',{ref_code:'894321',plan:'all_30d_12000'},user));
+ assert.equal(create.status,200);
+ const adminCookie=await admin();
+ const response=await smsDiagnostics.GET(req('/api/admin/sms-diagnostics','GET',undefined,adminCookie));
+ assert.equal(response.status,200);
+ const report=await response.json();
+ assert.equal(report.recentPending.length,1);
+ assert.equal(report.recentPending[0].ref,'894321');
+ assert.equal(report.recentPending[0].amount,12000);
+ assert.equal('phone' in report.recentPending[0],false);
 });
