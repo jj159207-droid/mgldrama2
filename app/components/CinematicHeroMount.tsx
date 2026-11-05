@@ -3,12 +3,15 @@
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dbAll } from "@/lib/client";
+import { mediaRank } from "@/lib/catalog";
+import { safeUrl } from "@/lib/domain";
 import { SITES, siteFromPathname } from "@/lib/site";
 
 type HeroFilm = {
   id: number;
   title: string;
   img?: string | null;
+  preview_url?: string | null;
   badge?: string | null;
 };
 
@@ -177,7 +180,7 @@ export default function CinematicHeroMount() {
 
   useEffect(() => {
     let cancelled = false;
-    dbAll("films?select=id,title,img,badge&order=id.desc", {}, true)
+    dbAll("films?select=id,title,img,badge,preview_url&order=id.desc", {}, true)
       .then(rows => {
         if (cancelled || !Array.isArray(rows)) return;
         const clean = rows
@@ -186,11 +189,17 @@ export default function CinematicHeroMount() {
             id: Number(film.id),
             title: String(film.title).trim(),
             img: typeof film.img === "string" ? film.img : "",
+            preview_url: typeof film.preview_url === "string" ? film.preview_url : "",
             badge: typeof film.badge === "string" ? film.badge : "",
           }));
         setTotalFilms(clean.length);
-        const withPosters = clean.filter(film => film.img);
-        setFilms((withPosters.length >= 3 ? withPosters : clean).slice(0, MAX_HERO_FILMS));
+        // Keep the existing ranking for other sites; only TAZA promotes artwork.
+        const isTaza = siteFromPathname(window.location.pathname) === "taza";
+        const prioritized = isTaza ? clean.sort((a, b) => mediaRank(a) - mediaRank(b) || b.id - a.id) : clean;
+        const withPosters = prioritized.filter(film => !!safeUrl(film.img, true));
+        setFilms((isTaza
+          ? (withPosters.length ? withPosters : prioritized)
+          : (withPosters.length >= 3 ? withPosters : clean)).slice(0, MAX_HERO_FILMS));
       })
       .catch(() => {if(!cancelled){setFilms([]);setTotalFilms(0);}});
     return () => { cancelled = true; };

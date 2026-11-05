@@ -790,7 +790,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section className="package-banner hero-mount-host" aria-label="Онцлох кинонууд" />
       {!preview && !freeCatalog && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
-        <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
+        <CatalogBrowser films={films} mediaFirst={freeCatalog} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "Бүх киног 12,000₮-өөр үзэх" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног · MacroDroid-оор баталгаажна" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
