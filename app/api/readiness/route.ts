@@ -2,6 +2,7 @@ import {NextRequest} from 'next/server';
 import {ApiError,db,fail,json,requestSite,session} from '@/lib/server';
 import {APP_VERSION,configurationChecks} from '@/lib/readiness';
 import {auditCatalogMedia,type CatalogReadiness} from '@/lib/media-audit';
+import {normalizeMongolianIban} from '@/lib/iban';
 import type {Row} from '@/lib/domain';
 export const runtime='nodejs';
 
@@ -33,6 +34,10 @@ export async function GET(req:NextRequest){
       for(const row of rows)checks.push({name:String(row.check_name),ok:row.ok===true,label:labels[String(row.check_name)]||String(row.check_name)});
     }catch{checks.push({name:'database_check',ok:false,label:'Өгөгдлийн сангийн шалгалт амжилтгүй. HTTPS-UPGRADE.sql суулгалт болон холболтыг шалгана уу.'});}
 
+    try{
+      const [bank]=await db(`site_settings?site_id=eq.${site}&select=bank_iban&limit=1`);
+      checks.push({name:'payment_iban',ok:!!normalizeMongolianIban(bank?.bank_iban),label:'Банкны 20 тэмдэгттэй хүчинтэй IBAN тохируулсан'});
+    }catch{checks.push({name:'payment_iban',ok:false,label:'Банкны IBAN тохиргоог шалгаж чадсангүй'});}
     let catalog:CatalogReadiness|null=null;
     try{
       catalog=await catalogReadiness(site);

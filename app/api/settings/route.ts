@@ -1,12 +1,9 @@
 import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
 import { safeUrl } from '@/lib/domain';
+import { normalizeMongolianIban } from '@/lib/iban';
 export const runtime='nodejs';
 
-function normalizeIban(value:unknown) {
-  const compact=typeof value==='string'?value.toUpperCase().replace(/\s+/g,''):'';
-  return /^MN\d{1,8}$/.test(compact)?compact:'';
-}
 const clean=(value:unknown,max:number)=>typeof value==='string'?value.trim().replace(/\s+/g,' ').slice(0,max):'';
 const validAccount=(value:string)=>/^[A-Za-z0-9 -]{6,40}$/.test(value);
 
@@ -16,7 +13,7 @@ function normalizeRow(row:Record<string,unknown>|undefined) {
   const rawAccount=clean(row?.bank_account,40);
   const bankAccount=validAccount(rawAccount)?rawAccount:'5251258979';
   const accountName=clean(row?.account_name,100)||'Т.Жаргалбаяр';
-  const bankIban=normalizeIban(row?.bank_iban)||'MN03000500';
+  const bankIban=normalizeMongolianIban(row?.bank_iban);
   return {messengerUrl,bankName,bankAccount,accountName,bankIban,ibanSetupRequired:!bankIban};
 }
 
@@ -50,12 +47,13 @@ export async function PUT(req:NextRequest) {
     const bankName=has('bankName')?clean(b.bankName,80):current.bankName;
     const bankAccount=has('bankAccount')?clean(b.bankAccount,40):current.bankAccount;
     const accountName=has('accountName')?clean(b.accountName,100):current.accountName;
-    const bankIban=has('bankIban')?normalizeIban(b.bankIban):current.bankIban;
+    const ibanRaw=has('bankIban')?clean(b.bankIban,50).replace(/\s+/g,''):'';
+    const bankIban=has('bankIban')?normalizeMongolianIban(ibanRaw):current.bankIban;
 
     if(bankName.length<2)throw new ApiError(400,'Банкны нэрийг зөв оруулна уу.');
     if(!validAccount(bankAccount))throw new ApiError(400,'Дансны дугаар 6–40 тэмдэгт, зөвхөн үсэг/тоо байх ёстой.');
     if(accountName.length<2)throw new ApiError(400,'Данс эзэмшигчийн нэрийг зөв оруулна уу.');
-    if(has('bankIban')&&!bankIban)throw new ApiError(400,'IBAN нь MN-ээр эхэлсэн, нийт 10 хүртэл тэмдэгт байна.');
+    if(has('bankIban')&&ibanRaw&&!bankIban)throw new ApiError(400,'Монгол IBAN нь MN-ээр эхэлсэн 20 тэмдэгт, зөв хяналтын оронтой байх ёстой. Банкнаасаа бүтэн IBAN авна уу.');
 
     const payload={
       messenger_url:messengerUrl,bank_name:bankName,bank_account:bankAccount,
