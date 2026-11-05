@@ -26,6 +26,24 @@ function summarize(row:Row){
   return {id:Number(row.id),title:String(row.title||'').slice(0,100),state:source.state,kind:source.kind};
 }
 
+function summarizeLibraries(rows:Row[]){
+  const stateCounts:Record<string,number>={};
+  const libraries:Record<string,number>={};
+  const hostCounts:Record<string,number>={};
+  for(const row of rows){
+    const source=sourceType(row.url);
+    stateCounts[source.state]=(stateCounts[source.state]||0)+1;
+    hostCounts[source.kind]=(hostCounts[source.kind]||0)+1;
+    if(source.kind!=='bunny'||source.state!=='configured')continue;
+    try {
+      const sourceUrl=new URL(source.url);
+      const libraryId=/^\/embed\/(\d+)\//.exec(sourceUrl.pathname)?.[1];
+      if(libraryId)libraries[libraryId]=(libraries[libraryId]||0)+1;
+    }catch{}
+  }
+  return {stateCounts,hostCounts,libraries:Object.entries(libraries).map(([libraryId,count])=>({libraryId,count})).sort((a,b)=>b.count-a.count)};
+}
+
 export async function GET(req:NextRequest){
  try {
    if(requestSite(req)!=='taza')throw new ApiError(404,'TAZA-д зориулсан оношлогоо.');
@@ -34,7 +52,7 @@ export async function GET(req:NextRequest){
    const idParam=new URL(req.url).searchParams.get('id');
    if(idParam===null){
      const rows=await db('films?site_id=eq.taza&select=id,title,url&order=id.asc&limit=200');
-     return json({films:rows.map(summarize),limited:rows.length===200});
+     return json({films:rows.map(summarize),summary:summarizeLibraries(rows),limited:rows.length===200});
    }
    if(!/^\d{1,9}$/.test(idParam)||Number(idParam)<1)throw new ApiError(400,'Киноны ID буруу.');
    const [row]=await db(`films?site_id=eq.taza&id=eq.${idParam}&select=id,title,url&limit=1`);
