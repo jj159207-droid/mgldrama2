@@ -48,7 +48,7 @@ test('completed phone and registration PIN fields advance focus automatically',(
 test('site settings endpoint permits optional Messenger while validating payment details',()=>{
   assert.match(settings,/messengerRaw\?safeUrl\(messengerRaw\):''/);
   assert.match(settings,/validAccount\(bankAccount\)/);
-  assert.match(settings,/kino_save_settings/);
+  assert.match(settings,/site_settings\?site_id=/);
 });
 
 
