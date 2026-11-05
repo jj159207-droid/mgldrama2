@@ -156,7 +156,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
   const isWalletTopup=film.plan==="wallet_topup";
   const isEntryGate=film.entryGate===true;
   const isSimpleMovieTopup=(isWalletTopup&&!film.returnPlan)||isEntryGate;
-  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?12500:isSimpleMovieTopup?6000:5000));
+  const [selectedTopup,setSelectedTopup]=useState<number>(()=>Number.isSafeInteger(Number(film.topupAmount))&&Number(film.topupAmount)>=5000?Number(film.topupAmount):(isEntryGate?Number(film.price||12000):isSimpleMovieTopup?6000:5000));
   const packageTopupNeed=film.returnPlan?Math.max(5000,Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)-Number(film.walletBefore||0)):5000;
   const topupChoices=Array.from(new Set([5000,10000,20000,selectedTopup])).filter(amount=>!film.returnPlan||amount>=packageTopupNeed).sort((a,b)=>a-b);
   const [showTransferDetails,setShowTransferDetails]=useState(!isWalletTopup || isSimpleMovieTopup);
@@ -337,6 +337,10 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
   const checkout = <>
     {isSimpleMovieTopup ? <>
+      {isEntryGate && inline && <div className="wallet-single-topbar">
+        <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Киноны мэдээлэл рүү буцах">←</button>
+        <strong>Бүх киног үзэх эрх</strong><span/>
+      </div>}
       {!isEntryGate && <div className="wallet-single-topbar">
         <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>
         <strong>Киноны данс цэнэглэх</strong>
@@ -355,8 +359,8 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </button>
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
-        <p><strong>Шилжүүлэх дүн 12,500₮</strong></p>
-        <p><strong>Бүх киног үзэх эрх</strong></p>
+        <p><strong>Шилжүүлэх дүн {Number(orderAmount??film.price??12000).toLocaleString("mn-MN")}₮</strong></p>
+        <p><strong>{film.plan==="all_30d_12000" ? "30 хоногийн турш бүх киног үзэх эрх" : "Бүх киног үзэх эрх"}</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -417,7 +421,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <p className="wallet-spend-note">Сонгосон <strong>{planLabel(film.returnPlan)}</strong> багцыг кино сайтын дансны үлдэгдлээр авна.</p>
         <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮ ба түүнээс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
       </section>}
-      <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.monthly ? "72 цагийн үзэх эрх" : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+      <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : film.plan==="all_30d_12000" ? "Бүх кино · 30 хоног" : film.monthly ? "72 цагийн үзэх эрх" : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
       {isWalletTopup && !showTransferDetails && <div className="wallet-topup-preview"><span className="wallet-current-balance">Таны кино сайтын дансны үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span>{film.returnPlan ? <><span>Багцын үнэ <strong>{Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0).toLocaleString()}₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд багц авбал <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)).toLocaleString()}₮ үлдэнэ</strong></span></> : <><span>Нэг киноны үнэ <strong>2,000₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-2000).toLocaleString()}₮ үлдэнэ</strong></span></>}</div>}
       {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
       {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
