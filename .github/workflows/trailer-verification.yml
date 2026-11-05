@@ -21,11 +21,11 @@ jobs:
         run: npm ci
       - name: Unit and real media tests
         run: |
-          npm test > /tmp/trailer-unit.log 2>&1 || { tail -100 /tmp/trailer-unit.log; exit 1; }
+          npm test > /tmp/trailer-unit.log 2>&1 || { grep -A 25 -E '^not ok|^  error:|^  code:' /tmp/trailer-unit.log | tail -250 || true; tail -35 /tmp/trailer-unit.log; exit 1; }
           tail -9 /tmp/trailer-unit.log
       - name: UI tests
         run: |
-          npm run test:ui > /tmp/trailer-ui.log 2>&1 || { tail -100 /tmp/trailer-ui.log; exit 1; }
+          npm run test:ui > /tmp/trailer-ui.log 2>&1 || { grep -A 25 -E '^not ok|^  error:|^  code:' /tmp/trailer-ui.log | tail -250 || true; tail -35 /tmp/trailer-ui.log; exit 1; }
           tail -9 /tmp/trailer-ui.log
       - name: Typecheck
         run: npm run typecheck
