@@ -2360,6 +2360,10 @@ export default function Home() {
       } catch(error) {
         if(!current())return;
         if(error instanceof RequestError && error.status===403){
+          if(process.env.NEXT_PUBLIC_TAZA_PAYMENTS_ACTIVE !== '1'){
+            setWatchError('Төлбөрийн шинэ систем шалгагдаж байгаа тул одоогоор шилжүүлэг хийхгүй байна. Бэлэн болохоор мэдэгдэнэ.');
+            return;
+          }
           // One 12,000₮ all-movies purchase, not a single-film sale.
           // The server still checks payment/entitlement before returning a URL.
           trackSiteEvent("payment_open",Number(film.id));
@@ -2439,6 +2443,10 @@ export default function Home() {
   };
 
   const openPlanCheckout = (plan: string, sourceFilm: FilmDetails | null = null) => {
+    if(siteId==="taza" && process.env.NEXT_PUBLIC_TAZA_PAYMENTS_ACTIVE !== '1'){
+      setAppError('Төлбөрийн шинэ систем шалгагдаж байна. Одоогоор мөнгө шилжүүлэхгүй байна.');
+      return;
+    }
     if (plan === "show_plan") {
       window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
     }

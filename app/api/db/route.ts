@@ -88,6 +88,8 @@ async function handler(req:NextRequest) {
       if(req.method==='GET') {
         query.set('user_id',`eq.${s.userId}`);query.set('select','id,ref_code,user_id,film_id,plan,amount,status,created_at,confirmed_at');
       }else if(req.method==='POST'&&b) {
+        if(site==='taza' && !process.env.SMS_WEBHOOK_SECRET?.trim())
+          throw new ApiError(503,'Банкны SMS холболт тохируулагдаагүй. Төлбөр түр хаалттай.','PAYMENTS_NOT_READY');
         const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');

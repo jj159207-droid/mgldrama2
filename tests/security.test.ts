@@ -253,6 +253,16 @@ test('legacy packages remain 72-hour, new all-film access lasts 30 days',()=>{
  assert.equal(canWatch({id:1,locked:true,badge:'Хэлтэй|Орос'},[{...base,plan:'all_48h'}],time),true);
  assert.equal(canWatch({id:1,locked:true},[],time),false);
 });
+test('Netlify does not accept paid orders while SMS confirmation is unconfigured',async()=>{
+ const cookie=await register();
+ const previous=process.env.SMS_WEBHOOK_SECRET;
+ delete process.env.SMS_WEBHOOK_SECRET;
+ try{
+   const r=await api.POST(dbReq('pending_payments','POST',{ref_code:'123456',plan:'entry_30d'},cookie));
+   assert.equal(r.status,503);
+   assert.equal(tables.pending_payments.length,0);
+ }finally{process.env.SMS_WEBHOOK_SECRET=previous;}
+});
 test('SMS cannot self-confirm; missing/wrong amount blocked; valid signed SMS works once',async()=>{
  tables.pending_payments.push({id:1,ref_code:'123456',amount:5000,status:'pending',created_at:now()});
  assert.equal((await sms.POST(req('/api/sms','POST',{text:'ORLOGO:5,000MNT Utga:123456'}))).status,401);
