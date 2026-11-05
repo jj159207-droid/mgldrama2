@@ -39,7 +39,7 @@ test('admin R2 private MP4 time selector returns only the cached twelve-second t
  const data=await response.json();
  assert.equal(data.startSeconds,3723);
  assert.equal(data.durationSeconds,12);
- assert.match(data.previewUrl,/kino-trailers\\/v1\\/[a-f0-9]{64}\\.mp4#taza-trailer=1&start=3723$/);
+ assert.match(data.previewUrl,/kino-trailers\/v1\/[a-f0-9]{64}\.mp4#taza-trailer=1&start=3723$/);
  assert.ok(!JSON.stringify(data).includes('r2://'));
  assert.equal(calls.length,3);
 });
