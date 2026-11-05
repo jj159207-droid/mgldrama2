@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
-import { safeUrl, ALL_MOVIES_PRICE, ALL_MOVIES_TITLE } from "@/lib/domain";
+import { safeUrl } from "@/lib/domain";
 import { filmCategory } from "@/lib/catalog";
-import { filmPlans, getVideoEmbed, relatedFilms, trailerUrl, type FilmDetails } from "@/lib/film-details";
+import { getVideoEmbed, relatedFilms, trailerUrl, type FilmDetails } from "@/lib/film-details";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 
 type Props = {
@@ -56,7 +56,6 @@ export default function FilmLanding(props:Props) {
   }, [film?.id]);
 
   const watch = () => {setPreviewOpen(false);props.onWatch();};
-  const choosePlan = (plan:string) => {setPreviewOpen(false);props.onPlan(plan);};
 
   if (!film || loading || error) return <main className="film-destination catalog-shell">
     <button className="secondary-button film-back" onClick={onBack}>← Бүх кино</button>
@@ -69,11 +68,9 @@ export default function FilmLanding(props:Props) {
 
   const category = filmCategory(film);
   const related = relatedFilms(props.films, film);
-  const packages = filmPlans(film);
   const preview = trailerUrl(film);
   const busy = props.watching || !props.authReady;
   const description = film.description?.trim() || "";
-  const priceLabel = `${ALL_MOVIES_TITLE} · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
 
   return <main className="film-destination catalog-shell film-reference-page">
@@ -97,11 +94,11 @@ export default function FilmLanding(props:Props) {
           <h1 id="selected-film-title">{film.title}</h1>
           <button className="film-hero-watch" onClick={watch} disabled={busy}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4v16l13-8Z"/></svg>
-            {props.watching ? "Үзэх эрхийг шалгаж байна…" : props.available ? "Киног бүтэн үзэх" : `Бүтэн үзэх · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮`}
+            {props.watching ? "Үзэх эрхийг шалгаж байна…" : "Бүтэн үзэх"}
           </button>
         </div>
       </div>
-      {!props.available && <p className="film-landing-note">Сайтад орох, трейлер болон тайлбар үзэх үнэгүй. Бүтэн үзэхэд бүх киноны 72 цагийн эрх · 12,500₮.</p>}
+      {!props.available && <p className="film-landing-note">Трейлер болон киноны тайлбарыг үнэгүй үзнэ. Бүтэн кино үзэх бол «Бүтэн үзэх» товчийг дарна уу.</p>}
       {props.available && <p className="film-landing-note">Танд энэ киног үзэх эрх байна.</p>}
       {props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}
     </section>
@@ -118,7 +115,6 @@ export default function FilmLanding(props:Props) {
 
     <section className="film-detail-info">
       <div className="film-detail-meta">
-        <span><strong>{priceLabel}</strong></span>
         <span>◉ {Number(film.views || 0).toLocaleString("mn-MN")}</span>
         <span>{language}</span>
         <span>{category}{category === "Эротик" ? " · 21+" : ""}</span>
@@ -136,8 +132,6 @@ export default function FilmLanding(props:Props) {
       {props.payment}
     </section>}
 
-    {packages.length > 0 && <section className="detail-packages" aria-label="Киноны багц">
-      <div className="detail-plan-grid">{packages.map((plan,index)=><article key={plan.id} className="detail-plan"><svg className="plan-calendar" width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18M7 15h2m3 0h2m3 0h1M7 18h2m3 0h2"/></svg><span className="eyebrow">72 цагийн үзэх эрх</span><h3>{plan.hours} цаг</h3><strong>{plan.price.toLocaleString("mn-MN")}₮</strong><button className="primary-button" disabled={busy} onClick={()=>choosePlan(plan.id)} aria-label={`${ALL_MOVIES_TITLE} ${plan.hours} цаг · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮`}>Бүх киноны эрх авах</button></article>)}</div>
-    </section>}
+
   </main>;
 }
