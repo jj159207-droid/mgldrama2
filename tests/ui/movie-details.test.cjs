@@ -116,8 +116,10 @@ test('preview is separate from free full movie playback, with no orders',async()
 test('missing trailer never falls back to a private movie, and a failed trailer can be closed',async()=>{
  const preview=films[0].preview_url;films[0].preview_url='';
  try {await render('/?film=7');assert.equal(document.querySelector('.detail-poster').disabled,true);await click('.detail-poster');assert.equal(document.querySelector('video'),null);}finally{films[0].preview_url=preview;}
- await pop('/?film=34');await click('.detail-poster');
- await act(async()=>document.querySelector('video[data-trailer]').dispatchEvent(new dom.window.Event('error')));
+ await pop('/?film=34');
+ if(document.querySelector('.detail-poster'))await click('.detail-poster');
+ const trailer=document.querySelector('video[data-trailer]');assert.ok(trailer,'trailer auto-opens when a preview exists');
+ await act(async()=>trailer.dispatchEvent(new dom.window.Event('error')));
  assert.ok(document.querySelector('.trailer-error'));await click('.trailer-close');assert.ok(document.querySelector('.detail-poster'));assert.equal(document.querySelector('video'),null);
 });
 test('related movie recommendations and deep links work without paid plans',async()=>{
