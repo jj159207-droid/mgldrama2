@@ -2,6 +2,8 @@ name: Security patch Next.js 16.4.5 and verify
 on:
   push:
     branches: [security/next-16-4-5-mobile-20261105]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
