@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/domain";
+import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, ALL_MOVIES_PRICE, ALL_MOVIES_PLAN, ALL_MOVIES_TITLE } from "@/lib/domain";
 import { SITES, siteFromPathname, type SiteId } from "@/lib/site";
 
 import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
@@ -646,69 +646,41 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   </form>;
 }
 
-function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsReady = true }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; films?: any[]; countsReady?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState("gadaad");
-  const [duration, setDuration] = useState("72h");
+function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; films?: any[]; countsReady?: boolean }) {
+  const [open,setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const categories = [{key:"gadaad",label:"Гадаад"},{key:"hyatad",label:"Хятад"},{key:"oros",label:"Орос"},{key:"erotic",label:"Эротик"},{key:"all",label:"Бүх ангилал"}];
-  const countFor = (key: string) => films.filter(f => key === "all" ? ["Гадаад","Хятад","Орос","Эротик"].includes(decodeCat(f.badge)) : decodeCat(f.badge) === categories.find(c => c.key === key)?.label).length;
-  const plan = category === "all" ? "all_48h" : `${category}_3day`;
-  const price = PLAN_PRICES[plan];
-  const selectedCount = countFor(category);
   const ensurePlanHistory = useCallback(() => {
     if (typeof window === "undefined" || window.history.state?.page === "planmodal") return;
-    window.history.pushState({page:"planmodal"}, "", window.location.href);
-  }, []);
-  useEffect(() => { if (autoOpen) {ensurePlanHistory();setOpen(true);} }, [autoOpen,ensurePlanHistory]);
-  useEffect(() => {
-    const openPreset=(event:Event)=>{
-      const detail=(event as CustomEvent<{category?:string;duration?:string}>).detail || {};
-      if(detail.category==="erotic" || detail.category==="all"){
-        ensurePlanHistory();
-        setCategory(detail.category);
-        setDuration("72h");
-        setOpen(true);
-      }
-    };
-    window.addEventListener("kinoOpenPlanPreset",openPreset as EventListener);
-    return()=>window.removeEventListener("kinoOpenPlanPreset",openPreset as EventListener);
-  }, [ensurePlanHistory]);
-  useEffect(() => {
-    if (open) dialogRef.current?.showModal(); else dialogRef.current?.close();
-  }, [open]);
-  const finishClose = useCallback(() => {setOpen(false);onAutoClose?.();},[onAutoClose]);
-  const close = () => {
-    if(typeof window!=="undefined" && window.history.state?.page==="planmodal"){window.history.back();return;}
+    window.history.pushState({page:"planmodal"},"",window.location.href);
+  },[]);
+  useEffect(() => { if(autoOpen){ensurePlanHistory();setOpen(true);} },[autoOpen,ensurePlanHistory]);
+  useEffect(()=>{
+    const show=()=>{ensurePlanHistory();setOpen(true);};
+    window.addEventListener("kinoOpenPlanPreset",show);
+    return()=>window.removeEventListener("kinoOpenPlanPreset",show);
+  },[ensurePlanHistory]);
+  useEffect(()=>{if(open)dialogRef.current?.showModal();else dialogRef.current?.close();},[open]);
+  const finishClose=useCallback(()=>{setOpen(false);onAutoClose?.();},[onAutoClose]);
+  const close=()=>{
+    if(typeof window!=="undefined"&&window.history.state?.page==="planmodal"){window.history.back();return;}
     finishClose();
   };
-  useEffect(() => {if (!open) return; window.addEventListener("popstate", finishClose);return () => window.removeEventListener("popstate", finishClose);}, [open,finishClose]);
-  const select = () => {
-    if(countsReady && selectedCount === 0)return;
-    if(typeof window!=="undefined" && window.history.state?.page==="planmodal"){
-      window.history.replaceState({page:"home"},"",window.location.href);
-    }
+  useEffect(()=>{if(!open)return;window.addEventListener("popstate",finishClose);return()=>window.removeEventListener("popstate",finishClose);},[open,finishClose]);
+  const select=()=>{
+    if(typeof window!=="undefined"&&window.history.state?.page==="planmodal")window.history.replaceState({page:"home"},"",window.location.href);
     finishClose();
-    onSelect(plan);
+    onSelect(ALL_MOVIES_PLAN);
   };
-  return <dialog ref={dialogRef} className="plan-dialog package-dialog" aria-labelledby="package-dialog-title" onCancel={e=>{e.preventDefault();close();}} onClick={e => {if(e.target === e.currentTarget)close();}}>
-      <div className="dialog-heading"><div><span className="eyebrow">ҮЗЭХ ЭРХ</span><h2 id="package-dialog-title">Багцаа сонгоорой</h2></div><button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button></div>
-      <fieldset className="package-fieldset"><legend>1. Ямар кино үзэх вэ?</legend><div className="package-choices">
-        {categories.map(c => <label key={c.key} className={`package-choice ${category === c.key ? "selected" : ""}`}>
-          <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);setDuration("72h");}} />
-          <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">21+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
-        </label>)}
-      </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, орос, эротик — дөрвөн ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
-      <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
-        {["72h"].map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
-          <input type="radio" name="package-duration" value={d} checked={duration === d} onChange={() => setDuration(d)} />
-          <span><strong>72 цаг</strong><span>{PLAN_PRICES[category === "all" ? "all_48h" : `${category}_3day`].toLocaleString()}₮</span></span>
-        </label>)}
-      </div><p className="package-hint">Төлбөр баталгаажсан үеэс үзэх хугацаа эхэлнэ.</p></fieldset>
-      <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>Сонгосон багцын кинонууд</span></span><strong>{price.toLocaleString()}₮</strong></div>
-      {countsReady && selectedCount === 0 && <p className="package-hint" role="status">Одоогоор энэ ангилалд кино байхгүй байна. Өөр ангилал сонгоорой.</p>}
-      <button type="button" className="primary-button package-continue" disabled={countsReady && selectedCount === 0} onClick={select}>Төлбөр төлөх</button>
-    </dialog>;
+  return <dialog ref={dialogRef} className="plan-dialog package-dialog" aria-labelledby="package-dialog-title" onCancel={e=>{e.preventDefault();close();}} onClick={e=>{if(e.target===e.currentTarget)close();}}>
+    <div className="dialog-heading">
+      <div><span className="eyebrow">НЭГ БАГЦ · БҮХ КИНО</span><h2 id="package-dialog-title">{ALL_MOVIES_TITLE}</h2></div>
+      <button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button>
+    </div>
+    <p className="package-hint">Нэг удаа төлөөд бүх ангиллын бүх киног 72 цагийн турш үзэх эрхтэй болно. Үзэх хугацаа төлбөр баталгаажсан мөчөөс эхэлнэ.</p>
+    <div className="package-summary" aria-live="polite"><span><strong>{ALL_MOVIES_TITLE}</strong><span>Бүх ангилал · 72 цаг</span></span><strong>{ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></div>
+    <p className="package-hint">Банкны данс болон 6 оронтой гүйлгээний утга төлбөрийн хэсэгт гарна.</p>
+    <button type="button" className="primary-button package-continue" onClick={select}>Бүх киног үзэх эрх авах · {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</button>
+  </dialog>;
 }
 
 function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ", admin=false }: any) {
