@@ -132,8 +132,8 @@ test('anonymous device gets one persistent guest identity and can own its paymen
  const firstBody=await first.json();assert.equal(firstBody.user.guest,true);assert.equal(firstBody.user.phone,'');assert.match(firstBody.user.user_id,/^G[A-F0-9]{12}$/);
  const cookie=first.headers.get('set-cookie')!.split(';')[0];assert.equal(tables.users.length,1);assert.equal(tables.users[0].is_guest,true);
  const second=await device.POST(req('/api/device','POST',{},cookie));assert.equal(second.status,200);assert.equal((await second.json()).user.id,firstBody.user.id);assert.equal(tables.users.length,1);
- const order=await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',film_id:1,plan:'single'},cookie));assert.equal(order.status,200);
- const saved=(await order.json())[0];assert.equal(saved.user_id,firstBody.user.id);assert.equal(saved.status,'pending');assert.equal(saved.amount,5000);
+ const order=await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',film_id:1,plan:'all_30d_12000'},cookie));assert.equal(order.status,200);
+ const saved=(await order.json())[0];assert.equal(saved.user_id,firstBody.user.id);assert.equal(saved.status,'pending');assert.equal(saved.amount,12000);
 });
 test('cross-origin mutation is rejected',async()=>{const r=await auth.POST(req('/api/auth','POST',{action:'register',phone:'99112233',pin:'1234'},undefined,{origin:'https://evil.test'}));assert.equal(r.status,403);});
 test('Taza movie catalog is publicly available but does not reveal full video URL',async()=>{
