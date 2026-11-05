@@ -39,8 +39,8 @@ export default function CatalogCardTuning() {
         const sub = copy ? Array.from(copy.children).find(child => child.tagName === "SPAN") as HTMLElement | undefined : undefined;
         const cta = banner.querySelector<HTMLElement>(".banner-cta");
 
-        if (lead && lead.textContent !== "Бүх киног үзэх эрх · 12,500₮") lead.textContent = "Бүх киног үзэх эрх · 12,500₮";
-        if (sub && sub.textContent !== "72 цаг үзэх эрх") sub.textContent = "72 цаг үзэх эрх";
+        if (lead && lead.textContent !== "1 сарын турш бүх киног үзэх эрх · 12,500₮") lead.textContent = "Бүх киног үзэх эрх · 12,500₮";
+        if (sub && sub.textContent !== "1 сарын үзэх эрх") sub.textContent = "1 сарын үзэх эрх";
         if (cta && cta.textContent !== "ЭНД ДАРЖ ҮЗЭХ →") cta.textContent = "ЭНД ДАРЖ ҮЗЭХ →";
 
       });
