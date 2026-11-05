@@ -118,9 +118,11 @@ test('only explicit master or matching site admin can access protected sites',()
  assert.equal(canAdminSite({userId:null,admin:true,adminSiteId:null,masterAdmin:true},'fire'),true);
 });
 test('production SMS webhook requires a configured trusted sender before confirming',async()=>{
- const prior=process.env.NODE_ENV;
- delete process.env.SMS_ALLOWED_SENDER;
- process.env.NODE_ENV='production';
+ // Next types NODE_ENV as readonly; scope the temporary override to this test.
+ const environment=process.env as Record<string,string|undefined>;
+ const prior=environment.NODE_ENV;
+ delete environment.SMS_ALLOWED_SENDER;
+ environment.NODE_ENV='production';
  try {
    const response=await sms.POST(req('/api/sms','POST',{text:'ORLOGO:12,000MNT Utga:123456'},undefined,{
      authorization:`Bearer ${process.env.SMS_WEBHOOK_SECRET}`,
@@ -129,8 +131,8 @@ test('production SMS webhook requires a configured trusted sender before confirm
    assert.equal(response.status,503);
    assert.equal((await response.json()).code,'SMS_SENDER_CONFIG_REQUIRED');
  } finally {
-   if(prior===undefined)delete process.env.NODE_ENV;
-   else process.env.NODE_ENV=prior;
+   if(prior===undefined)delete environment.NODE_ENV;
+   else environment.NODE_ENV=prior;
  }
 });
 
