@@ -3,6 +3,7 @@ import { CATEGORIES, INITIAL_CATALOG, filterCatalog, type CatalogFilm, type Cata
 
 type Props<T extends CatalogFilm> = {
   films: T[];
+  mediaFirst?: boolean;
   state: CatalogState;
   onChange: (state: CatalogState) => void;
   loading: boolean;
@@ -13,10 +14,10 @@ type Props<T extends CatalogFilm> = {
 };
 
 export default function CatalogBrowser<T extends CatalogFilm>({
-  films, state, onChange, loading, error, onRetry, renderFilm, renderPromotion,
+  films, mediaFirst = false, state, onChange, loading, error, onRetry, renderFilm, renderPromotion,
 }: Props<T>) {
   // Removed controls must not leave invisible search/access/sort filters active.
-  const results = useMemo(() => filterCatalog(films, {...INITIAL_CATALOG, category: state.category}), [films, state.category]);
+  const results = useMemo(() => filterCatalog(films, {...INITIAL_CATALOG, category: state.category, sort: mediaFirst ? "featured" : "newest"}), [films, state.category, mediaFirst]);
   const change = (category: CatalogState["category"]) => onChange({...INITIAL_CATALOG, category});
   const isFiltered = state.category !== "Бүгд";
   const clear = () => onChange({...INITIAL_CATALOG});
