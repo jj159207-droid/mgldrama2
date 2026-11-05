@@ -107,9 +107,10 @@ export async function session(req:NextRequest):Promise<Session|null> {
   };
 }
 export function canAdminSite(s:Session|null|undefined,site:SiteId) {
-  // Sessions issued before multi-site support have no admin_site_id. They were
-  // global admins already, so keep them as master-compatible during rollout.
-  return !!s?.admin && (s.masterAdmin || s.adminSiteId===null || s.adminSiteId===site);
+  // Do not treat unscoped/legacy sessions as global admin. Only an explicitly
+  // authenticated master may span sites; site admins need a matching scope.
+  // Older unscoped site-admin sessions must sign in again.
+  return !!s?.admin && (s.masterAdmin===true || s.adminSiteId===site);
 }
 
 export async function siteEntryAllowed(userId:number|null|undefined,site:SiteId) {
