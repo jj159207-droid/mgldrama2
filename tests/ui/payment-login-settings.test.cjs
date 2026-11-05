@@ -48,12 +48,14 @@ test('completed phone and registration PIN fields advance focus automatically',(
 test('site settings endpoint permits optional Messenger while validating payment details',()=>{
   assert.match(settings,/messengerRaw\?safeUrl\(messengerRaw\):''/);
   assert.match(settings,/validAccount\(bankAccount\)/);
-  assert.match(settings,/kino_save_settings/);
+  assert.match(settings,/site_settings\?site_id=/);
+  assert.match(settings,/const rows=await db\(/);
 });
 
 
-test('TAZA entry payment has no pre-payment movie visibility banner and admin chooses destination',()=>{
-  assert.doesNotMatch(page,/Кинонууд төлбөр баталгаажсаны дараа харагдана/);
+test('TAZA has no mandatory entry fee and admin chooses destination',()=>{
+  assert.match(page,/const entryBarrier=false/);
+  assert.match(page,/Үзэх эрх авах/);
   assert.match(page,/aria-label="Админ удирдах хэсэг"/);
   assert.match(page,/aria-label="Кино хэсэг"/);
   assert.match(page,/navigateTo\("admin-choice"\)/);
