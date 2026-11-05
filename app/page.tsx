@@ -580,7 +580,7 @@ function FilmCard({ film, onClick, expiry, brandName }: any) {
   </article>;
 }
 
-function ContactModal({ onClose, user, onLogin, admin, onAdmin }: any) {
+function ContactModal({ onClose, user, onLogin, admin, onAdmin, freeCatalog=false }: any) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [announcement, setAnnouncement] = useState<any>(null);
   const [messengerUrl, setMessengerUrl] = useState("");
@@ -597,11 +597,11 @@ function ContactModal({ onClose, user, onLogin, admin, onAdmin }: any) {
     <p>{announcement.message}</p>
   </details>;
   return <dialog ref={dialog} className="contact-chat-modal" aria-label="Админтай холбогдох" onCancel={e=>{e.preventDefault();onClose();}}>
-    {user ? <ChatPanel key={user.id} onBack={onClose}>{notice}</ChatPanel> : <div className="chat-signin">
+    {user && !freeCatalog ? <ChatPanel key={user.id} onBack={onClose}>{notice}</ChatPanel> : <div className="chat-signin">
       <button className="chat-icon" onClick={onClose} aria-label="Холбогдох хэсгийг хаах">←</button>
-      <h2>Админтай чатлах</h2><p>Нэвтрээд мессеж, зураг илгээж, админы хариуг эндээс уншаарай.</p>
-      {admin ? <button className="chat-primary" onClick={onAdmin}>Хэрэглэгчдийн чатыг нээх</button> : <LoginModal onLogin={onLogin} />}
-      {messengerUrl && <a className="chat-messenger" href={messengerUrl} target="_blank" rel="noopener noreferrer">PIN мартсан уу? Messenger-ээр холбогдох ↗</a>}
+      <h2>Админтай холбогдох</h2><p>{freeCatalog ? "Кино үзэхэд гишүүнээр нэвтрэх шаардлагагүй. Мессеж илгээх бол Messenger холбоосыг ашиглана уу." : "Нэвтрээд мессеж, зураг илгээж, админы хариуг эндээс уншаарай."}</p>
+      {admin ? <button className="chat-primary" onClick={onAdmin}>Хэрэглэгчдийн чатыг нээх</button> : freeCatalog ? null : <LoginModal onLogin={onLogin} />}
+      {messengerUrl && <a className="chat-messenger" href={messengerUrl} target="_blank" rel="noopener noreferrer">{freeCatalog ? "Messenger-ээр холбогдох ↗" : "PIN мартсан уу? Messenger-ээр холбогдох ↗"}</a>}
       {notice}
     </div>}
   </dialog>;
@@ -2613,13 +2613,13 @@ export default function Home() {
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={()=>navigateTo("admin-choice")} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       <PushNotificationSetup key={user?.id||"none"} enabled={siteId!=="taza"&&!!user?.id&&!adminAuth} />
-      {showContact && <ContactModal onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo(adminAuth?"admin-choice":"adminlogin");}} />}
+      {showContact && <ContactModal freeCatalog={siteId==="taza"} onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo(adminAuth?"admin-choice":"adminlogin");}} />}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
 
       </>}
 
-      {showLoginModal && !user && mounted && createPortal(
+      {showLoginModal && siteId!=="taza" && !user && mounted && createPortal(
         <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} className="login-dialog">
           <div className="dialog-heading"><div><span className="eyebrow">{brandName}</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
           {selectedFilm && <p className="login-note">Үргэлжлүүлэх кино: <strong>{selectedFilm.title}</strong></p>}
