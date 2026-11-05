@@ -120,7 +120,7 @@ async function handler(req:NextRequest) {
             throw error;
           }
         }else if(plan==='entry_30d') {
-          // One open 12,500₮ all-film checkout per visitor. Preserve the
+          // One open 12,000₮ all-film checkout per visitor. Preserve the
           // original six-digit payment reference across refresh/reentry.
           const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
           const existing=await db(
@@ -209,8 +209,9 @@ async function handler(req:NextRequest) {
         if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
         if(target.status!=='pending')throw new ApiError(409,'Төлбөрийн төлөв өөрчлөгдсөн байна.');
         const actualAmount=Number(b.confirmed_amount);
-        if(['entry_72h','entry_30d'].includes(String(target.plan)) && actualAmount!==ALL_MOVIES_PRICE)
-          throw new ApiError(400,'1 сарын бүх киноны эрх нээх төлбөр яг 12,500₮ байх ёстой.');
+        const expectedAmount=target.plan==='entry_30d'?ALL_MOVIES_PRICE:target.plan==='entry_72h'?12500:null;
+        if(expectedAmount!==null && actualAmount!==expectedAmount)
+          throw new ApiError(400,`Бүх киноны эрх нээх төлбөр яг ${expectedAmount.toLocaleString('mn-MN')}₮ байх ёстой.`);
         if(target.plan!=='entry_72h' && (!Number.isSafeInteger(actualAmount)||actualAmount<=5000||actualAmount>200000))
           throw new ApiError(400,'5,000₮-өөс дээш бодитоор орсон дүнг оруулна уу.');
         b={status:'confirmed',confirmed_amount:actualAmount};
