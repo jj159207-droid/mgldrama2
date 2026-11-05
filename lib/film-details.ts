@@ -39,6 +39,22 @@ export function getVideoEmbed(value: string): {type:"iframe" | "video" | "youtub
     id = url.pathname === "/watch" ? url.searchParams.get("v") : /^\/(?:embed|shorts|live)\/([^/]+)$/.exec(url.pathname)?.[1] || null;
   }
   if (id && /^[a-zA-Z0-9_-]{11}$/.test(id)) return {type:"youtube", src:`https://www.youtube-nocookie.com/embed/${id}?playsinline=1`};
+  // Bunny's direct "play" page is not an embeddable player. Preserve the
+  // library's existing player hostname, including older legacy libraries.
+  if (url.hostname==="player.mediadelivery.net" || url.hostname==="iframe.mediadelivery.net") {
+    const direct=/^\/play\/(\d+)\/([a-zA-Z0-9-]{16,64})\/?$/.exec(url.pathname);
+    if(direct){
+      url.pathname=`/embed/${direct[1]}/${direct[2]}`;
+      return {type:"iframe",src:url.href};
+    }
+  }
+  // Bunny Stream's default pull-zone HLS playlist is a manifest, not an
+  // HTML iframe. For unsigned default URLs, use Bunny's real embed player.
+  const zone=/^vz-(\d+)\.b-cdn\.net$/.exec(url.hostname);
+  const playlist=/^\/([a-f0-9-]{32,36})\/playlist\.m3u8$/i.exec(url.pathname);
+  if(zone && playlist && !url.search){
+    return {type:"iframe",src:`https://player.mediadelivery.net/embed/${zone[1]}/${playlist[1]}`};
+  }
   if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) return {type:"video", src:safe};
   const drive = url.hostname === "drive.google.com" ? /^\/file\/d\/([a-zA-Z0-9_-]+)/.exec(url.pathname)?.[1] : null;
   return {type:"iframe", src:drive ? `https://drive.google.com/file/d/${drive}/preview` : safe};
