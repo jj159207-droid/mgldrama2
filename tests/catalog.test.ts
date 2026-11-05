@@ -27,3 +27,17 @@ test('sorting is deterministic, natural for sequels, and never mutates the sourc
   const dated = [{id:10,created_at:'invalid'}, {id:2,created_at:'2026-09-15'}, {id:3,created_at:'2026-09-01'}];
   assert.deepEqual(filterCatalog(dated,INITIAL_CATALOG).map(f=>f.id),[2,3,10]);
 });
+
+test('featured sort puts real poster+trailer first, poster-only next and image-less last', () => {
+  const mediaFilms = [
+    {id:9, title:'No artwork'},
+    {id:8, title:'Image only', img:'https://images.example/poster.webp'},
+    {id:7, title:'Trailer but no image', preview_url:'https://videos.example/preview.mp4'},
+    {id:6, title:'Old complete', img:'https://images.example/old.jpg', preview_url:'https://videos.example/old.mp4'},
+    {id:10, title:'New complete', img:'https://images.example/new.jpg', preview_url:'https://videos.example/new.mp4'},
+    {id:11, title:'Broken fields', img:'not-a-url', preview_url:'javascript:alert(1)'},
+  ];
+  assert.deepEqual(filterCatalog(mediaFilms, {...INITIAL_CATALOG, sort:'featured'}).map(f=>f.id), [10,6,8,7,11,9]);
+  assert.deepEqual(mediaFilms.map(f=>f.id), [9,8,7,6,10,11]);
+  assert.deepEqual(filterCatalog(mediaFilms, {...INITIAL_CATALOG, sort:'newest'}).map(f=>f.id), [11,10,9,8,7,6]);
+});
