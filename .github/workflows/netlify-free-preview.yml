@@ -1,0 +1,41 @@
+name: Netlify Free preview safety checks
+
+on:
+  push:
+    branches:
+      - infra/netlify-free-preview-20261105
+  pull_request:
+    branches:
+      - main
+    paths:
+      - netlify.toml
+      - NETLIFY-FREE-MIGRATION-MN.md
+      - .github/workflows/netlify-free-preview.yml
+      - package.json
+      - package-lock.json
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact code
+        uses: actions/checkout@v4
+      - name: Install Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: UI tests
+        run: npm run test:ui
+      - name: Production build
+        run: npm run build
