@@ -1,6 +1,6 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
-export const ALL_MOVIES_PRICE = 12500;
+export const ALL_MOVIES_PRICE = 12000;
 export const ALL_MOVIES_PLAN = 'entry_30d';
 export const ALL_MOVIES_DAYS = 30;
 export const ALL_MOVIES_DURATION_LABEL = '1 сарын';
@@ -8,7 +8,7 @@ export const ALL_MOVIES_TITLE = '1 сарын турш бүх киног үзэ�
 export const plans: Record<string, number> = {
   erotic_3day:12500,gadaad_3day:12500,hyatad_3day:12500,oros_3day:12500,
   erotic_1month:12500,gadaad_1month:12500,hyatad_1month:12500,oros_1month:12500,all_1month:12500,
-  all_48h:ALL_MOVIES_PRICE,entry_72h:ALL_MOVIES_PRICE,entry_30d:ALL_MOVIES_PRICE,
+  all_48h:7900,entry_72h:12500,entry_30d:ALL_MOVIES_PRICE,
   wallet_topup:5000,
 };
 export function planLabel(plan: string): string {
