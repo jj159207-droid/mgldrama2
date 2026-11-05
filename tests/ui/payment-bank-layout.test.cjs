@@ -11,7 +11,7 @@ test("simple TAZA mobile checkout puts IBAN above the account and reference", ()
   const account = checkSource.indexOf('wallet-single-account');
   const reference = checkSource.indexOf('wallet-single-copy wallet-single-ref');
   assert.ok(iban > 0 && account > iban && reference > account, "IBAN -> account -> transfer reference");
-  assert.match(checkSource, /copyText\(transferDestination,tazaTransfer\?"iban":"account"\)/);
+  assert.match(checkSource, /copyText\(tazaTransfer\?"44000500":transferDestination,tazaTransfer\?"iban":"account"\)/);
   assert.match(checkSource, /copyText\(bankAccount\.number,"account"\)/);
   assert.match(checkSource, /copyText\(refCode,"ref"\)/);
 });
@@ -26,7 +26,7 @@ test("standard payment form has two independent copy buttons, IBAN first", () =>
 });
 
 test("IBAN is copied without display spaces and both numbers must agree", () => {
-  assert.match(source, /transferIban\.match\(\/\.\{1,4\}\/g\)\?\.join\(" "\)/);
+  assert.match(source, /transferIbanDisplay=tazaTransfer\?"44000500"/);
   assert.match(source, /transferIban\.endsWith\(bankAccount\.number\)/);
   assert.match(source, /disabled=\{!transferReady\|\|!orderReady\}/);
 });
