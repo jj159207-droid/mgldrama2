@@ -3,11 +3,15 @@ import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 're
 import { formatTrailerTime, generatedTrailerStart, isBunnySource, parseTimeParts, timeParts, TRAILER_SECONDS } from '@/lib/trailer-spec';
 export type TrailerEditorHandle = { prepare: () => Promise<string> };
 type Props = { filmId: number; videoUrl: string; value: string; onChange: (value: string) => void; onBusyChange: (busy: boolean) => void; disabled?: boolean };
+// R2 references are pointers to the private movie bucket; they are NEVER
+// exposed as playable public URLs. The admin API generates only a 12-sec clip.
+const isPrivateR2Movie = (url: string) => /^r2:\/\/taza-movies\/[A-Za-z0-9][A-Za-z0-9._/-]*\.mp4$/i.test(url.trim());
+const canClip = (url: string) => isBunnySource(url) || isPrivateR2Movie(url);
 const input = { width: '100%', minWidth: 0, padding: '12px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--background)', color: 'var(--foreground)', fontSize: 16 };
 const label = { display: 'block', fontSize: 13, marginBottom: 6, color: 'var(--muted)' };
 const TrailerEditor = forwardRef<TrailerEditorHandle, Props>(function TrailerEditor({ filmId, videoUrl, value, onChange, onBusyChange, disabled }, ref) {
   const savedStart = generatedTrailerStart(value);
-  const [mode, setMode] = useState<'auto' | 'link'>(() => savedStart !== null || (!value && isBunnySource(videoUrl)) ? 'auto' : 'link');
+  const [mode, setMode] = useState<'auto' | 'link'>(() => savedStart !== null || (!value && canClip(videoUrl)) ? 'auto' : 'link');
   const [parts, setParts] = useState(() => timeParts(savedStart ?? 0));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -21,7 +25,7 @@ const TrailerEditor = forwardRef<TrailerEditorHandle, Props>(function TrailerEdi
   const prepare = async (): Promise<string> => {
     if (mode === 'link') return value.trim();
     if (start === null) throw new Error('Цаг 0–99, минут болон секунд 0–59 хооронд байна. Бүх нүдийг бөглөнө үү.');
-    if (!isBunnySource(videoUrl)) throw new Error('Видео URL хэсэгт Bunny Stream-ийн холбоос оруулна уу.');
+    if (!canClip(videoUrl)) throw new Error('Видео URL хэсэгт Bunny Stream эсвэл хувийн Cloudflare R2 MP4 (r2://taza-movies/films/...) оруулна уу.');
     if (generated.current?.source === videoUrl.trim() && generated.current.start === start) return generated.current.url;
     if (pending.current) throw new Error('Трейлэр үүсгэж байна.');
     const controller = new AbortController(); pending.current = controller;
@@ -56,7 +60,7 @@ const TrailerEditor = forwardRef<TrailerEditorHandle, Props>(function TrailerEdi
       <option value="auto">Энэ киноноос 12 секунд</option><option value="link">Тусдаа трейлэрийн холбоос</option>
     </select>
     {mode === 'auto' ? <>
-      <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--muted)' }}>Дээрх видео URL-д холбогдсон киноны аль хэсгээс эхлэхийг сонгоно уу.</p>
+      <p style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--muted)' }}>Админ трейлерийг хаанаас эхлэхийг цаг, минут, секундээр тохируулна. Bunny Stream болон хувийн Cloudflare R2 MP4 файлыг дэмжинэ.</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
         {(['Цаг', 'Минут', 'Секунд'] as const).map((name, index) => <label key={name} style={label}>{name}
           <input aria-label={`Трейлэр эхлэх ${name.toLowerCase()}`} style={{ ...input, marginTop: 6 }} type="number" inputMode="numeric" min="0" max={index === 0 ? 99 : 59} step="1" disabled={disabled || busy} value={parts[index]}
@@ -65,7 +69,7 @@ const TrailerEditor = forwardRef<TrailerEditorHandle, Props>(function TrailerEdi
       </div>
       <p aria-live="polite" style={{ fontSize: 13 }}>{start === null ? 'Цаг, минут, секундийг зөв оруулна уу.' : `${formatTrailerTime(start)} → ${formatTrailerTime(start + TRAILER_SECONDS)} · 12 секунд`}</p>
       <button type="button" className="secondary-button" disabled={disabled || busy || start === null} onClick={() => { void prepare().catch(() => {}); }}>{busy ? '12 секундын бичлэг үүсгэж байна…' : '12 секундийг шалгах'}</button>
-      <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--muted)' }}>“Хадгалах” дарахад сонгосон 12 секундийг автоматаар үүсгэнэ. Бүтэн киноны үзэх эрх өөрчлөгдөхгүй.</p>
+      <p style={{ fontSize: 12, lineHeight: 1.6, color: 'var(--muted)' }}>“Хадгалах” дарахад сонгосон 12 секундийг сервер дээр тусад нь гаргаж хадгална. Бүтэн кино нийтэд нээгдэхгүй. R2 эх сурвалжид Netlify дээр R2 нууц түлхүүр тохируулсан байх ёстой.</p>
       {preview && !playError && <video key={preview} aria-label="Үүсгэсэн 12 секундын трейлэр" src={preview} controls playsInline preload="metadata" onError={() => setPlayError(true)} style={{ width: '100%', borderRadius: 10 }} />}
       {playError && <p role="alert">Урьдчилсан бичлэг ачаалсангүй. Холболтоо шалгана уу.</p>}
       {preview && <p style={{ fontSize: 12, color: 'var(--muted)' }}>Үүсгэсэн хэсэг: {formatTrailerTime(generatedTrailerStart(preview) ?? 0)}. Киноны өөрчлөлтийг “Хадгалах” дарж нийтэлнэ.</p>}
