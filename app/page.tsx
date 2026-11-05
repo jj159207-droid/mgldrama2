@@ -1755,7 +1755,14 @@ function AdminSettingsTab({masterAdmin=false}: {masterAdmin?:boolean}) {
   };
   if(loading)return <div style={{textAlign:"center",padding:40,color:C.muted}}>Ачааллаж байна...</div>;
   return <div style={{padding:"0 14px"}}>
-    {masterAdmin&&<><ReadinessCheck /><SiteAdminManager /></>}
+    {masterAdmin&&<><ReadinessCheck /><SiteAdminManager />
+      <div style={{background:C.card2,border:`1px solid ${C.bd}`,borderRadius:12,padding:16,marginBottom:12}}>
+        <div style={{fontSize:14,fontWeight:800,color:C.txt,marginBottom:8}}>📲 MacroDroid — SMS автоматаар баталгаажуулах</div>
+        <p style={{fontSize:12,color:C.muted,lineHeight:1.65,margin:"0 0 12px"}}>TAZA-ийн ХААН Банкны орлогын SMS дамжуулах файлыг эндээс татаж, Android утсан дээр MacroDroid-д импортлоно. Өмнөх макро давхар ажиллаж байвал унтраана уу.</p>
+        <a href="/api/admin/macrodroid" download="TAZA_MacroDroid_SMS_12000.macro" style={{...goldBtn,display:"flex",alignItems:"center",justifyContent:"center",textDecoration:"none",borderRadius:10,padding:"12px 14px",marginBottom:10}}>📥 MacroDroid тохиргоо татах (.macro)</a>
+        <div style={{fontSize:11,color:C.muted,lineHeight:1.6}}>Зөвхөн үндсэн админ татна. Холбоос 2026.11.12-ны 23:59-д автоматаар хаагдана. Файл төлбөр баталгаажуулах нууцтай тул бусдад дамжуулахгүй.</div>
+      </div>
+    </>}
     <div style={{background:C.card,border:`0.5px solid ${C.bd}`,borderRadius:12,padding:16,marginBottom:12}}>
       <div style={{fontSize:14,fontWeight:700,color:C.txt,marginBottom:16}}>⚙️ Сайтын тохиргоо</div>
       <label style={lbl}>🏦 Банкны нэр</label>
