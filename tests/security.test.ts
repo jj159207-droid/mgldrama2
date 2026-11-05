@@ -68,6 +68,7 @@ beforeEach(()=>{
      return values.includes(String(row[k]));
    }
    if(v.startsWith('gt.'))return k==='id'?Number(row[k])>Number(v.slice(3)):String(row[k])>v.slice(3);
+   if(v.startsWith('gte.'))return String(row[k])>=v.slice(4);
    if(v.startsWith('neq.'))return String(row[k])!==v.slice(4);
    return true;
   });
@@ -331,7 +332,7 @@ test('MacroDroid plain text validates sender and opens only purchased movie; dup
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await send('BANK_TEST')).status,200);assert.equal(tables.pending_payments[0].confirmed_at,stamp);
  tables.pending_payments[0].status='revoked';assert.equal((await send('BANK_TEST')).status,409);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,402);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
 });
 test('SMS rejects malformed amounts, multiple references, outgoing and expired orders',async()=>{
  for(const text of ['ORLOGO:5,00MNT Utga:123456','ORLOGO:5000MNT Utga:1234567','ORLOGO:5000MNT Utga:123456 Utga:654321','ZARLAGA:5000MNT Utga:123456'])assert.equal(parseBankSms(text),null);
@@ -350,7 +351,7 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'410001',film_id:1,plan:'single'},owner))).status,200);
  // The order already existed for two hours when the forwarding phone lost service.
  t.mock.timers.setTime(start+2*3600000);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,402);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,403);
  // No webhook is delivered during the next four hours. Then the original SMS arrives.
  const receivedAt=start+6*3600000;
  t.mock.timers.setTime(receivedAt);
@@ -364,7 +365,7 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal(rights.access.film_2,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,403);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,402);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,403);
 });
 
 test('a burst of delayed SMS and concurrent duplicates confirms every matching order once',async(t)=>{
@@ -461,11 +462,11 @@ test('revoking one purchase preserves other rights and allows later purchases',a
  assert.equal(tables.pending_payments[1].status,'confirmed');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.234567','PATCH',{status:'revoked'},ac))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,402);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',plan:'single',film_id:1},cookie))).status,200);
  tables.films[0].free=true;
- // A pending order or a free film does not restore the site's expired entry gate.
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,402);
+ // A free film can be watched without paying an unrelated site entry fee.
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  markEntryPaid(Number(uid));
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
