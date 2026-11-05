@@ -236,11 +236,14 @@ test('previously free/unlocked TAZA movies now require the same all-movies entit
   assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
   assert.equal((await guest()).status,403);
 });
-test('all package plans use 72-hour expiry while single and yearly stay distinct',()=>{
+test('legacy packages remain 72-hour, new all-film access lasts 30 days',()=>{
  const time=Date.parse('2026-01-01T00:00:00Z');const base={status:'confirmed',confirmed_at:new Date(time).toISOString()};
  assert.equal(paymentExpiry({...base,plan:'3day'}),time+72*3600000);
  assert.equal(paymentExpiry({...base,plan:'all_48h'}),time+72*3600000);
  assert.equal(paymentExpiry({...base,plan:'entry_72h'}),time+72*3600000);
+ assert.equal(paymentExpiry({...base,plan:'entry_30d'}),time+30*86400000);
+ assert.equal(canWatch({id:1,locked:true,badge:'Хэлтэй|Орос'},[{...base,plan:'entry_30d'}],time+29*86400000),true);
+ assert.equal(canWatch({id:1,locked:true,badge:'Хэлтэй|Орос'},[{...base,plan:'entry_30d'}],time+30*86400000),false);
  assert.equal(paymentExpiry({...base,plan:'gadaad_1month'}),time+72*3600000);
  assert.equal(paymentExpiry({...base,plan:'1year'}),time+365*86400000);
  assert.equal(paymentExpiry({...base,confirmed_at:'bad'}),0);
@@ -262,10 +265,10 @@ test('SMS cannot self-confirm; missing/wrong amount blocked; valid signed SMS wo
  assert.equal(tables.pending_payments[0].confirmed_at,confirmed);
  assert.equal(parseBankSms('ZARLAGA:5000MNT Utga:123456'),null);
 });
-test('12,500₮ MacroDroid bank SMS activates all films but rejects wrong amounts',async()=>{
+test('12,500₮ MacroDroid SMS activates all films for 30 days and rejects wrong amounts',async()=>{
  const cookie=await register(),uid=tables.users[0].id;
  tables.films.push({...tables.films[0],id:2,title:'Second movie'});
- tables.pending_payments.push({id:77,user_id:uid,ref_code:'567890',film_id:null,plan:'entry_72h',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
+ tables.pending_payments.push({id:77,user_id:uid,ref_code:'567890',film_id:null,plan:'entry_30d',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
  assert.equal((await bankSms('567890','5,001.00')).status,400);
  assert.equal((await bankSms('567890','12,499.00')).status,400);
  assert.equal((await bankSms('567890','12,501.00')).status,400);
@@ -281,7 +284,7 @@ test('12,500₮ MacroDroid bank SMS activates all films but rejects wrong amount
 });
 test('admin manual payment confirmation requires exact 12,500₮ for the new all-films order',async()=>{
  const c=await admin();
- tables.pending_payments.push({id:77,ref_code:'567891',user_id:10,film_id:null,plan:'entry_72h',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
+ tables.pending_payments.push({id:77,ref_code:'567891',user_id:10,film_id:null,plan:'entry_30d',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed'},c))).status,400);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed',confirmed_amount:6000},c))).status,400);
  assert.equal(tables.pending_payments[0].status,'pending');
@@ -291,15 +294,15 @@ test('admin manual payment confirmation requires exact 12,500₮ for the new all
 });
 test('reopening an unpaid all-film checkout keeps the original six-digit code and one pending order',async()=>{
  const cookie=await register(),other=await register('99112234');
- const first=await api.POST(dbReq('pending_payments','POST',{ref_code:'675432',plan:'entry_72h',amount:2000,film_id:1},cookie));
+ const first=await api.POST(dbReq('pending_payments','POST',{ref_code:'675432',plan:'entry_30d',amount:2000,film_id:1},cookie));
  assert.equal(first.status,200);
  const [order]=await first.json();
- assert.equal(order.amount,12500);assert.equal(order.film_id,null);assert.equal(order.plan,'entry_72h');
- const second=await api.POST(dbReq('pending_payments','POST',{ref_code:'123456',plan:'entry_72h',film_id:2},cookie));
+ assert.equal(order.amount,12500);assert.equal(order.film_id,null);assert.equal(order.plan,'entry_30d');
+ const second=await api.POST(dbReq('pending_payments','POST',{ref_code:'123456',plan:'entry_30d',film_id:2},cookie));
  assert.equal(second.status,200);
  assert.equal((await second.json())[0].ref_code,'675432');
  assert.equal(tables.pending_payments.length,1);
- const third=await api.POST(dbReq('pending_payments','POST',{ref_code:'123456',plan:'entry_72h'},other));
+ const third=await api.POST(dbReq('pending_payments','POST',{ref_code:'123456',plan:'entry_30d'},other));
  assert.equal(third.status,200);
  assert.equal((await third.json())[0].ref_code,'123456');
  assert.equal(tables.pending_payments.length,2);
