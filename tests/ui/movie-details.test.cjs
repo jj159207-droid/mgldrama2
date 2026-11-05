@@ -50,7 +50,7 @@ beforeEach(()=>{
         if(walletBalance>=5000){walletBalance-=5000;entitled=true;return Response.json({result:'purchased',balance:walletBalance,price:5000});}
         return Response.json({result:'insufficient',balance:walletBalance,price:5000});
       }
-      if(body.action==='purchase_plan')return Response.json({result:'insufficient',balance:walletBalance,price:12500});
+      if(body.action==='purchase_plan')return Response.json({result:'insufficient',balance:walletBalance,price:12000});
     }
     return Response.json({balance:walletBalance});
   }
@@ -83,7 +83,7 @@ beforeEach(()=>{
        const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
        if(existingTopup)return Response.json([existingTopup]);
      }
-     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan==='entry_30d'?12500:body.plan==='all_48h'?7900:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan==='entry_30d'?12000:body.plan==='all_48h'?7900:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -109,7 +109,7 @@ test('TAZA lets visitors select films without paying an entry fee',async()=>{
  assert.ok(document.querySelector('.film-reference-page'));
  assert.ok(document.querySelector('.film-hero-watch'));
  assert.equal(document.querySelector('.film-hero-watch').textContent.trim(),'Бүтэн үзэх');
- assert.doesNotMatch(document.querySelector('.film-reference-page').textContent,/12,500|1 сарын|72 цаг/);
+ assert.doesNotMatch(document.querySelector('.film-reference-page').textContent,/12,000|1 сарын|72 цаг/);
  assert.equal(orders.length,0,'opening a film must not silently create a payment');
  assert.equal(requests.filter(r=>r.path==='/api/playback').length,0,'full movie cannot autoplay');
  await click('.film-back');
@@ -143,15 +143,15 @@ test('recommendations show top three and film details never show price before Wa
   assert.equal(document.querySelector('.detail-plan'),null);assert.equal(document.querySelector('.detail-packages'),null);
   assert.ok(document.querySelector('.film-landing'));assert.ok(document.querySelector('.film-detail-info'));assert.ok(document.querySelector('.detail-related'));
   await click('.detail-poster');await click('.related-film');assert.equal(title(),'Салхи');assert.equal(document.querySelector('video'),null);assert.equal(new URL(window.location.href).searchParams.get('film'),'9');assert.equal(new URL(window.location.href).searchParams.get('fbclid'),'tracking');
-  await pop('/?film=34');assert.equal(document.querySelector('.detail-packages'),null);assert.doesNotMatch(document.querySelector('.film-reference-page').textContent,/12,500|1 сарын|72 цаг/);
+  await pop('/?film=34');assert.equal(document.querySelector('.detail-packages'),null);assert.doesNotMatch(document.querySelector('.film-reference-page').textContent,/12,000|1 сарын|72 цаг/);
  }finally{films.splice(original);}
 });
 test('Watch creates one 30-day all-film checkout and plays selected film after confirmation',async()=>{
  await render('/?film=7');assert.equal(document.querySelector('#film-payment'),null);await click('.film-hero-watch');assert.equal(document.querySelector('.login-dialog'),null);
  assert.equal(title(),'Гэрэл');assert.ok(document.querySelector('#film-payment .checkout-inline'));assert.equal(document.querySelector('.checkout-dialog'),null);
  assert.match(document.querySelector('#film-payment').textContent,/1 сарын турш бүх киног үзэх эрх/);
- assert.match(document.querySelector('#film-payment').textContent,/12,500₮/);
- assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12500);
+ assert.match(document.querySelector('#film-payment').textContent,/12,000₮/);
+ assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12000);
  orders[0].status='confirmed';entitled=true;
  await act(async()=>[...document.querySelectorAll('.checkout-back')].find(b=>b.textContent==='Төлбөрөө шалгах').click());
  assert.equal(movie(),films[0].url);assert.equal(orders.length,1);
@@ -175,14 +175,14 @@ test('a closed checkout ignores late confirmation and keeps the detail page',asy
  assert.equal(document.querySelector('#film-payment'),null);
 });
 
-test('Facebook movie links show details first and open the 12,500₮ all-movies checkout only on Watch',async()=>{
+test('Facebook movie links show details first and open the 12,000₮ all-movies checkout only on Watch',async()=>{
  failCatalog=true;await render('/?utm_source=facebook&film=34&fbclid=tracking');
  assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);
  assert.equal(orders.length,0);
  await click('.film-continue');
  assert.equal(document.querySelector('.login-dialog'),null);
  assert.equal(movie(),undefined);
- assert.equal(orders.length,1);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12500);
+ assert.equal(orders.length,1);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12000);
  assert.ok(requests.some(r=>r.path==='/api/device'));
  assert.equal(new URL(window.location.href).searchParams.get('film'),'34');
 });
@@ -193,7 +193,7 @@ test('session restoration completes before selecting login or playback',async()=
 });
 test('guest device receives one all-film payment reference from a selected movie',async()=>{
  await render('/?film=7&fbclid=tracking');assert.equal(title(),'Гэрэл');assert.equal(orders.length,0);assert.equal(movie(),undefined);
- await click('.film-continue');assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('#film-payment .checkout-inline'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12500);
+ await click('.film-continue');assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('#film-payment .checkout-inline'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12000);
  orders[0].status='confirmed';entitled=true;
  await act(async()=>[...document.querySelectorAll('.checkout-back')].find(b=>b.textContent==='Төлбөрөө шалгах').click());
  assert.equal(movie(),films[0].url);assert.equal(orders.length,1);assert.equal(new URL(window.location.href).searchParams.get('film'),'7');
@@ -252,7 +252,7 @@ test('admin mode cannot bypass the all-movies playback entitlement',async()=>{
 });
 test('package purchase creates a guest device and remains a package without a movie ID',async()=>{
  await render();await click('.package-continue');
- assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('.checkout-dialog'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12500);assert.equal(window.location.search,'');
+ assert.equal(document.querySelector('.login-dialog'),null);assert.ok(document.querySelector('.checkout-dialog'));assert.equal(orders.length,1);assert.equal(orders[0].film_id,null);assert.equal(orders[0].plan,'entry_30d');assert.equal(orders[0].amount,12000);assert.equal(window.location.search,'');
 });
 test('native history back restores catalog and forward restores details without playback',async()=>{
  await render();await act(async()=>[...document.querySelectorAll('.movie-main')].find(b=>b.textContent.includes('Алсын зам')).click());
