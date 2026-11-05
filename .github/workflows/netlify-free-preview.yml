@@ -13,6 +13,7 @@ on:
       - .github/workflows/netlify-free-preview.yml
       - package.json
       - package-lock.json
+      - tests/**
 
 permissions:
   contents: read
@@ -30,12 +31,17 @@ jobs:
           node-version: 24
           cache: npm
       - name: Install locked dependencies
+        id: deps
         run: npm ci
       - name: Type check
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run typecheck
       - name: Unit tests
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm test
       - name: UI tests
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run test:ui
       - name: Production build
+        if: ${{ always() && steps.deps.outcome == 'success' }}
         run: npm run build
