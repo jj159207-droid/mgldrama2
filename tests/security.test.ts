@@ -203,11 +203,11 @@ test('payment read is constrained to cookie owner',async()=>{
  const c=await register();tables.pending_payments.push({id:1,user_id:999,status:'confirmed'});
  const r=await api.GET(dbReq('pending_payments?user_id=eq.999&select=*','GET',undefined,c));assert.deepEqual(await r.json(),[]);
 });
-test('TAZA playback requires entry payment and then the movie entitlement',async()=>{
+test('TAZA playback requires a confirmed purchase and blocks access after final revocation',async()=>{
  const c=await register();assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,402);
  tables.pending_payments.push({user_id:tables.users[0].id,film_id:1,plan:'single',amount:5000,status:'confirmed',confirmed_at:now(),site_id:'taza'});
  const r=await playback.GET(req('/api/playback?id=1','GET',undefined,c));assert.equal(r.status,200);assert.equal((await r.json()).url,'https://video.example/movie.mp4');
- tables.pending_payments[0].status='revoked';assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,403);
+ tables.pending_payments[0].status='revoked';assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,c))).status,402);
 });
 test('wallet funding or expired payment does not bypass the 72-hour TAZA entry gate',async()=>{
  const c=await register();const uid=Number(tables.users[0].id);
@@ -328,7 +328,7 @@ test('MacroDroid plain text validates sender and opens only purchased movie; dup
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await send('BANK_TEST')).status,200);assert.equal(tables.pending_payments[0].confirmed_at,stamp);
  tables.pending_payments[0].status='revoked';assert.equal((await send('BANK_TEST')).status,409);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,402);
 });
 test('SMS rejects malformed amounts, multiple references, outgoing and expired orders',async()=>{
  for(const text of ['ORLOGO:5,00MNT Utga:123456','ORLOGO:5000MNT Utga:1234567','ORLOGO:5000MNT Utga:123456 Utga:654321','ZARLAGA:5000MNT Utga:123456'])assert.equal(parseBankSms(text),null);
@@ -458,9 +458,12 @@ test('revoking one purchase preserves other rights and allows later purchases',a
  assert.equal(tables.pending_payments[1].status,'confirmed');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.234567','PATCH',{status:'revoked'},ac))).status,200);
- assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,402);
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',plan:'single',film_id:1},cookie))).status,200);
  tables.films[0].free=true;
+ // A pending order or a free film does not restore the site's expired entry gate.
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,402);
+ markEntryPaid(Number(uid));
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
 
