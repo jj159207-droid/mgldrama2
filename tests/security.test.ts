@@ -535,6 +535,21 @@ test('settings writes require admin, validate URLs and stay scoped to TAZA setti
  assert.equal(tables.site_settings[0].messenger_url,'https://m.me/test');
 });
 
+test('payment settings hide an invalid legacy IBAN and accept only a verified 20-character IBAN',async()=>{
+ const old=await settings.GET();
+ assert.equal(old.status,200);
+ assert.equal((await old.json()).ibanSetupRequired,true);
+ const c=await admin();
+ assert.equal((await settings.PUT(req('/api/settings','PUT',{bankIban:'MN03000500'},c))).status,400);
+ const valid='MN121234123456789123';
+ const saved=await settings.PUT(req('/api/settings','PUT',{bankIban:valid},c));
+ assert.equal(saved.status,200);
+ const response=await saved.json();
+ assert.equal(response.bankIban,valid);
+ assert.equal(response.ibanSetupRequired,false);
+ assert.equal(tables.site_settings[0].bank_iban,valid);
+});
+
 test('admin cannot save a filter label as the movie category',async()=>{
  const c=await admin();
  assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{badge:'Хэлтэй|Бүгд'},c))).status,400);
