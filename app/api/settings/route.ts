@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
 import { safeUrl } from '@/lib/domain';
 import { normalizeMongolianIban } from '@/lib/iban';
+import { paymentBankSettings } from '@/lib/bank-details';
 export const runtime='nodejs';
 
 const clean=(value:unknown,max:number)=>typeof value==='string'?value.trim().replace(/\s+/g,' ').slice(0,max):'';
@@ -21,10 +22,10 @@ export async function GET(req?:NextRequest) {
   try {
     const site=req?requestSite(req):'taza';
     const [row]=await db(`site_settings?site_id=eq.${site}&select=messenger_url,bank_name,bank_account,account_name,bank_iban&limit=1`);
-    return json({...normalizeRow(row),site});
+    return json({...normalizeRow(paymentBankSettings(row,site)),site});
   } catch(error) {
     if(error instanceof ApiError && ['42703','42P01','PGRST204','PGRST205'].includes(error.code))
-      return json({...normalizeRow(undefined),site:'taza',setupRequired:true});
+      return json({...normalizeRow(paymentBankSettings(undefined,'taza')),site:'taza',setupRequired:true});
     return fail(error);
   }
 }
@@ -37,7 +38,7 @@ export async function PUT(req:NextRequest) {
 
     const b=await bodyJson(req,4096);
     const [stored]=await db(`site_settings?site_id=eq.${site}&select=messenger_url,bank_name,bank_account,account_name,bank_iban&limit=1`);
-    const current=normalizeRow(stored);
+    const current=normalizeRow(paymentBankSettings(stored,site));
     const has=(key:string)=>Object.prototype.hasOwnProperty.call(b,key);
 
     const messengerRaw=has('messengerUrl')?clean(b.messengerUrl,2000):current.messengerUrl;
