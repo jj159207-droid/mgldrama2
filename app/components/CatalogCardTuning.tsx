@@ -60,7 +60,7 @@ export default function CatalogCardTuning() {
         const sub = copy ? Array.from(copy.children).find(child => child.tagName === "SPAN") as HTMLElement | undefined : undefined;
         const cta = banner.querySelector<HTMLElement>(".banner-cta");
 
-        const title=freeCatalog?"Бүх кино · 12,000₮":"Сайтын бүх киног 7,900 төгрөгөөр;
+        const title=freeCatalog?"Бүх кино · 12,000₮":"Сайтын бүх киног 7,900 төгрөгөөр";
         if (lead && lead.textContent !== title) lead.textContent = title;
         const subtitle=freeCatalog?"30 хоног · MacroDroid баталгаажуулалт":"72 цаг үзэх эрх";
         if (sub && sub.textContent !== subtitle) sub.textContent = subtitle;
