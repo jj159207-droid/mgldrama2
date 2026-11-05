@@ -61,7 +61,7 @@ function updatePreview() {
 }
 
 function schedulePreview() {
-  if (!frame) frame = requestAnimationFrame(() => { frame = 0; updatePreview(); });
+  if (!frame) frame = window.requestAnimationFrame(() => { frame = 0; updatePreview(); });
 }
 
 function attachPreviewListeners() {
@@ -78,7 +78,7 @@ function detachPreviewListeners() {
   window.removeEventListener("resize", schedulePreview);
   document.removeEventListener("visibilitychange", schedulePreview);
   window.removeEventListener("pagehide", pauseAllPreviews);
-  if (frame) cancelAnimationFrame(frame);
+  if (frame) window.cancelAnimationFrame(frame);
   frame = 0;
   selected = null;
   hovered = null;
