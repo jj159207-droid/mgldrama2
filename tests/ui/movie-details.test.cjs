@@ -91,26 +91,19 @@ const pop=async(url,state={page:'home'})=>act(async()=>{window.history.replaceSt
 const movie=()=>document.querySelector('.full-player video')?.getAttribute('src');
 const title=()=>document.querySelector('#selected-film-title')?.textContent;
 
-test('TAZA hides every movie until the 12500 MNT 72-hour entry package is confirmed',async()=>{
+test('TAZA lets visitors select films without paying an entry fee',async()=>{
  entryAllowed=false;walletBalance=0;
  await render('/?film=7&fbclid=tracking');
- assert.equal(document.querySelector('#selected-film-title'),null);
- assert.equal(document.querySelectorAll('.movie-card').length,0);
- assert.match(document.body.textContent,/Автоматаар баталгаажиж кинонууд нээгдэнэ/);
- const pricing=document.querySelector('.wallet-entry-pricing');assert.ok(pricing);
- assert.match(pricing.textContent,/Шилжүүлэх дүн 12,500₮/);
- assert.match(pricing.textContent,/Бүх киног үзэх эрх/);
- assert.doesNotMatch(pricing.textContent,/72 цаг/);
- assert.doesNotMatch(pricing.textContent,/1 кино - 2,000₮/);
- assert.doesNotMatch(pricing.textContent,/41 кино/);
- assert.doesNotMatch(pricing.textContent,/48 цаг/);
- assert.doesNotMatch(document.body.textContent,/Таны кино сайтын дансны одоогийн үлдэгдэл/);
- assert.equal(orders.length,1);assert.equal(orders[0].plan,'entry_72h');assert.equal(orders[0].amount,12500);
- orders[0].status='confirmed';entryAllowed=true;entitled=true;
- await act(async()=>window.dispatchEvent(new dom.window.Event('focus')));
- await act(async()=>new Promise(resolve=>setTimeout(resolve,0)));
  assert.equal(title(),'Гэрэл');
- assert.ok(requests.some(r=>r.path==='/api/entry-access'));
+ assert.ok(document.querySelector('.film-reference-page'));
+ assert.ok(document.querySelector('.film-hero-watch'));
+ assert.match(document.querySelector('.film-hero-watch').textContent,/Үзэх эрх авах/);
+ assert.equal(orders.length,0,'opening a film must not silently create a payment');
+ assert.equal(requests.filter(r=>r.path==='/api/playback').length,0,'full movie cannot autoplay');
+ await click('.film-back');
+ assert.ok(document.querySelector('.catalog-browser'));
+ assert.ok(document.querySelectorAll('.movie-card').length>=2,'catalog remains publicly browseable');
+ assert.equal(orders.length,0);
 });
 
 test('poster starts only the public trailer; full playback requires its own button',async()=>{
