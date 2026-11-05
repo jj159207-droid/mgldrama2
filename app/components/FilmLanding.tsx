@@ -97,10 +97,11 @@ export default function FilmLanding(props:Props) {
           <h1 id="selected-film-title">{film.title}</h1>
           <button className="film-hero-watch" onClick={watch} disabled={busy}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 4v16l13-8Z"/></svg>
-            {props.watching ? "Шалгаж байна…" : "Киног бүтэн үзэх"}
+            {props.watching ? "Үзэх эрхийг шалгаж байна…" : props.available ? "Киног бүтэн үзэх" : film.free || film.locked === false ? "Үнэгүй үзэх" : `Үзэх эрх авах · ${Number(film.price || 0).toLocaleString("mn-MN")}₮`}
           </button>
         </div>
       </div>
+      {!props.available && !film.free && film.locked !== false && <p className="film-landing-note">Сайтад ороход төлбөргүй. Энэ киног сонгож үзэх эрх авахад л төлбөрийн мэдээлэл гарна.</p>}
       {props.available && <p className="film-landing-note">Танд энэ киног үзэх эрх байна.</p>}
       {props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}
     </section>
