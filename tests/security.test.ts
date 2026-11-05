@@ -730,8 +730,9 @@ test('video source diagnoses actual Bunny HTTP 404 privately for master admin',a
  global.fetch=async(input,init)=>{
    if(String(input).startsWith('https://player.mediadelivery.net/')){
      probed=String(input);
-     assert.equal(init?.method,'HEAD');
+     assert.ok(['HEAD','GET'].includes(String(init?.method)));
      assert.equal(init?.redirect,'manual');
+     assert.equal(new Headers(init?.headers).get('Referer'),'https://taza.site/');
      return new Response(null,{status:404});
    }
    return native(input,init);
@@ -746,6 +747,8 @@ test('video source diagnoses actual Bunny HTTP 404 privately for master admin',a
    assert.equal(checked.status,200);
    const data=await checked.json();
    assert.equal(data.httpStatus,404);
+   assert.equal(data.headStatus,404);
+   assert.equal(data.method,'GET');
    assert.equal(data.probe,'http');
    assert.match(probed,/\/embed\/617966\//);
    assert.ok(!JSON.stringify(data).includes('token=private'));
@@ -761,4 +764,29 @@ test('confirmed TAZA viewers see a descriptive missing-video 404, not another pa
  assert.equal(result.status,404);
  assert.equal((await result.json()).code,'VIDEO_SOURCE_MISSING');
  assert.equal((await videoDiagnostics.GET(req('/api/admin/video-diagnostics?id=1','GET',undefined,cookie))).status,403);
+});
+
+test('Bunny diagnostic rechecks HEAD false 404 with GET and reports a healthy reachable player',async()=>{
+ const cookie=await admin();
+ tables.films[0].url='https://player.mediadelivery.net/embed/617966/7088fc08-ea3d-4126-840d-c47aa324b637';
+ const native=global.fetch;
+ let head=0,get=0;
+ global.fetch=async(input,init)=>{
+   if(String(input).startsWith('https://player.mediadelivery.net/')){
+     if(init?.method==='HEAD'){head++;return new Response(null,{status:404});}
+     if(init?.method==='GET'){get++;return new Response('ok',{status:200,headers:{'content-type':'text/html'}});}
+     throw new Error('unexpected method');
+   }
+   return native(input,init);
+ };
+ try{
+   const response=await videoDiagnostics.GET(req('/api/admin/video-diagnostics?id=1','GET',undefined,cookie));
+   assert.equal(response.status,200);
+   const checked=await response.json();
+   assert.equal(checked.headStatus,404);
+   assert.equal(checked.httpStatus,200);
+   assert.equal(checked.method,'GET');
+   assert.equal(head,1);
+   assert.equal(get,1);
+ }finally{global.fetch=native;}
 });
