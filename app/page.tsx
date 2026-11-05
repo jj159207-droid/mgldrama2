@@ -572,8 +572,8 @@ function FilmCard({ film, onClick, expiry, brandName }: any) {
       <div className="movie-info">
         <span className="movie-category">{decodeCat(film.badge)}</span>
         <h3>{film.title}</h3>
-        <div className="movie-price"><strong className={available ? "available" : ""}>{film.free ? "Үнэгүй үзэх" : available ? "Үзэх эрхтэй" : `${Number(film.price || 0).toLocaleString()}₮`}</strong>
-          {!available && Number(film.op) > Number(film.price) && <del>{Number(film.op).toLocaleString()}₮</del>}
+        <div className="movie-price"><strong className={available ? "available" : ""}>{film.free ? "Үнэгүй үзэх" : available ? "Үзэх эрхтэй" : `${ALL_MOVIES_TITLE} · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮`}</strong>
+          {/* One fixed all-movies price: no misleading film-by-film discounts. */}
         </div>
         {expiry && <span className="movie-expiry">{expiry}</span>}
       </div>
@@ -730,7 +730,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Сайтын бүх кино 7,900₮</strong><span>72 цаг үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Бүх киног үзэх эрх · 12,500₮</strong><span>72 цаг үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
@@ -1526,7 +1526,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const existingPreview = f.preview_url || (f.url && f.url.includes("|||") ? f.url.split("|||")[1] : "");
   const [title, setTitle] = useState(f.title);
   const [description, setDescription] = useState(f.description || "");
-  const [price, setPrice] = useState(String(f.price ?? 2000));
+  const [price, setPrice] = useState(String(f.price ?? ALL_MOVIES_PRICE));
   const [op, setOp] = useState(String(f.op ?? 6000));
   const [url, setUrl] = useState(mainUrl);
   const [img, setImg] = useState(f.img || "");
@@ -1864,7 +1864,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
   const unreadCount = useChatUnread("admin");
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
 
-  const empty = { title: "", description: "", views: 0, op: 6000, price: 2000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
+  const empty = { title: "", description: "", views: 0, op: 12500, price: ALL_MOVIES_PRICE, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
@@ -2356,21 +2356,11 @@ export default function Home() {
       } catch(error) {
         if(!current())return;
         if(error instanceof RequestError && error.status===403){
-          try{
-            const wallet=await purchaseWithWallet(film,viewerId);
-            if(accessOwner.current!==viewerId)return;
-            if(wallet.ok){
-              if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
-            }else{
-              // Do not force a minimum wallet top-up when the user chose
-              // one movie. The payment amount must be that movie's real price.
-              trackSiteEvent("payment_open",Number(film.id));
-              setPayFilm({id:film.id,title:film.title,price:wallet.price,monthly:false,plan:"single",locked:true,returnFilm:film});
-              setPage("film");
-            }
-          }catch(walletError){
-            setWatchError(walletError instanceof Error?walletError.message:"Үлдэгдлийг шалгаж чадсангүй.");
-          }
+          // One 12,500₮ all-movies purchase, not a single-film sale.
+          // The server still checks payment/entitlement before returning a URL.
+          trackSiteEvent("payment_open",Number(film.id));
+          setPayFilm({id:0,title:ALL_MOVIES_TITLE,price:ALL_MOVIES_PRICE,monthly:true,plan:ALL_MOVIES_PLAN,entryGate:true,locked:true,returnFilm:film});
+          setPage("film");
         } else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
       }
     } catch(error) {setWatchError(error instanceof Error?error.message:"Төхөөрөмжийг таньж чадсангүй. Дахин оролдоно уу.");}
@@ -2448,11 +2438,11 @@ export default function Home() {
     if (plan === "show_plan") {
       window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
     }
-    if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan)) return;
+    if (plan!==ALL_MOVIES_PLAN) return;
     if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
     if(sourceFilm){setPage("film");}
     else navigateTo("payment");
-    setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true,returnFilm:sourceFilm});
+    setPayFilm({id:0,title:ALL_MOVIES_TITLE,price:ALL_MOVIES_PRICE,monthly:true,plan:ALL_MOVIES_PLAN,entryGate:true,locked:true,returnFilm:sourceFilm});
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     try {
@@ -2460,7 +2450,7 @@ export default function Home() {
       if(!viewer && !adminAuth)viewer=await ensureDeviceUser();
       if(adminAuth && !viewer){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
       if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
-      if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup" || plan==="entry_72h")return;
+      if(plan!==ALL_MOVIES_PLAN)return;
       if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
       openPlanCheckout(plan,sourceFilm);
     } catch(error) {setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
