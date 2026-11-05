@@ -260,26 +260,49 @@ test('SMS cannot self-confirm; missing/wrong amount blocked; valid signed SMS wo
  assert.equal(tables.pending_payments[0].confirmed_at,confirmed);
  assert.equal(parseBankSms('ZARLAGA:5000MNT Utga:123456'),null);
 });
-test('matched TAZA entry reference accepts any bank income above 5000 and opens every movie',async()=>{
- const cookie=await register();const uid=tables.users[0].id;
+test('12,500₮ MacroDroid bank SMS activates all films but rejects wrong amounts',async()=>{
+ const cookie=await register(),uid=tables.users[0].id;
  tables.films.push({...tables.films[0],id:2,title:'Second movie'});
  tables.pending_payments.push({id:77,user_id:uid,ref_code:'567890',film_id:null,plan:'entry_72h',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
- assert.equal((await bankSms('567890','5,000.00')).status,400);
+ assert.equal((await bankSms('567890','5,001.00')).status,400);
+ assert.equal((await bankSms('567890','12,499.00')).status,400);
+ assert.equal((await bankSms('567890','12,501.00')).status,400);
  assert.equal(tables.pending_payments[0].status,'pending');
- assert.equal((await bankSms('567890','5,001.00')).status,200);
+ assert.equal((await bankSms('567890','12,500.00')).status,200);
  assert.equal(tables.pending_payments[0].status,'confirmed');
- assert.equal(tables.pending_payments[0].confirmed_amount,5001);
+ assert.equal(tables.pending_payments[0].confirmed_amount,12500);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,cookie))).status,200);
+ const confirmed=tables.pending_payments[0].confirmed_at;
+ assert.equal((await bankSms('567890','12,500.00')).status,200);
+ assert.equal(tables.pending_payments[0].confirmed_at,confirmed);
 });
-test('admin manual confirmation stores the actual flexible entry amount',async()=>{
+test('admin manual payment confirmation requires exact 12,500₮ for the new all-films order',async()=>{
  const c=await admin();
  tables.pending_payments.push({id:77,ref_code:'567891',user_id:10,film_id:null,plan:'entry_72h',amount:12500,status:'pending',created_at:now(),site_id:'taza'});
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed'},c))).status,400);
- assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed',confirmed_amount:6000},c))).status,200);
+ assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed',confirmed_amount:6000},c))).status,400);
+ assert.equal(tables.pending_payments[0].status,'pending');
+ assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.567891','PATCH',{status:'confirmed',confirmed_amount:12500},c))).status,200);
  assert.equal(tables.pending_payments[0].status,'confirmed');
- assert.equal(tables.pending_payments[0].confirmed_amount,6000);
+ assert.equal(tables.pending_payments[0].confirmed_amount,12500);
 });
+test('reopening an unpaid all-film checkout keeps the original six-digit code and one pending order',async()=>{
+ const cookie=await register(),other=await register('99112234');
+ const first=await api.POST(dbReq('pending_payments','POST',{ref_code:'675432',plan:'entry_72h',amount:2000,film_id:1},cookie));
+ assert.equal(first.status,200);
+ const [order]=await first.json();
+ assert.equal(order.amount,12500);assert.equal(order.film_id,null);assert.equal(order.plan,'entry_72h');
+ const second=await api.POST(dbReq('pending_payments','POST',{ref_code:'123456',plan:'entry_72h',film_id:2},cookie));
+ assert.equal(second.status,200);
+ assert.equal((await second.json())[0].ref_code,'675432');
+ assert.equal(tables.pending_payments.length,1);
+ const third=await api.POST(dbReq('pending_payments','POST',{ref_code:'123456',plan:'entry_72h'},other));
+ assert.equal(third.status,200);
+ assert.equal((await third.json())[0].ref_code,'123456');
+ assert.equal(tables.pending_payments.length,2);
+});
+
 test('admin can edit but cannot repeatedly extend confirmed payment',async()=>{
  const c=await admin();assert.equal((await api.PATCH(dbReq('films?id=eq.1','PATCH',{img:'',price:4000},c))).status,200);
  tables.pending_payments.push({id:1,ref_code:'123456',status:'confirmed',confirmed_at:now()});assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.123456','PATCH',{status:'confirmed'},c))).status,409);
