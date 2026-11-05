@@ -1,0 +1,12 @@
+# TAZA - Netlify Free preview (without moving the production domain).
+# This project uses Next.js server-side API routes; do not export a static site.
+# Netlify's maintained OpenNext adapter is selected automatically.
+# Never commit Supabase/admin/SMS secret values to this file.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "24"
+  NEXT_TELEMETRY_DISABLED = "1"

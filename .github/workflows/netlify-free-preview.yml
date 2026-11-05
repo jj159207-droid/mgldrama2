@@ -1,0 +1,48 @@
+name: Netlify Free preview safety checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - netlify.toml
+      - NETLIFY-FREE-MIGRATION-MN.md
+      - .github/workflows/netlify-free-preview.yml
+      - package.json
+      - package-lock.json
+      - tests/**
+
+concurrency:
+  group: netlify-free-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Check out exact code
+        uses: actions/checkout@v4
+      - name: Install Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        id: deps
+        run: npm ci
+      - name: Type check
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run typecheck
+      - name: Unit tests
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm test
+      - name: Production build
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run build
+      - name: UI tests
+        if: ${{ always() && steps.deps.outcome == 'success' }}
+        run: npm run test:ui

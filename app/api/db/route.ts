@@ -1,7 +1,8 @@
 import { NextRequest } from 'next/server';
-import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session,siteEntryAllowed } from '@/lib/server';
-import { plans,safeUrl,type Row } from '@/lib/domain';
+import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
+import { plans,safeUrl,ALL_MOVIES_PRICE,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
+import { isR2MovieReference } from '@/lib/r2';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
 function validateFilm(b:Row) {
@@ -12,7 +13,7 @@ function validateFilm(b:Row) {
   if('badge' in b && (typeof b.badge!=='string' || !['Эротик','Гадаад','Хятад','Орос'].includes(b.badge.split('|')[1] || 'Эротик')))throw new ApiError(400,'Киноны ангиллыг сонгоно уу. Бүгд нь киноны ангилал биш.');
   for(const k of ['views','op','price'])if(k in b && (typeof b[k]!=='number'||!Number.isSafeInteger(b[k])||Number(b[k])<0))throw new ApiError(400,'Үнэ болон үзсэн тоо 0 эсвэл эерэг бүхэл тоо байна.');
   for(const k of ['free','locked'])if(k in b && typeof b[k]!=='boolean')throw new ApiError(400,'Киноны төлөв буруу.');
-  for(const k of ['url','preview_url'])if(b[k] && (typeof b[k]!=='string'||String(b[k]).split('|||').some(u=>u && !safeUrl(u))))throw new ApiError(400,'Зөв HTTPS видео холбоос оруулна уу.');
+  for(const k of ['url','preview_url'])if(b[k] && (typeof b[k]!=='string'||String(b[k]).split('|||').some((u,i)=>u && !safeUrl(u) && !(k==='url' && i===0 && isR2MovieReference(u)))))throw new ApiError(400,'Зөв HTTPS видео холбоос эсвэл хувийн R2 киноны зам оруулна уу.');
   if(b.img && !safeUrl(b.img,true))throw new ApiError(400,'Зөв зургийн холбоос эсвэл 2 MB хүртэл PNG/JPEG/WebP/GIF зураг оруулна уу.');
 }
 async function siteUsers(query:URLSearchParams,site:string) {
@@ -77,8 +78,6 @@ async function handler(req:NextRequest) {
 
   if(table==='sms_logs'&&admin&&!s?.masterAdmin)throw new ApiError(403,'SMS оношлогоог зөвхөн үндсэн админ харна.');
   if(table==='users'&&admin&&req.method==='GET')return json(await siteUsers(query,site));
-  if(table==='films'&&req.method==='GET'&&!admin&&site==='taza'&&!(await siteEntryAllowed(s?.userId,site)))
-    throw new ApiError(402,'ТАЗА САЙТ нээхийн тулд эхлээд 12,500₮ төлбөрөө баталгаажуулна уу.','SITE_PAYMENT_REQUIRED');
 
   if(['films','pending_payments','contact_messages'].includes(table))query.set('site_id',`eq.${site}`);
   let b:Row|undefined=req.method==='GET'||req.method==='DELETE'?undefined:await bodyJson(req);
@@ -120,11 +119,30 @@ async function handler(req:NextRequest) {
             }
             throw error;
           }
+        }else if(plan==='entry_30d') {
+          // One open 12,500₮ all-film checkout per visitor. Preserve the
+          // original six-digit payment reference across refresh/reentry.
+          const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
+          const existing=await db(
+            `pending_payments?site_id=eq.${site}&user_id=eq.${s.userId}&plan=eq.entry_30d&amount=eq.${ALL_MOVIES_PRICE}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
+          );
+          if(existing.length)return json(existing);
         }else if(plan==='single') {
           filmId=Number(b.film_id);if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
           const [film]=await db(`films?id=eq.${filmId}&site_id=eq.${site}&select=id,price,free,locked`);
           if(!film || film.free===true || film.locked===false)throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
           amount=Number(film.price);
+
+          // Re-open the exact same pending movie checkout instead of issuing
+          // another bank reference each time the phone page reloads.
+          // Never reuse a different movie, amount, site or user's payment.
+          if(Number.isSafeInteger(amount)&&amount>0) {
+            const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
+            const existing=await db(
+              `pending_payments?site_id=eq.${site}&user_id=eq.${s.userId}&plan=eq.single&film_id=eq.${filmId}&amount=eq.${amount}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
+            );
+            if(existing.length)return json(existing);
+          }
         }
         if(!Number.isSafeInteger(amount)||amount<=0)throw new ApiError(400,'Багц эсвэл үнэ буруу.');
         b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan,site_id:site};
@@ -187,11 +205,14 @@ async function handler(req:NextRequest) {
         });
         return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
       }
-      if(['all_48h','entry_72h'].includes(String(target?.plan)) && b.status==='confirmed'){
+      if(['all_48h','entry_72h','entry_30d'].includes(String(target?.plan)) && b.status==='confirmed'){
         if(target.status==='confirmed')return json(await db(`pending_payments?id=eq.${target.id}&select=*`));
         if(target.status!=='pending')throw new ApiError(409,'Төлбөрийн төлөв өөрчлөгдсөн байна.');
         const actualAmount=Number(b.confirmed_amount);
-        if(!Number.isSafeInteger(actualAmount)||actualAmount<=5000||actualAmount>200000)throw new ApiError(400,'5,000₮-өөс дээш бодитоор орсон дүнг оруулна уу.');
+        if(['entry_72h','entry_30d'].includes(String(target.plan)) && actualAmount!==ALL_MOVIES_PRICE)
+          throw new ApiError(400,'1 сарын бүх киноны эрх нээх төлбөр яг 12,500₮ байх ёстой.');
+        if(target.plan!=='entry_72h' && (!Number.isSafeInteger(actualAmount)||actualAmount<=5000||actualAmount>200000))
+          throw new ApiError(400,'5,000₮-өөс дээш бодитоор орсон дүнг оруулна уу.');
         b={status:'confirmed',confirmed_amount:actualAmount};
       }else{
         b={status:b.status};

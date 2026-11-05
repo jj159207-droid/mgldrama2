@@ -259,3 +259,10 @@
 .wallet-transfer-label-blink{color:#22c55e!important;font-weight:800;animation:wallet-transfer-label-blink 1.05s ease-in-out infinite}
 @keyframes wallet-transfer-label-blink{0%,100%{opacity:1;text-shadow:0 0 0 transparent}50%{opacity:.3;text-shadow:0 0 9px currentColor}}
 @media(prefers-reduced-motion:reduce){.wallet-transfer-label-blink{animation:none}}
+
+
+/* Scroll/hover trailer only. The static poster remains until media actually plays. */
+.movie-card-autopreview{position:absolute;inset:0;display:block;width:100%;height:100%;overflow:hidden;z-index:0;pointer-events:none;background:transparent}
+.movie-card-autopreview video{display:block;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .2s ease;pointer-events:none}
+.movie-card-autopreview video.is-playing{opacity:1}
+@media(prefers-reduced-motion:reduce){.movie-card-autopreview video{display:none}}

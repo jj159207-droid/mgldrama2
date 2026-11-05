@@ -31,3 +31,21 @@ test('cached twelve-second preview is reusable; neither full URL nor credentials
  const data=await response.json();assert.equal(data.startSeconds,930);assert.equal(data.durationSeconds,12);assert.match(data.previewUrl,/kino-trailers\/v1\/[a-f0-9]{64}\.mp4#taza-trailer=1&start=930$/);
  assert.ok(!JSON.stringify(data).includes(sourceUrl));assert.ok(!JSON.stringify(data).includes('fake.service.jwt'));assert.equal(calls.length,3);
 });
+
+test('admin R2 private MP4 time selector returns only the cached twelve-second trailer',async()=>{
+ const calls=fixtures(),privateMovie='r2://taza-movies/films/sample-01.mp4';
+ const response=await POST(req({filmId:7,sourceUrl:privateMovie,startSeconds:3723}));
+ assert.equal(response.status,200);
+ const data=await response.json();
+ assert.equal(data.startSeconds,3723);
+ assert.equal(data.durationSeconds,12);
+ assert.match(data.previewUrl,/kino-trailers\/v1\/[a-f0-9]{64}\.mp4#taza-trailer=1&start=3723$/);
+ assert.ok(!JSON.stringify(data).includes('r2://'));
+ assert.equal(calls.length,3);
+});
+
+test('trailer API denies invalid private R2 keys and other buckets',async()=>{
+ fixtures();
+ for(const sourceUrl of ['r2://another-bucket/sample.mp4','r2://taza-movies/../sample.mp4','r2://taza-movies/film.m3u8'])
+   assert.equal((await POST(req({filmId:7,sourceUrl,startSeconds:10}))).status,422);
+});

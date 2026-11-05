@@ -3,6 +3,8 @@ import { NextRequest } from 'next/server';
 import ffmpeg from 'ffmpeg-static';
 import { ApiError, bodyJson, canAdminSite, db, fail, json, originCheck, requestSite, session, supabaseConfig } from '@/lib/server';
 import { createBunnyClip, MAX_CLIP_BYTES, parseBunnySource, TrailerError } from '@/lib/trailer-media';
+import { createPrivateR2Trailer } from '@/lib/trailer-r2';
+import { r2MovieObjectKey } from '@/lib/r2';
 import { TRAILER_SECONDS, validTrailerStart } from '@/lib/trailer-spec';
 export const runtime = 'nodejs';
 export const maxDuration = 180;
@@ -17,13 +19,15 @@ export async function POST(req: NextRequest) {
     if (Object.keys(body).some(k => !['filmId', 'sourceUrl', 'startSeconds'].includes(k))
       || !Number.isSafeInteger(body.filmId) || Number(body.filmId) <= 0 || typeof body.sourceUrl !== 'string' || !validTrailerStart(body.startSeconds))
       throw new ApiError(400, 'Кино, видео холбоос болон эхлэх цагийг зөв оруулна уу.');
-    const source = parseBunnySource(body.sourceUrl);
+    const privateR2Key = r2MovieObjectKey(body.sourceUrl);
+    const source = privateR2Key ? null : parseBunnySource(body.sourceUrl);
+    const identity = privateR2Key ? `r2:taza-movies/${privateR2Key}` : source!.identity;
     const [film] = await db(`films?id=eq.${body.filmId}&site_id=eq.${site}&select=id`);
     if (!film) throw new ApiError(404, 'Кино олдсонгүй.');
     if (busy) throw new ApiError(429, 'Өөр трейлэр үүсгэж байна. Дууссаны дараа дахин оролдоно уу.');
     busy = true; acquired = true;
     const { url, headers } = supabaseConfig();
-    const hash = createHash('sha256').update(JSON.stringify(['clip-v1', body.filmId, source.identity, body.startSeconds])).digest('hex');
+    const hash = createHash('sha256').update(JSON.stringify(['clip-v1', body.filmId, identity, body.startSeconds])).digest('hex');
     const path = `v1/${hash}.mp4`;
     const publicUrl = `${url}/storage/v1/object/public/kino-trailers/${path}`;
     const result = () => json({ previewUrl: `${publicUrl}#taza-trailer=1&start=${body.startSeconds}`, startSeconds: body.startSeconds, durationSeconds: TRAILER_SECONDS });
@@ -31,7 +35,7 @@ export async function POST(req: NextRequest) {
     if (cached.ok) return result();
     if (![400, 404].includes(cached.status)) throw new ApiError(502, 'Трейлэрийн сантай холбогдож чадсангүй.');
     if (!ffmpeg) throw new ApiError(503, 'FFmpeg тохиргоо дутуу байна.', 'TRAILER_SETUP_REQUIRED');
-    const clip = await createBunnyClip(source, body.startSeconds, ffmpeg, process.env.SITE_URL);
+    const clip = privateR2Key ? await createPrivateR2Trailer(body.sourceUrl, body.startSeconds, ffmpeg) : await createBunnyClip(source!, body.startSeconds, ffmpeg, process.env.SITE_URL);
     if (clip.length > MAX_CLIP_BYTES) throw new ApiError(413, 'Бичлэгийн хэмжээ хэт том байна.');
     const upload = await fetch(`${url}/storage/v1/object/kino-trailers/${path}`, {
       method: 'POST', headers: { ...headers, 'Content-Type': 'video/mp4', 'Cache-Control': 'max-age=31536000', 'x-upsert': 'false' },

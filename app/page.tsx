@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES } from "@/lib/domain";
+import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, ALL_MOVIES_PRICE, ALL_MOVIES_PLAN, ALL_MOVIES_TITLE } from "@/lib/domain";
 import { SITES, siteFromPathname, type SiteId } from "@/lib/site";
 
 import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
@@ -20,6 +20,7 @@ import {appearanceStyle} from "@/lib/appearance";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
+import ScrollCardPreview from "@/app/components/ScrollCardPreview";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
 import { INITIAL_CATALOG, type CatalogState } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, type FilmDetails } from "@/lib/film-details";
@@ -329,7 +330,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
           <div style={{ fontSize: 22, fontWeight: 800, color: C.green }}>Төлбөр баталгаажлаа!</div>
           <div style={{ fontSize: 14, color: C.muted, marginTop: 8 }}>{isEntryGate ? "Кино сан нээгдэж байна..." : "Үзэх эрх нээгдэж байна..."}</div>
           {paymentError && <><p role="alert">{paymentError}</p><p>Холболт сэргэхэд дахин оролдоно. Дахин мөнгө шилжүүлэх шаардлагагүй.</p></>}
-          {!isEntryGate && <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>}
+          <button className="secondary-button" onClick={onClose}>{film.monthly && !inline ? "Кино сан руу буцах" : "Кино руу буцах"}</button>
         </div>
       </div>
     );
@@ -337,11 +338,11 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
   const checkout = <>
     {isSimpleMovieTopup ? <>
-      {!isEntryGate && <div className="wallet-single-topbar">
+      <div className="wallet-single-topbar">
         <button type="button" className="wallet-single-back" onClick={onClose} aria-label="Кино руу буцах">←</button>
-        <strong>Киноны данс цэнэглэх</strong>
+        <strong>{isEntryGate ? ALL_MOVIES_TITLE : "Киноны данс цэнэглэх"}</strong>
         <span />
-      </div>}
+      </div>
 
       {paymentError && <p role="alert" className="checkout-error wallet-single-error">{paymentError}</p>}
 
@@ -350,13 +351,13 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       </section>
 
       <button type="button" className="wallet-single-copy" onClick={() => copyText(bankAccount.number,"account")}>
-        <span><small>Данс · {bankAccount.bank} · IBAN-{String(bankAccount.iban || "").replace(/^MN/i,"")}</small><strong>{bankAccount.number}</strong></span>
+        <span><small>Данс · {bankAccount.bank} · {bankAccount.name} · IBAN {bankAccount.iban}</small><strong>{bankAccount.number}</strong></span>
         <b>{copied === "account" ? "Хуулагдлаа ✓" : "Хуулах"}</b>
       </button>
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
-        <p><strong>Шилжүүлэх дүн 12,500₮</strong></p>
-        <p><strong>Бүх киног үзэх эрх</strong></p>
+        <p><strong>Шилжүүлэх дүн {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></p>
+        <p><strong>{ALL_MOVIES_TITLE} · 12,500₮ · 30 хоног</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -374,7 +375,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <div className={isEntryGate ? "wallet-entry-wait-content" : undefined}>
           <strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Төлбөр шалгаж байна…" : "Төлбөрийн SMS хүлээж байна"}</strong>
           {autoStatus === "timeout"
-            ? (!isEntryGate && <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>)
+            ? <p>Мөнгө шилжүүлсэн бол дахин шилжүүлэхгүй, админтай холбогдоно уу.</p>
             : isEntryGate
               ? <>
                   <button
@@ -400,6 +401,10 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         </div>
       </div>
 
+      {isEntryGate && <div className="wallet-entry-confirm-actions">
+        <button type="button" className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
+        <button type="button" className="secondary-button checkout-back" onClick={onClose}>Кино руу буцах</button>
+      </div>}
       {isEntryGate && <div className="wallet-single-topbar wallet-single-bottom-banner">
         <AdminEntryLogo onOpen={()=>onAdmin?.()} />
         <span />
@@ -556,22 +561,23 @@ function Poster({ film, brandName="ТАЗА САЙТ" }: any) {
   </div>;
 }
 function FilmCard({ film, onClick, expiry, brandName }: any) {
-  const available = film.free || film.locked === false || !!expiry;
+  const available = !!expiry; // Every TAZA movie is part of the all-movies bundle.
   const isErotic = decodeCat(film.badge) === "Эротик";
   return <article className={`movie-card${isErotic ? " erotic-card" : ""}`}>
     <button type="button" className="movie-main" onClick={onClick} aria-label={`${film.title} — дэлгэрэнгүй үзэх`}>
       <div className="movie-poster">
         <Poster key={film.img || "no-image"} film={film} brandName={brandName} />
+        <ScrollCardPreview film={film} />
         <span className="movie-badge">{decodeBadge(film.badge)}</span>
         {isErotic && <span className="movie-age21">+21</span>}
-        {film.free && <span className="movie-free">Үнэгүй</span>}
+        {/* All films belong to the unified bundle; no public free badge. */}
         <span className="movie-play"><UiIcon name="play" size={25} /></span>
       </div>
       <div className="movie-info">
         <span className="movie-category">{decodeCat(film.badge)}</span>
         <h3>{film.title}</h3>
-        <div className="movie-price"><strong className={available ? "available" : ""}>{film.free ? "Үнэгүй үзэх" : available ? "Үзэх эрхтэй" : `${Number(film.price || 0).toLocaleString()}₮`}</strong>
-          {!available && Number(film.op) > Number(film.price) && <del>{Number(film.op).toLocaleString()}₮</del>}
+        <div className="movie-price"><strong className={available ? "available" : ""}>{available ? "Үзэх эрхтэй" : `${ALL_MOVIES_TITLE} · ${ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮`}</strong>
+          {/* One fixed all-movies price: no misleading film-by-film discounts. */}
         </div>
         {expiry && <span className="movie-expiry">{expiry}</span>}
       </div>
@@ -644,69 +650,41 @@ function LoginModal({ onLogin }: { onLogin: (u: any) => void }) {
   </form>;
 }
 
-function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsReady = true }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; films?: any[]; countsReady?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState("gadaad");
-  const [duration, setDuration] = useState("72h");
+function PlanModal({ onSelect, autoOpen, onAutoClose }: { onSelect: (plan: string) => void; autoOpen?: boolean; onAutoClose?: () => void; user?: any; films?: any[]; countsReady?: boolean }) {
+  const [open,setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const categories = [{key:"gadaad",label:"Гадаад"},{key:"hyatad",label:"Хятад"},{key:"oros",label:"Орос"},{key:"erotic",label:"Эротик"},{key:"all",label:"Бүх ангилал"}];
-  const countFor = (key: string) => films.filter(f => key === "all" ? ["Гадаад","Хятад","Орос","Эротик"].includes(decodeCat(f.badge)) : decodeCat(f.badge) === categories.find(c => c.key === key)?.label).length;
-  const plan = category === "all" ? "all_48h" : `${category}_3day`;
-  const price = PLAN_PRICES[plan];
-  const selectedCount = countFor(category);
   const ensurePlanHistory = useCallback(() => {
     if (typeof window === "undefined" || window.history.state?.page === "planmodal") return;
-    window.history.pushState({page:"planmodal"}, "", window.location.href);
-  }, []);
-  useEffect(() => { if (autoOpen) {ensurePlanHistory();setOpen(true);} }, [autoOpen,ensurePlanHistory]);
-  useEffect(() => {
-    const openPreset=(event:Event)=>{
-      const detail=(event as CustomEvent<{category?:string;duration?:string}>).detail || {};
-      if(detail.category==="erotic" || detail.category==="all"){
-        ensurePlanHistory();
-        setCategory(detail.category);
-        setDuration("72h");
-        setOpen(true);
-      }
-    };
-    window.addEventListener("kinoOpenPlanPreset",openPreset as EventListener);
-    return()=>window.removeEventListener("kinoOpenPlanPreset",openPreset as EventListener);
-  }, [ensurePlanHistory]);
-  useEffect(() => {
-    if (open) dialogRef.current?.showModal(); else dialogRef.current?.close();
-  }, [open]);
-  const finishClose = useCallback(() => {setOpen(false);onAutoClose?.();},[onAutoClose]);
-  const close = () => {
-    if(typeof window!=="undefined" && window.history.state?.page==="planmodal"){window.history.back();return;}
+    window.history.pushState({page:"planmodal"},"",window.location.href);
+  },[]);
+  useEffect(() => { if(autoOpen){ensurePlanHistory();setOpen(true);} },[autoOpen,ensurePlanHistory]);
+  useEffect(()=>{
+    const show=()=>{ensurePlanHistory();setOpen(true);};
+    window.addEventListener("kinoOpenPlanPreset",show);
+    return()=>window.removeEventListener("kinoOpenPlanPreset",show);
+  },[ensurePlanHistory]);
+  useEffect(()=>{if(open)dialogRef.current?.showModal();else dialogRef.current?.close();},[open]);
+  const finishClose=useCallback(()=>{setOpen(false);onAutoClose?.();},[onAutoClose]);
+  const close=()=>{
+    if(typeof window!=="undefined"&&window.history.state?.page==="planmodal"){window.history.back();return;}
     finishClose();
   };
-  useEffect(() => {if (!open) return; window.addEventListener("popstate", finishClose);return () => window.removeEventListener("popstate", finishClose);}, [open,finishClose]);
-  const select = () => {
-    if(countsReady && selectedCount === 0)return;
-    if(typeof window!=="undefined" && window.history.state?.page==="planmodal"){
-      window.history.replaceState({page:"home"},"",window.location.href);
-    }
+  useEffect(()=>{if(!open)return;window.addEventListener("popstate",finishClose);return()=>window.removeEventListener("popstate",finishClose);},[open,finishClose]);
+  const select=()=>{
+    if(typeof window!=="undefined"&&window.history.state?.page==="planmodal")window.history.replaceState({page:"home"},"",window.location.href);
     finishClose();
-    onSelect(plan);
+    onSelect(ALL_MOVIES_PLAN);
   };
-  return <dialog ref={dialogRef} className="plan-dialog package-dialog" aria-labelledby="package-dialog-title" onCancel={e=>{e.preventDefault();close();}} onClick={e => {if(e.target === e.currentTarget)close();}}>
-      <div className="dialog-heading"><div><span className="eyebrow">ҮЗЭХ ЭРХ</span><h2 id="package-dialog-title">Багцаа сонгоорой</h2></div><button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button></div>
-      <fieldset className="package-fieldset"><legend>1. Ямар кино үзэх вэ?</legend><div className="package-choices">
-        {categories.map(c => <label key={c.key} className={`package-choice ${category === c.key ? "selected" : ""}`}>
-          <input type="radio" name="package-category" value={c.key} checked={category === c.key} onChange={() => {setCategory(c.key);setDuration("72h");}} />
-          <span><strong>{c.label}{c.key === "erotic" && <span className="age-label">21+</span>}</strong><span>{c.key === "all" ? "Бүх ангилал" : "Тухайн ангиллын бүх кино"}</span></span>
-        </label>)}
-      </div><p className="package-hint">{category === "all" ? "Гадаад, хятад, орос, эротик — дөрвөн ангиллын бүх кино." : "Сонгосон ангиллын бүх киног үзнэ."}</p></fieldset>
-      <fieldset className="package-fieldset"><legend>2. Хэдий хугацаанд үзэх вэ?</legend><div className="package-durations">
-        {["72h"].map(d => <label key={d} className={`package-choice ${duration === d ? "selected" : ""}`}>
-          <input type="radio" name="package-duration" value={d} checked={duration === d} onChange={() => setDuration(d)} />
-          <span><strong>72 цаг</strong><span>{PLAN_PRICES[category === "all" ? "all_48h" : `${category}_3day`].toLocaleString()}₮</span></span>
-        </label>)}
-      </div><p className="package-hint">Төлбөр баталгаажсан үеэс үзэх хугацаа эхэлнэ.</p></fieldset>
-      <div className="package-summary" aria-live="polite"><span><strong>{planLabel(plan)}</strong><span>Сонгосон багцын кинонууд</span></span><strong>{price.toLocaleString()}₮</strong></div>
-      {countsReady && selectedCount === 0 && <p className="package-hint" role="status">Одоогоор энэ ангилалд кино байхгүй байна. Өөр ангилал сонгоорой.</p>}
-      <button type="button" className="primary-button package-continue" disabled={countsReady && selectedCount === 0} onClick={select}>Төлбөр төлөх</button>
-    </dialog>;
+  return <dialog ref={dialogRef} className="plan-dialog package-dialog" aria-labelledby="package-dialog-title" onCancel={e=>{e.preventDefault();close();}} onClick={e=>{if(e.target===e.currentTarget)close();}}>
+    <div className="dialog-heading">
+      <div><span className="eyebrow">НЭГ БАГЦ · БҮХ КИНО</span><h2 id="package-dialog-title">{ALL_MOVIES_TITLE}</h2></div>
+      <button type="button" className="icon-button" aria-label="Багцын сонголт хаах" onClick={close}><UiIcon name="close" /></button>
+    </div>
+    <p className="package-hint">Нэг удаа 12,500₮ төлөөд бүх киног 1 сарын (30 хоногийн) турш үзэх эрхтэй болно. Хугацаа төлбөр баталгаажсан мөчөөс эхэлнэ.</p>
+    <div className="package-summary" aria-live="polite"><span><strong>{ALL_MOVIES_TITLE}</strong><span>Бүх ангилал · 1 сар (30 хоног)</span></span><strong>{ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</strong></div>
+    <p className="package-hint">Банкны данс болон 6 оронтой гүйлгээний утга төлбөрийн хэсэгт гарна.</p>
+    <button type="button" className="primary-button package-continue" onClick={select}>Бүх киног үзэх эрх авах · {ALL_MOVIES_PRICE.toLocaleString("mn-MN")}₮</button>
+  </dialog>;
 }
 
 function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ", admin=false }: any) {
@@ -756,7 +734,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>Сайтын бүх кино 7,900₮</strong><span>72 цаг үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>1 сарын турш бүх киног үзэх эрх · 12,500₮</strong><span>1 сарын үзэх эрх</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
@@ -1083,7 +1061,7 @@ function AdminMembersTab() {
   const isActive = (p: any) => paymentExpiry({...p,status:"confirmed"}) > now;
   const activePayments = allPayments.filter(p => p.plan !== "wallet_topup" && isActive(p));
 
-  const paymentsAllBag = activePayments.filter(p => ["all_1month","all_48h","entry_72h","monthly","1month","3day","1year"].includes(p.plan));
+  const paymentsAllBag = activePayments.filter(p => ["all_1month","all_48h","entry_72h","entry_30d","monthly","1month","3day","1year"].includes(p.plan));
   const paymentsPackage = activePayments.filter(p => p.plan && /_(3day|1month)$/.test(String(p.plan)) && p.plan !== "all_1month");
   const paymentsFilm = activePayments.filter(p => !p.plan || p.plan === "single");
   const revocableUserPayments = userPayments.filter((p:any) => p.plan !== "wallet_topup" && isActive(p));
@@ -1147,7 +1125,7 @@ function AdminMembersTab() {
     } finally { setGranting(false); }
   };
 
-  const tabLabel = filterTab === "allbag" ? "🌟 Бүх киноны 72 цагийн эрхтэй гишүүд" : filterTab === "package" ? "👑 Ангиллын 72 цагийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
+  const tabLabel = filterTab === "allbag" ? "🌟 Бүх киноны эрхтэй гишүүд" : filterTab === "package" ? "👑 Ангиллын 72 цагийн эрхтэй гишүүд" : "🎬 1 кино эрхтэй гишүүд";
 
   // ── Нийт гишүүдийн жагсаалт дэлгэц ──
   if (showAllUsers) {
@@ -1262,13 +1240,13 @@ function AdminMembersTab() {
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>Эрх нэмэх:</div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
                   {[
-                    ["all_1month", "🌟", "Бүх кино · 72 цаг",  "#1a0a3a", "#f59e0b", "#fcd34d"],
+                    [ALL_MOVIES_PLAN, "🌟", "Бүх кино · 1 сар",  "#1a0a3a", "#f59e0b", "#fcd34d"],
                     ["3day_cat",   "👑", "Ангилал · 72 цаг",   "#061220", "#38bdf8", "#7dd3fc"],
                     ["film",       "🎬", "1 кино эрх",         "#031a0e", "#16a34a", "#4ade80"],
                   ].map(([key, icon, label, bg, border, color]) => (
                     <button key={key} disabled={granting}
                       onClick={() => {
-                        if (key === "all_1month") grantAccess("all_1month");
+                        if (key === ALL_MOVIES_PLAN) grantAccess(ALL_MOVIES_PLAN);
                         else setGrantStep(key as any);
                       }}
                       style={{ background: bg as string, border: `0.5px solid ${border}`, borderRadius: 10, padding: "12px 10px", cursor: "pointer", textAlign: "left", opacity: granting ? 0.6 : 1 }}>
@@ -1552,7 +1530,7 @@ function EditFilmPanel({ f, onDone }: any) {
   const existingPreview = f.preview_url || (f.url && f.url.includes("|||") ? f.url.split("|||")[1] : "");
   const [title, setTitle] = useState(f.title);
   const [description, setDescription] = useState(f.description || "");
-  const [price, setPrice] = useState(String(f.price ?? 2000));
+  const [price, setPrice] = useState(String(f.price ?? ALL_MOVIES_PRICE));
   const [op, setOp] = useState(String(f.op ?? 6000));
   const [url, setUrl] = useState(mainUrl);
   const [img, setImg] = useState(f.img || "");
@@ -1890,7 +1868,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
   const unreadCount = useChatUnread("admin");
   const [imgVal, setImgVal] = useState(""); const [urlVal, setUrlVal] = useState("");
 
-  const empty = { title: "", description: "", views: 0, op: 6000, price: 2000, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
+  const empty = { title: "", description: "", views: 0, op: 12500, price: ALL_MOVIES_PRICE, badge: "Хэлтэй", free: false, locked: true, url: "", img: "", bg: "#1a0820", cat: "Гадаад" };
   const [form, setForm] = useState<any>(empty);
   const set = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.value }));
   const setChk = (k: string) => (e: any) => setForm((f: any) => ({ ...f, [k]: e.target.checked }));
@@ -2046,8 +2024,8 @@ export default function Home() {
   const [siteResolved,setSiteResolved]=useState(false);
   const brandName=SITES[siteId].name;
   const [masterAdmin,setMasterAdmin]=useState(false);
-  const [entryReady,setEntryReady]=useState(false);
-  const [entryAllowed,setEntryAllowed]=useState(false);
+  const [entryReady,setEntryReady]=useState(true);
+  const [entryAllowed,setEntryAllowed]=useState(true);
   const [entryError,setEntryError]=useState("");
   useEffect(()=>{
     setSiteId(siteFromPathname(window.location.pathname));
@@ -2160,37 +2138,14 @@ export default function Home() {
     return()=>{active=false;};
   }, []);
 
+  // Catalog access is free. Device registration is deferred until the user
+  // chooses a paid movie or requests another account-only action.
   useEffect(() => {
-    if(!mounted||!authReady||!siteResolved)return;
-    if(siteId!=="taza"){
-      setEntryAllowed(true);setEntryReady(true);setEntryError("");
-      return;
-    }
-    if(adminAuth){
-      setEntryAllowed(true);setEntryReady(true);setEntryError("");
-      return;
-    }
-    let cancelled=false;
-    const run=async()=>{
-      setEntryReady(false);setEntryError("");
-      try{
-        const viewer=user?.id?user:await ensureDeviceUser();
-        if(cancelled)return;
-        if(!viewer?.id)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
-        const data=await requestJson("/api/entry-access",{},true);
-        if(cancelled)return;
-        setEntryAllowed(data?.allowed===true);
-        setEntryReady(true);
-      }catch(error){
-        if(cancelled)return;
-        setEntryAllowed(false);
-        setEntryReady(true);
-        setEntryError(error instanceof Error?error.message:"Төлбөрийн эрхийг шалгаж чадсангүй.");
-      }
-    };
-    void run();
-    return()=>{cancelled=true;};
-  },[mounted,authReady,siteResolved,siteId,adminAuth,user?.id]);
+    if (!siteResolved) return;
+    setEntryAllowed(true);
+    setEntryReady(true);
+    setEntryError("");
+  }, [siteResolved]);
 
   useEffect(()=>{
     if(!mounted||!authReady||!user?.id)return;
@@ -2247,7 +2202,7 @@ export default function Home() {
   }, []);
   useEffect(() => {
     if(!siteResolved)return;
-    const mayLoad=adminAuth || siteId!=="taza" || entryAllowed;
+    const mayLoad=siteResolved;
     if(!mayLoad){
       filmLoadController.current?.abort();
       setFilms([]);setLoading(false);setLoadError("");
@@ -2312,7 +2267,7 @@ export default function Home() {
   // Visiting a movie link loads public details only. Playback always needs a click.
   useEffect(() => {
     if(filmTarget.kind==="none")return;
-    if(siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed){setFilmOpening(false);return;}
+    /* Public film metadata is always available; playback remains paid. */
     setPage("film");setFilmError("");setFilmOpening(true);
     if(filmTarget.kind==="invalid"){
       setSelectedFilm(null);setFilmError("Киноны холбоос буруу байна. Бүх кино хэсгээс киногоо сонгоно уу.");setFilmOpening(false);return;
@@ -2405,21 +2360,11 @@ export default function Home() {
       } catch(error) {
         if(!current())return;
         if(error instanceof RequestError && error.status===403){
-          try{
-            const wallet=await purchaseWithWallet(film,viewerId);
-            if(accessOwner.current!==viewerId)return;
-            if(wallet.ok){
-              if(await playFilm(film,()=>accessOwner.current===viewerId))setPayFilm(null);
-            }else{
-              const needed=Math.max(0,wallet.price-wallet.balance);
-              const topupAmount=Math.max(6000,Math.ceil(needed/1000)*1000);
-              trackSiteEvent("payment_open",Number(film.id));
-              setPayFilm({id:0,title:"Үлдэгдэл цэнэглэх",price:topupAmount,topupAmount,monthly:true,plan:"wallet_topup",locked:true,returnFilm:film,walletBefore:wallet.balance});
-              setPage("film");
-            }
-          }catch(walletError){
-            setWatchError(walletError instanceof Error?walletError.message:"Үлдэгдлийг шалгаж чадсангүй.");
-          }
+          // One 12,500₮ all-movies purchase, not a single-film sale.
+          // The server still checks payment/entitlement before returning a URL.
+          trackSiteEvent("payment_open",Number(film.id));
+          setPayFilm({id:0,title:ALL_MOVIES_TITLE,price:ALL_MOVIES_PRICE,monthly:true,plan:ALL_MOVIES_PLAN,entryGate:true,locked:true,returnFilm:film});
+          setPage("film");
         } else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй. Дахин оролдоно уу.");
       }
     } catch(error) {setWatchError(error instanceof Error?error.message:"Төхөөрөмжийг таньж чадсангүй. Дахин оролдоно уу.");}
@@ -2497,11 +2442,11 @@ export default function Home() {
     if (plan === "show_plan") {
       window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
     }
-    if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan)) return;
+    if (plan!==ALL_MOVIES_PLAN) return;
     if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
     if(sourceFilm){setPage("film");}
     else navigateTo("payment");
-    setPayFilm({id:0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:true,plan,locked:true,returnFilm:sourceFilm});
+    setPayFilm({id:0,title:ALL_MOVIES_TITLE,price:ALL_MOVIES_PRICE,monthly:true,plan:ALL_MOVIES_PLAN,entryGate:true,locked:true,returnFilm:sourceFilm});
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     try {
@@ -2509,7 +2454,7 @@ export default function Home() {
       if(!viewer && !adminAuth)viewer=await ensureDeviceUser();
       if(adminAuth && !viewer){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
       if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
-      if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup" || plan==="entry_72h")return;
+      if(plan!==ALL_MOVIES_PLAN)return;
       if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
       openPlanCheckout(plan,sourceFilm);
     } catch(error) {setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
@@ -2561,15 +2506,15 @@ export default function Home() {
     try {
       await requestJson("/api/auth",{method:"POST",body:JSON.stringify({action:"logout"})});
       accessOwner.current=null;setUser(null);setAdminAuth(false);setMasterAdmin(false);setAccessMap({});setWalletBalance(0);
-      setEntryAllowed(siteId!=="taza");setEntryReady(siteId!=="taza");setEntryError("");
+      setEntryAllowed(true);setEntryReady(true);setEntryError("");
       navigateTo("home");
     } catch {} // Keep the signed-in state visible if server-side logout failed.
   };
   const filmsWithUnlock = films.map((f: any) => hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked: false } : f);
-  const entryBarrier=siteResolved&&siteId==="taza"&&!adminAuth&&!entryAllowed&&page!=="adminlogin";
+  const entryBarrier=false; // No admission fee: film access is checked only on playback.
   const entryPaymentFilm={
-    id:0,title:"ТАЗА САЙТ нээх",price:12500,
-    monthly:true,plan:"entry_72h",locked:true,entryGate:true,walletBefore:walletBalance
+    id:0,title:ALL_MOVIES_TITLE,price:ALL_MOVIES_PRICE,
+    monthly:true,plan:ALL_MOVIES_PLAN,locked:true,entryGate:true,walletBefore:walletBalance
   };
 
   return (
@@ -2618,7 +2563,7 @@ export default function Home() {
         </main>
       ) : <>
       {(page === "home" || page === "payment") && <HomePage chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
-      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && (adminAuth || selectedFilm.free || selectedFilm.locked===false || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
+      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm} films={films} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} available={!!selectedFilm && hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
       {page === "admin-choice" && adminAuth && <AdminDestinationChoice brandName={brandName} onAdmin={()=>navigateTo("admin")} onMovies={()=>navigateTo("home")} onLogout={handleLogout} />}

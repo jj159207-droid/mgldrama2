@@ -27,8 +27,10 @@ test('checkout loads the latest saved bank settings instead of only hardcoded da
 test('package purchase dialog does not reveal movie counts',()=>{
   assert.doesNotMatch(page,/\$\{countFor\(c\.key\)\} кино/);
   assert.doesNotMatch(page,/\$\{selectedCount\} кино үзэх эрх/);
-  assert.match(page,/Тухайн ангиллын бүх кино/);
-  assert.match(page,/Сонгосон багцын кинонууд/);
+  assert.match(page,/Бүх киног үзэх эрх/);
+  assert.match(page,/НЭГ БАГЦ · БҮХ КИНО/);
+  assert.match(page,/ALL_MOVIES_PRICE/);
+  assert.doesNotMatch(page,/Сайтын бүх кино 7,900₮/);
 });
 
 test('login and registration are presented as two clear choices with large numeric inputs',()=>{
@@ -48,12 +50,14 @@ test('completed phone and registration PIN fields advance focus automatically',(
 test('site settings endpoint permits optional Messenger while validating payment details',()=>{
   assert.match(settings,/messengerRaw\?safeUrl\(messengerRaw\):''/);
   assert.match(settings,/validAccount\(bankAccount\)/);
-  assert.match(settings,/kino_save_settings/);
+  assert.match(settings,/site_settings\?site_id=/);
+  assert.match(settings,/const rows=await db\(/);
 });
 
 
-test('TAZA entry payment has no pre-payment movie visibility banner and admin chooses destination',()=>{
-  assert.doesNotMatch(page,/Кинонууд төлбөр баталгаажсаны дараа харагдана/);
+test('TAZA has no mandatory entry fee and admin chooses destination',()=>{
+  assert.match(page,/const entryBarrier=false/);
+  assert.match(page,/Үзэх эрх авах/);
   assert.match(page,/aria-label="Админ удирдах хэсэг"/);
   assert.match(page,/aria-label="Кино хэсэг"/);
   assert.match(page,/navigateTo\("admin-choice"\)/);
