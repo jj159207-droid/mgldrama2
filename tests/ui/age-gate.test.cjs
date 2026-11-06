@@ -14,6 +14,7 @@ const render = () => act(async () => root.render(React.createElement(AgeGate, nu
 const settle = () => act(async () => { await Promise.resolve(); });
 beforeEach(() => {
   window.localStorage.clear();
+  window.sessionStorage.clear();
   root = createRoot(document.getElementById('root'));
 });
 afterEach(async () => { await act(async () => root.unmount()); document.getElementById('root').innerHTML = ''; });
@@ -25,20 +26,20 @@ test('site content stays hidden until a visitor confirms they are 21+', async ()
   assert.equal(document.querySelector('#site'), null);
   const yes = [...document.querySelectorAll('button')].find(button => /Тийм/.test(button.textContent));
   assert.ok(yes); await act(async () => yes.click());
-  assert.equal(window.localStorage.getItem('taza_age_21_v1'), 'yes');
+  assert.equal(window.sessionStorage.getItem('taza_age_21_session_v2'), 'yes');
   assert.equal(document.querySelector('#site').textContent, 'SITE CONTENT');
 });
 
-test('previous 21+ confirmation opens the site without asking again', async () => {
-  window.localStorage.setItem('taza_age_21_v1', 'yes');
+test('21+ confirmation stays valid when this browser session reloads', async () => {
+  window.sessionStorage.setItem('taza_age_21_session_v2', 'yes');
   await render(); await settle();
   assert.equal(document.querySelector('#site').textContent, 'SITE CONTENT');
   assert.doesNotMatch(document.body.textContent, /Та 21 нас хүрсэн үү/);
 });
 
 test('under-21 choice clears approval and sends the visitor back', async () => {
-  window.localStorage.setItem('taza_age_21_v1', 'yes');
-  window.localStorage.removeItem('taza_age_21_v1');
+  window.sessionStorage.setItem('taza_age_21_session_v2', 'yes');
+  window.sessionStorage.removeItem('taza_age_21_session_v2');
   window.history.pushState({}, '', '/from-facebook');
   let backed = 0;
   window.history.back = () => { backed++; };
@@ -47,5 +48,22 @@ test('under-21 choice clears approval and sends the visitor back', async () => {
   const no = [...document.querySelectorAll('button')].find(button => /Үгүй/.test(button.textContent));
   assert.ok(no); await act(async () => no.click());
   assert.equal(backed, 1);
-  assert.equal(window.localStorage.getItem('taza_age_21_v1'), null);
+  assert.equal(window.sessionStorage.getItem('taza_age_21_session_v2'), null);
+});
+
+
+test('old permanent approval never skips the 21+ prompt in a new session', async () => {
+  window.localStorage.setItem('taza_age_21_v1', 'yes');
+  await render(); await settle();
+  assert.match(document.body.textContent, /Та 21 нас хүрсэн үү/);
+  assert.equal(document.querySelector('#site'), null);
+  assert.equal(window.sessionStorage.getItem('taza_age_21_session_v2'), null);
+});
+
+test('each new browser session must confirm 21+ again', async () => {
+  window.sessionStorage.setItem('taza_age_21_session_v2', 'yes');
+  window.sessionStorage.clear();
+  await render(); await settle();
+  assert.match(document.body.textContent, /Та 21 нас хүрсэн үү/);
+  assert.equal(document.querySelector('#site'), null);
 });
