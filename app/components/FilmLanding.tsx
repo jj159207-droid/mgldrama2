@@ -85,12 +85,12 @@ export default function FilmLanding(props:Props) {
   const preview = trailerUrl(film);
   const busy = props.watching || (!props.subscriptionCatalog && !props.freeCatalog && !props.authReady);
   const description = film.description?.trim() || "";
-  const priceLabel = props.subscriptionCatalog ? "3 кино 5,000₮ · 6 кино 9,500₮ · бүх кино 12,500₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
+  const priceLabel = props.subscriptionCatalog ? "1 кино 3,000₮ · 5 кино 6,000₮ · 10 кино 9,000₮ · бүх кино 15,000₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
   const movieCount = props.films.length || 45;
 
   return <main className="film-destination catalog-shell film-reference-page">
-    {props.subscriptionCatalog && !props.available && offerOpen && <TazaPlanPicker busy={busy} onSelect={choosePlan} onClose={()=>setOfferOpen(false)} />}
+    {props.subscriptionCatalog && !props.available && offerOpen && <TazaPlanPicker busy={busy} hasSelectedFilm onSelect={choosePlan} onClose={()=>setOfferOpen(false)} />}
     <nav className="detail-top" aria-label="Киноны навигац">
       <button className="icon-button film-back" onClick={onBack} aria-label="Нүүр рүү буцах">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8"/></svg>
