@@ -101,18 +101,15 @@ const confirmSubscription=async()=>{
 
 };
 
-test('TAZA catalog and trailer are public but the only package is 12,000₮ for 30 days',async()=>{
+test('TAZA public details offer two purchase options without a premature order',async()=>{
  await render('/?film=7&fbclid=tracking');
  assert.equal(title(),'Гэрэл');
- assert.ok(document.querySelector('.film-reference-page'));
- assert.ok(document.querySelector('.film-hero-watch'));
- assert.equal(document.querySelectorAll('.detail-plan').length,1);
- assert.match(document.querySelector('.detail-plan').textContent,/12,000₮/);
- assert.match(document.querySelector('.detail-plan').textContent,/30 хоног/);
- assert.equal(document.querySelector('#film-payment'),null);
  assert.equal(orders.length,0);
- assert.equal(requests.filter(r=>r.path==='/api/device').length,0);
+ await click('.film-hero-watch');
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,2);
+ assert.equal(orders.length,0);
 });
+
 test('watch shows six-digit 12,000₮ checkout and MacroDroid confirmation opens player',async()=>{
  await render('/?film=7');
  assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
