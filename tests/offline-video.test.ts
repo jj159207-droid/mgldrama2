@@ -3,7 +3,7 @@ import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
 import {offlineMp4Candidates,offlineExpiry,offlineMovieKey,offlineMetaKey,OFFLINE_MOVIE_CACHE} from '../lib/offline-video';
 
-const id='509e87f9-b6a5-466c-b10a-8eb1b29a6ab2';
+const id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 
 test('Bunny player/embed URLs generate same-library MP4 fallback candidates',()=>{
   for(const path of ['embed','play']){
