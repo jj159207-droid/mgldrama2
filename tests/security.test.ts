@@ -500,7 +500,8 @@ test('four-hour delayed bank SMS opens its owner and film; viewing time starts a
  assert.equal(payment.confirmed_at,new Date(receivedAt).toISOString());
  assert.equal(paymentExpiry(payment),receivedAt+30*86400000);
  const rights=await (await access.GET(req('/api/access','GET',undefined,owner))).json();
- assert.equal(rights.access.monthly,receivedAt+30*86400000);
+ assert.equal(rights.access.monthly,undefined);
+ assert.equal(rights.bundleRemaining,6);
  assert.equal(rights.access.film_2,undefined);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,owner))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,owner))).status,200);
