@@ -2,16 +2,26 @@
 
 import {useEffect,useState} from 'react';
 import {OFFLINE_MOVIE_CACHE,offlineExpiry,offlineMetaKey,offlineMovieKey,offlineMp4Candidates,type OfflineMovieMeta} from '@/lib/offline-video';
+import {directMovieFileName,isDirectMp4Response} from '@/lib/direct-video-file';
 
 type Film = {id:number;title:string;url?:string;badge?:string};
 type State = 'idle'|'saving'|'saved'|'error';
 
 const MAX_SIZE=1_500_000_000; // avoid unexpectedly filling a mobile device
+const MAX_DIRECT_FILE_SIZE=4_000_000_000;
+
+type FileSaveWindow = Window & {
+  showSaveFilePicker?: (options:{
+    suggestedName:string;
+    types:Array<{description:string;accept:Record<string,string[]>}>;
+  })=>Promise<{createWritable:()=>Promise<WritableStream<Uint8Array>>}>;
+};
 
 export default function OfflineDownloadButton({film}:{film:Film}) {
   const [state,setState]=useState<State>('idle');
   const [message,setMessage]=useState('');
   const [supported,setSupported]=useState(true);
+  const [fileBusy,setFileBusy]=useState(false);
   useEffect(()=>{
     const available=typeof window!=='undefined'&&'caches' in window&&'serviceWorker' in navigator;
     setSupported(available);
@@ -88,10 +98,97 @@ export default function OfflineDownloadButton({film}:{film:Film}) {
     }
   };
 
+
+  // Save a REAL .mp4 in the person's chosen Downloads/files folder.
+  // Unlike the in-app offline copy, this file can be shared and is NOT DRM protected.
+  const saveDirectFile=async()=>{
+    if(fileBusy||state==='saving')return;
+    setMessage('');
+    if(!navigator.onLine){
+      setState('error');setMessage('MP4 файл татахын тулд интернэтэд холбогдоно уу.');return;
+    }
+    const filename=directMovieFileName(film.title);
+    const authorizedCandidates=offlineMp4Candidates(film.url||'');
+    if(!authorizedCandidates.length){
+      setState('error');setMessage('Энэ киноны MP4 файл татах холбоос олдсонгүй.');return;
+    }
+    const picker=(window as FileSaveWindow).showSaveFilePicker;
+    if(!picker){
+      // iOS Safari / Firefox do not implement showSaveFilePicker.
+      // Opening the MP4 in the browser permits the native Share / Save-to-Files
+      // flow. We must not claim a file was saved or rely on cross-origin
+      // <a download>, which most browsers ignore.
+      const link=document.createElement('a');
+      link.href=authorizedCandidates[0];link.target='_blank';link.rel='noopener noreferrer';
+      document.body.appendChild(link);link.click();link.remove();
+      setState('idle');
+      setMessage('Таны хөтөч файл сонгож хадгалах цонх дэмжихгүй. Видео шинэ цонхонд нээгдсэн бол цэснээс «Татах» эсвэл «Save to Files»-ийг сонгоно уу. Хэрэв 403 гарвал Bunny-ийн MP4 хандалтыг шалгах хэрэгтэй.');
+      return;
+    }
+
+    // Must be called before the first await: file picker requires a direct
+    // user gesture (the browser rejects a picker opened after a network call).
+    let handlePromise:ReturnType<NonNullable<FileSaveWindow['showSaveFilePicker']>>;
+    try {
+      handlePromise=picker({suggestedName:filename,types:[{description:'MP4 кино',accept:{'video/mp4':['.mp4']}}]});
+    }catch(error){
+      setState('error');setMessage('Файл хадгалах цонх нээгдсэнгүй. Chrome эсвэл Edge-д татаж үзнэ үү.');return;
+    }
+    setFileBusy(true);setState('idle');setMessage('MP4 файл татаж байна. Бүрэн дуустал энэ цонхыг хаахгүй байгаарай.');
+    try{
+      const handle=await handlePromise;
+      // Re-check the viewer's current session and entitlement on the server.
+      // We never fetch an arbitrary URL from untrusted client input here.
+      const result=await fetch(`/api/playback?id=${film.id}`,{cache:'no-store',credentials:'same-origin'});
+      if(!result.ok)throw new Error('Киноны төлбөртэй үзэх эрхийг дахин баталгаажуулж чадсангүй.');
+      const current=await result.json() as {url?:string};
+      const candidates=offlineMp4Candidates(String(current.url||''));
+      if(!candidates.length)throw new Error('Энэ кинонд татаж болох MP4 холбоос байхгүй байна.');
+      let completed=false;
+      for(const url of candidates){
+        let response:Response;
+        try{response=await fetch(url,{mode:'cors',credentials:'omit',redirect:'error',cache:'no-store'});}
+        catch{continue;}
+        if(!isDirectMp4Response(response)){await response.body?.cancel().catch(()=>{});continue;}
+        const length=Number(response.headers.get('content-length')||0);
+        if(!Number.isFinite(length)||length<0||length>MAX_DIRECT_FILE_SIZE){await response.body?.cancel().catch(()=>{});continue;}
+        const writable=await handle.createWritable();
+        let bytes=0;
+        try{
+          const limiter=new TransformStream<Uint8Array,Uint8Array>({
+            transform(chunk,controller){
+              bytes+=chunk.byteLength;
+              if(bytes>MAX_DIRECT_FILE_SIZE)throw new Error('Киноны хэмжээ 4 GB-ээс их байна. Админд мэдэгдэнэ үү.');
+              controller.enqueue(chunk);
+            }
+          });
+          await response.body!.pipeThrough(limiter).pipeTo(writable);
+          completed=true;
+          break;
+        }catch(error){
+          try{await writable.abort();}catch{}
+          throw error;
+        }
+      }
+      if(!completed)throw new Error('Bunny.net дээр энэ киноны MP4 файлыг татаж чадсангүй. Файлын холбоос, CORS, Security тохиргоог шалгах шаардлагатай.');
+      setMessage(`«${filename}» файлыг хадгаллаа. Одоо Downloads/Files дотроос интернэтгүй үзэж болно. Файл үзэх эрх дууссанаар автоматаар устахгүй, бусдад хуваалцах боломжтой.`);
+    }catch(error){
+      if(error instanceof DOMException && error.name==='AbortError'){
+        setMessage('Файл татах үйлдлийг цуцаллаа.');
+      }else{
+        setState('error');
+        setMessage(error instanceof Error?error.message:'Файл татахад алдаа гарлаа.');
+      }
+    }finally{setFileBusy(false);}
+  };
+
   return <div className="taza-offline-controls">
     <div className="taza-offline-buttons">
-      <button type="button" disabled={state==='saving'} onClick={()=>void download()} aria-busy={state==='saving'} className="taza-offline-button">
+      <button type="button" disabled={state==='saving'||fileBusy} onClick={()=>void download()} aria-busy={state==='saving'} className="taza-offline-button">
         {state==='saving'?'⏳ Татаж байна…':state==='saved'?'✓ Дахин хадгалах':'⬇ Татаж хадгалах'}
+      </button>
+      <button type="button" disabled={state==='saving'||fileBusy} onClick={()=>void saveDirectFile()} aria-busy={fileBusy} className="taza-offline-button taza-direct-download">
+        {fileBusy?'⏳ MP4 татаж байна…':'⬇ MP4 файл татах'}
       </button>
       <a className="taza-offline-button taza-offline-library" href="/offline.html">📁 Татсан кино</a>
     </div>
