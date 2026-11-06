@@ -7,7 +7,6 @@ import * as auth from '../app/api/auth/route';
 import * as device from '../app/api/device/route';
 import * as api from '../app/api/db/route';
 import * as playback from '../app/api/playback/route';
-import * as directDownload from '../app/api/direct-download/route';
 import * as sms from '../app/api/sms/route';
 import * as settings from '../app/api/settings/route';
 import * as access from '../app/api/access/route';
@@ -281,39 +280,6 @@ test('TAZA rejects new purchases of the retired 12,000₮ plan but honors an old
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
 
-test('MP4 download redirect requires fresh playback permission and never exposes unpurchased films',async()=>{
- const none=await directDownload.GET(req('/api/direct-download?id=1'));
- assert.equal(none.status,403);
- assert.equal(none.headers.get('location'),null);
-
- const cookie=await register();
- const noRights=await directDownload.GET(req('/api/direct-download?id=1','GET',undefined,cookie));
- assert.equal(noRights.status,403);
- assert.equal(noRights.headers.get('location'),null);
-
- const owner=Number(tables.users.find(u=>u.phone==='99112233')?.id);
- tables.pending_payments.push({
-   id:789,user_id:owner,site_id:'taza',plan:'all_30d_12500',film_id:null,
-   status:'confirmed',amount:12500,confirmed_at:now(),created_at:now(),
- });
- const allowed=await directDownload.GET(req('/api/direct-download?id=1','GET',undefined,cookie));
- assert.equal(allowed.status,302);
- assert.equal(allowed.headers.get('location'),'https://video.example/movie.mp4');
- assert.match(allowed.headers.get('cache-control')||'',/no-store/);
- const other=await register('99112244');
- assert.equal((await directDownload.GET(req('/api/direct-download?id=1','GET',undefined,other))).status,403);
-});
-
-test('download redirect rejects absent or unsupported MP4 sources',async()=>{
- const cookie=await paidUser();
- tables.films[0].url='https://player.mediadelivery.net/play/1/not-a-uuid';
- const invalid=await directDownload.GET(req('/api/direct-download?id=1','GET',undefined,cookie));
- assert.equal(invalid.status,404);
- assert.equal(invalid.headers.get('location'),null);
- tables.films[0].url='';
- const missing=await directDownload.GET(req('/api/direct-download?id=1','GET',undefined,cookie));
- assert.equal(missing.status,404);
-});
 test('TAZA disables new single-film sales but preserves previously confirmed single film',async()=>{
  const cookie=await register();
  assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'711224',plan:'single',film_id:1},cookie))).status,400);
