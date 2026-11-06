@@ -81,7 +81,7 @@ export default function FilmLanding(props:Props) {
     ? []
     : props.freeCatalog ? [] : filmPlans(film);
   const preview = trailerUrl(film);
-  const busy = props.watching || (!props.freeCatalog && !props.authReady);
+  const busy = props.watching || (!props.subscriptionCatalog && !props.freeCatalog && !props.authReady);
   const description = film.description?.trim() || "";
   const priceLabel = props.subscriptionCatalog ? "Энэ кино · 2,000₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
