@@ -13,7 +13,7 @@ export async function GET(req:NextRequest) {
   // continue to work. Admin access remains authenticated and separate.
   const s=await session(req);
   const isAdmin=canAdminSite(s,site);
-  if(!s?.userId && !isAdmin)throw new ApiError(403,'Бүх киног үзэх 12,000₮ / 30 хоногийн эрх шаардлагатай.','SUBSCRIPTION_REQUIRED');
+  if(!s?.userId && !isAdmin)throw new ApiError(403,'Энэ киног 2,000₮-өөр эсвэл бүх 45 киног 9,500₮-өөр 30 хоног үзэх эрх шаардлагатай.','SUBSCRIPTION_REQUIRED');
   if(!isAdmin){
     const payments=await entitlementPayments(Number(s?.userId),site);
     const required=site==='taza'?{...film,free:false,locked:true}:film;
