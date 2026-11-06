@@ -222,26 +222,34 @@ test('guest can choose single-film checkout during login restoration',async()=>{
  await act(async()=>authGate.resolve());
 });
 
-test('unregistered visitors receive a device-bound payment order',async()=>{
+test('unregistered visitor creates device-bound order only after selecting a plan',async()=>{
  await render('/?film=7&fbclid=tracking');
  assert.equal(title(),'Гэрэл');
  await click('.film-hero-watch');
+ assert.equal(requests.some(r=>r.path==='/api/device'),false);
+ await click('.taza-offer-featured');
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'all_30d_12000');
+ assert.equal(orders[0].plan,'all_30d_9500');
  assert.ok(session.user?.guest);
  assert.equal(requests.some(r=>r.path==='/api/device'),true);
 });
+
 test('normal catalog movie selection also creates a reloadable direct link',async()=>{
  await render();await act(async()=>[...document.querySelectorAll('.movie-main')].find(b=>b.textContent.includes('Гэрэл')).click());
  assert.equal(title(),'Гэрэл');assert.equal(window.location.search,'?film=7');
  await act(async()=>root.unmount());root=createRoot(document.getElementById('root'));await act(async()=>root.render(React.createElement(App)));
  assert.equal(title(),'Гэрэл');assert.equal(orders.length,0);
 });
-test('old member sessions still play free without another order',async()=>{
- session={user:{id:12,phone:'99112233'}};await render('/?film=7');assert.equal(title(),'Гэрэл');
- entitled=true;await click('.film-hero-watch');assert.equal(movie(),films[0].url);assert.equal(orders.length,0);
+test('existing paid member can watch without another order',async()=>{
+ session={user:{id:12,phone:'99112233'}};entitled=true;
+ await render('/?film=7');
+ assert.equal(title(),'Гэрэл');
+ await click('.film-hero-watch');
+ assert.equal(movie(),films[0].url);
+ assert.equal(orders.length,0);
 });
+
 test('free movie detail never creates a device identity',async()=>{
  deviceGate=defer();
  await render('/?film=7');
@@ -287,18 +295,19 @@ test('an admin session previews full playback without replacing itself with a gu
  await click('.film-hero-watch');assert.equal(document.querySelector('.login-dialog'),null);assert.equal(movie(),films[1].url);assert.equal(requests.filter(r=>r.path==='/api/device').length,beforeDevice);
  assert.equal(document.querySelector('.admin-surface'),null);
 });
-test('homepage shows the 12,000₮ package and opens checkout only on demand',async()=>{
+test('home header shows 9,500₮ and starts package checkout only on demand',async()=>{
  await render('/');
  assert.equal(document.querySelector('.package-continue'),null);
  assert.equal(document.querySelector('.checkout-dialog'),null);
  assert.equal(document.querySelector('.login-button'),null);
- assert.match(document.querySelector('.header-nav').textContent,/12,000₮/);
+ assert.match(document.querySelector('.header-nav').textContent,/9,500₮/);
  assert.equal(orders.length,0);
  await click('.header-nav button');
  assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'all_30d_12000');
- assert.equal(orders[0].amount,12000);
+ assert.equal(orders[0].plan,'all_30d_9500');
+ assert.equal(orders[0].amount,9500);
 });
+
 test('native history back restores catalog and forward restores details without playback',async()=>{
  await render();await act(async()=>[...document.querySelectorAll('.movie-main')].find(b=>b.textContent.includes('Алсын зам')).click());
  assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);
