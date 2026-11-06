@@ -59,3 +59,23 @@ in the standalone `/offline.html` page without internet.
 **Do not promote this feature as active for all 45 movies until at least one
 actual Bunny source has passed this test and the rest have been confirmed
 to have downloadable MP4 variants.**
+
+
+## Native MP4 download to Downloads / Files
+
+The movie player also offers **⬇ MP4 файл татах**. It is distinct from
+**⬇ Татаж хадгалах** (browser-only offline cache).
+- Chromium browsers with File System Access API: the browser asks where to
+  save a .mp4 file, checks /api/playback again for current entitlement, and
+  streams the file directly to the chosen folder without buffering multi-GB
+  content in application memory.
+- Safari / Firefox: a separately authenticated `/api/direct-download?id=...`
+  endpoint redirects to the permitted Bunny fallback MP4; users may then
+  need to select Download or Save to Files in the native media viewer.
+  HTTP redirect does NOT guarantee a browser download.
+- A downloaded MP4 is **not** DRM protected: a user can rename or share the
+  file and it will not expire automatically when their online viewing rights
+  expire. Do not promise DRM.
+- MP4 Fallback and CDN access (referer/CORS/token auth) still have to work.
+  As on-device cache saving, the player does not auto-download movies.
+  Large downloads consume Bunny bandwidth and users' device storage.
