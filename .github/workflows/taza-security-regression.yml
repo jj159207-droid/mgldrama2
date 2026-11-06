@@ -21,6 +21,8 @@ on:
       - 'tests/film-details.test.ts'
       - 'app/components/AdminSmsDiagnostics.tsx'
       - 'app/page.tsx'
+      - 'app/components/AgeGate.tsx'
+      - 'tests/ui/age-gate.test.cjs'
       - 'tests/bank-details.test.ts'
       - '.github/workflows/taza-security-regression.yml'
   workflow_dispatch:
