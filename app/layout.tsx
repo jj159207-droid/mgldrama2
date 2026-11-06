@@ -16,6 +16,7 @@ import "./catalog-trailer-tuning.css";
 import "./film-price-blink.css";
 import "./film-reference.css";
 import "./wallet.css";
+import "./offline.css";
 
 export const viewport: Viewport = { themeColor: "#05070c" };
 

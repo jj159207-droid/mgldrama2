@@ -15,6 +15,7 @@ import AdminVideoDiagnostics from "@/app/components/AdminVideoDiagnostics";
 import CatalogBrowser from "@/app/components/CatalogBrowser";
 import ConnectionStatus from "@/app/components/ConnectionStatus";
 import AppInstallButton from "@/app/components/AppInstallButton";
+import OfflineDownloadButton from "@/app/components/OfflineDownloadButton";
 import PushNotificationSetup from "@/app/components/PushNotificationSetup";
 import AdminEntryLogo from "@/app/components/AdminEntryLogo";
 import AppearanceEditor from "@/app/components/AppearanceEditor";
@@ -797,13 +798,13 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "3 кино 5,000₮ · 6 кино 9,500₮ · Бүх кино 12,500₮" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton />{freeCatalog && <a className="taza-offline-footer-link" href="/offline.html">📁 Татсан кино</a>}</div></footer>
     </main>
   </div>;
 }
 
 
-function VideoPage({ film, onBack }: any) {
+function VideoPage({ film, onBack, offlineEnabled=false }: any) {
   const [videoError,setVideoError]=useState(false);
   const mainUrl = film.url ? film.url.split("|||")[0] : "";
   const { type, src } = getVideoEmbed(mainUrl);
@@ -816,8 +817,9 @@ function VideoPage({ film, onBack }: any) {
       ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.muted, fontSize: 14 }}>Видео холбоос байхгүй байна</div>
       )}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, background: "linear-gradient(to bottom, rgba(0,0,0,0.7), transparent)", padding: "16px", transition: "opacity 0.3s", opacity: 1, pointerEvents: "auto" }}>
-        <button aria-label="Нүүр рүү буцах" onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>←</button>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 10, background: "linear-gradient(to bottom, rgba(0,0,0,0.78), transparent)", padding: "16px", display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, transition: "opacity 0.3s", opacity: 1, pointerEvents: "auto" }}>
+        <button aria-label="Нүүр рүү буцах" onClick={(e) => { e.stopPropagation(); onBack(); }} style={{ background: "rgba(0,0,0,0.5)", border: "none", color: "#fff", fontSize: 22, cursor: "pointer", borderRadius: 50, width: 44, height: 44, minWidth:44, display: "flex", alignItems: "center", justifyContent: "center", backdropFilter: "blur(10px)" }}>←</button>
+        {offlineEnabled && <OfflineDownloadButton key={film.id} film={film} />}
       </div>
     </div>
   );
@@ -2676,7 +2678,7 @@ export default function Home() {
       ) : <>
       {(page === "home" || page === "payment") && <HomePage freeCatalog={siteId==="taza"} chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm && siteId==="taza" ? {...selectedFilm,free:false,locked:!hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)),price:TAZA_SINGLE_PRICE,op:TAZA_SINGLE_PRICE} : selectedFilm} subscriptionCatalog={siteId==="taza"} films={filmsWithUnlock} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={siteId==="taza" || authReady} bundleRemaining={bundleRemaining} available={!!selectedFilm && (adminAuth || (siteId!=="taza" && (selectedFilm.free || selectedFilm.locked===false)) || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
-      {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
+      {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} offlineEnabled={siteId==="taza"} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setBundleRemaining(0);setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
       {page === "admin-choice" && adminAuth && <AdminDestinationChoice brandName={brandName} onAdmin={()=>navigateTo("admin")} onMovies={()=>navigateTo("home")} onLogout={handleLogout} />}
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={()=>navigateTo("admin-choice")} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
