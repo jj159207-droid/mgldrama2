@@ -17,6 +17,7 @@ on:
       - 'app/api/admin/video-diagnostics/route.ts'
       - 'app/components/AdminVideoDiagnostics.tsx'
       - 'app/api/playback/route.ts'
+      - 'app/api/direct-download/route.ts'
       - 'lib/film-details.ts'
       - 'tests/film-details.test.ts'
       - 'app/components/AdminSmsDiagnostics.tsx'
