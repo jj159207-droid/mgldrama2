@@ -52,13 +52,19 @@ export default function FilmLanding(props:Props) {
   const {film, loading, error, onBack} = props;
   const [previewOpen, setPreviewOpen] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [offerOpen, setOfferOpen] = useState(false);
 
   useEffect(() => {
     if (film && trailerUrl(film)) setPreviewOpen(true);
   }, [film?.id]);
 
-  const watch = () => {setPreviewOpen(false);props.onWatch();};
-  const choosePlan = (plan:string) => {setPreviewOpen(false);props.onPlan(plan);};
+  useEffect(() => setOfferOpen(false), [film?.id]);
+  const watch = () => {
+    setPreviewOpen(false);
+    if (props.subscriptionCatalog && !props.available) { setOfferOpen(true); return; }
+    props.onWatch();
+  };
+  const choosePlan = (plan:string) => {setPreviewOpen(false);setOfferOpen(false);props.onPlan(plan);};
 
   if (!film || loading || error) return <main className="film-destination catalog-shell">
     <button className="secondary-button film-back" onClick={onBack}>← Бүх кино</button>
@@ -72,15 +78,44 @@ export default function FilmLanding(props:Props) {
   const category = filmCategory(film);
   const related = relatedFilms(props.films, film);
   const packages = props.subscriptionCatalog
-    ? [{id:"all_30d_12000",hours:720,category:"Бүх кино",price:12000}]
+    ? []
     : props.freeCatalog ? [] : filmPlans(film);
   const preview = trailerUrl(film);
-  const busy = props.watching || (!props.freeCatalog && !props.authReady);
+  const busy = props.watching || (!props.subscriptionCatalog && !props.freeCatalog && !props.authReady);
   const description = film.description?.trim() || "";
-  const priceLabel = props.subscriptionCatalog ? "Бүх кино · 12,000₮ / 30 хоног" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
+  const priceLabel = props.subscriptionCatalog ? "Энэ кино · 2,000₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
+  const movieCount = props.films.length || 45;
 
   return <main className="film-destination catalog-shell film-reference-page">
+    {props.subscriptionCatalog && !props.available && offerOpen && (
+      <div className="taza-offer-backdrop">
+        <section className="taza-offer-dialog" role="dialog" aria-modal="true" aria-labelledby="taza-offer-title">
+          <button type="button" className="taza-offer-close" onClick={() => setOfferOpen(false)} aria-label="Сонголт хаах">×</button>
+          <span className="taza-offer-eyebrow">TAZA SITE · ҮЗЭХ ЭРХ</span>
+          <h2 id="taza-offer-title">Киногоо хэрхэн үзэх вэ?</h2>
+          <p className="taza-offer-intro">Өөрт тохирох нэг сонголтыг дараарай.</p>
+          <button type="button" className="taza-offer-card" disabled={busy} onClick={() => choosePlan("single")}>
+            <span className="taza-offer-card-copy">
+              <strong>🎬 Энэ киног үзэх</strong>
+              <small>{film.title} · 72 цагийн эрх</small>
+            </span>
+            <span className="taza-offer-amount">2,000₮</span>
+            <span className="taza-offer-go">Сонгох →</span>
+          </button>
+          <button type="button" className="taza-offer-card taza-offer-featured" disabled={busy} onClick={() => choosePlan("all_30d_9500")}>
+            <span className="taza-offer-best">ИЛҮҮ ХЭМНЭЛТТЭЙ</span>
+            <span className="taza-offer-card-copy">
+              <strong>🌟 Бүх {movieCount} кино үзэх</strong>
+              <small>Бүх киног 1 сарын турш хязгааргүй үзнэ</small>
+            </span>
+            <span className="taza-offer-amount">9,500₮</span>
+            <span className="taza-offer-go">Багц сонгох →</span>
+          </button>
+          <p className="taza-offer-note">Төлбөр баталгаажмагц үзэх эрх автоматаар нээгдэнэ.</p>
+        </section>
+      </div>
+    )}
     <nav className="detail-top" aria-label="Киноны навигац">
       <button className="icon-button film-back" onClick={onBack} aria-label="Нүүр рүү буцах">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8"/></svg>

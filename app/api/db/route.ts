@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
-import { plans,safeUrl,type Row } from '@/lib/domain';
+import { plans,safeUrl,TAZA_ALL_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
@@ -91,9 +91,8 @@ async function handler(req:NextRequest) {
         const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
-        // TAZA offers one public subscription: all films, 30 days, exact 12,000₮.
-        // Legacy grants remain readable but cannot be purchased again.
-        if(site==='taza' && plan!=='all_30d_12000')throw new ApiError(400,'Бүх киноны 30 хоногийн эрх 12,000₮.');
+        // TAZA sells one movie or a 30-day all-movie pass; old passes stay valid but are not sold again.
+        if(site==='taza' && !['single',TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'1 кино 2,000₮ эсвэл бүх 45 кино 9,500₮ / 30 хоног.');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {
@@ -125,8 +124,8 @@ async function handler(req:NextRequest) {
         }else if(plan==='single') {
           filmId=Number(b.film_id);if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
           const [film]=await db(`films?id=eq.${filmId}&site_id=eq.${site}&select=id,price,free,locked`);
-          if(!film || film.free===true || film.locked===false)throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
-          amount=Number(film.price);
+          if(!film || (site!=='taza' && (film.free===true || film.locked===false)))throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
+          amount=site==='taza'?TAZA_SINGLE_PRICE:Number(film.price);
         }
         if(!Number.isSafeInteger(amount)||amount<=0)throw new ApiError(400,'Багц эсвэл үнэ буруу.');
         b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan,site_id:site};
