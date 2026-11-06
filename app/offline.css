@@ -7,3 +7,13 @@
 .taza-offline-warning{color:#ffd1d1}
 .taza-offline-footer-link{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:7px 11px;border:1px solid #4a5564;border-radius:10px;color:#e5b53b;font-weight:700;text-decoration:none}
 @media(max-width:520px){.taza-offline-controls{max-width:calc(100vw - 84px)}.taza-offline-button{font-size:11px;padding:8px;min-height:38px}.taza-offline-buttons{gap:5px}.taza-offline-message,.taza-offline-warning{max-width:min(80vw,300px);font-size:11px}}
+
+.taza-direct-download{background:#194556;color:#f4fffe;border-color:rgba(76,192,218,.72)}
+.taza-direct-download:hover:not(:disabled){background:#21576b}
+.taza-offline-controls{max-width:min(82vw,560px)}
+.taza-offline-buttons{max-width:100%}
+@media(max-width:520px){
+  .taza-offline-controls{max-width:calc(100vw - 75px)}
+  .taza-offline-buttons{gap:4px}
+  .taza-offline-button{font-size:10px;padding:7px 8px}
+}
