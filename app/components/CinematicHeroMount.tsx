@@ -31,7 +31,7 @@ function heroPackageLabel(film: HeroFilm) {
   return `${language} · ${category}`;
 }
 
-function Carousel({ films, onOpenPlans, packageFilmCount, brandName }: { films: HeroFilm[]; onOpenPlans: () => void; packageFilmCount:number; brandName:string }) {
+function Carousel({ films, onOpenPlans, packageFilmCount, brandName, taza }: { films: HeroFilm[]; onOpenPlans: () => void; packageFilmCount:number; brandName:string; taza:boolean }) {
   const [active, setActive] = useState(0);
   const [failed, setFailed] = useState<Record<number, true>>({});
   const swipe = useRef({ startX: 0, moved: false });
@@ -149,12 +149,12 @@ function Carousel({ films, onOpenPlans, packageFilmCount, brandName }: { films: 
         </div>
       )}
 
-      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`Сайтын бүх ${packageFilmCount} киног 12,000 төгрөгөөр 30 хоног үзэх эрх`}>
+      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={`Сайтын бүх ${packageFilmCount} киног ${taza ? "9,500" : "12,000"} төгрөгөөр 30 хоног үзэх эрх`}>
         <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
           <path d="m12 10 1.5 2.5M15 15l1.5 2.5M18 20l1.5 2.5" />
         </svg>
-        <span>Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>12,000₮</strong> · <strong>30 хоног</strong></span>
+        <span>Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>{taza ? "9,500₮" : "12,000₮"}</strong> · <strong>30 хоног</strong></span>
       </button>
     </section>
   );
@@ -165,11 +165,13 @@ export default function CinematicHeroMount() {
   const [films, setFilms] = useState<HeroFilm[]>([]);
   const [packageFilmCount,setTotalFilms]=useState(0);
   const [brandName,setBrandName]=useState("ТАЗА САЙТ");
+  const [taza,setTaza]=useState(true);
   const [entryRefresh,setEntryRefresh]=useState(0);
 
   useEffect(()=>{
     const id=siteFromPathname(window.location.pathname);
     setBrandName(SITES[id].name);
+    setTaza(id==="taza");
   },[]);
 
   useEffect(()=>{
@@ -227,6 +229,6 @@ export default function CinematicHeroMount() {
     else window.dispatchEvent(new CustomEvent("kinoOpenPlanPreset",{detail:{category:"all",duration:"72h"}}));
   }, []);
 
-  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} packageFilmCount={packageFilmCount} brandName={brandName} /> : null, [films, openPlans, packageFilmCount, brandName]);
+  const content = useMemo(() => films.length ? <Carousel films={films} onOpenPlans={openPlans} packageFilmCount={packageFilmCount} brandName={brandName} taza={taza} /> : null, [films, openPlans, packageFilmCount, brandName, taza]);
   return target && content ? createPortal(content, target) : null;
 }
