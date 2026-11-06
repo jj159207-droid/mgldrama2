@@ -15,11 +15,11 @@ require('esbuild').buildSync({entryPoints:[path.join(repo,'app/page.tsx')],bundl
 const React=require('react'),{act}=React,{createRoot}=require('react-dom/client');
 const App=require(outfile).default;
 const films=[{id:7,title:'Гэрэл',img:'https://images.test/poster7.webp',description:'Хоёр найзын аялал. <b>Хадмалтай</b>',preview_url:'https://video.test/trailer7.mp4',views:20,free:false,locked:true,price:5000,badge:'Хадмал|Гадаад',url:'https://video.test/private7.mp4'},{id:34,title:'Алсын зам',preview_url:'https://video.test/trailer34.mp4',views:10,free:true,locked:false,price:0,badge:'Хэлтэй|Хятад',url:'https://video.test/free34.mp4'}];
-let root,session,entitled,orders,requests,failCatalog,failPlayback,authGate,filmGate,loginGate,deviceGate,playbackGate,clipboard,entryAllowed,walletBalance;
+let root,session,entitled,purchased,orders,requests,failCatalog,failPlayback,authGate,filmGate,loginGate,deviceGate,playbackGate,clipboard,entryAllowed,walletBalance;
 const originalFetch=global.fetch;
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:v=>resolve(v)};};
 beforeEach(()=>{
- session={};entitled=false;orders=[];requests=[];failCatalog=false;failPlayback=false;authGate=null;filmGate=null;loginGate=null;deviceGate=null;playbackGate=null;clipboard=[];entryAllowed=true;walletBalance=0;
+ session={};entitled=false;purchased=new Set();orders=[];requests=[];failCatalog=false;failPlayback=false;authGate=null;filmGate=null;loginGate=null;deviceGate=null;playbackGate=null;clipboard=[];entryAllowed=true;walletBalance=0;
  window.history.replaceState({page:'home'},'', '/');
  Object.defineProperty(navigator,'clipboard',{value:{writeText:async value=>clipboard.push(value)},configurable:true});
  root=createRoot(document.getElementById('root'));
@@ -41,7 +41,7 @@ beforeEach(()=>{
    return Response.json(session);
   }
   if(url.pathname==='/api/entry-access')return Response.json({allowed:entryAllowed,reason:entryAllowed?'paid':'payment_required'});
-  if(url.pathname==='/api/access')return Response.json({access:entitled?{monthly:Date.now()+30*86400000}:{}});
+  if(url.pathname==='/api/access')return Response.json({access:{...(entitled?{monthly:Date.now()+30*86400000}:{}),...Object.fromEntries([...purchased].map(id=>[`film_${id}`,Date.now()+72*3600000]))}});
   if(url.pathname==='/api/wallet')return Response.json({balance:walletBalance});
   if(url.pathname==='/api/settings')return Response.json({});
   if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
@@ -52,7 +52,7 @@ beforeEach(()=>{
    if(!film)return Response.json({message:'Кино олдсонгүй.'},{status:404});
    // Full video remains protected until MacroDroid confirms the bank transfer.
    if(!session.admin&&!session.user)return Response.json({code:'SUBSCRIPTION_REQUIRED',message:'Үзэх эрх шаардлагатай.'},{status:403});
-   if(!session.admin&&!entitled)return Response.json({code:'SUBSCRIPTION_REQUIRED',message:'12,000₮ төлбөр шаардлагатай.'},{status:403});
+   if(!session.admin&&!entitled&&!purchased.has(id))return Response.json({code:'SUBSCRIPTION_REQUIRED',message:'Үзэх эрх шаардлагатай.'},{status:403});
    return Response.json({...film,locked:false});
   }
   if(url.pathname==='/api/db'){
@@ -73,7 +73,7 @@ beforeEach(()=>{
        const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
        if(existingTopup)return Response.json([existingTopup]);
      }
-     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?5000:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:body.plan==='all_30d_12000'?12000:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?2000:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:body.plan==='all_30d_9500'?9500:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -93,10 +93,12 @@ const movie=()=>document.querySelector('.full-player video')?.getAttribute('src'
 const title=()=>document.querySelector('#selected-film-title')?.textContent;
 const confirmSubscription=async()=>{
  assert.equal(orders.length,1,'payment order must exist before bank confirmation');
- assert.equal(orders[0].amount,12000);
- assert.equal(orders[0].plan,'all_30d_12000');
- orders[0].status='confirmed';entitled=true;
+ const order=orders[0];
+ assert.ok((order.plan==='single' && order.amount===2000)||(order.plan==='all_30d_9500' && order.amount===9500));
+ order.status='confirmed';
+ if(order.plan==='single')purchased.add(Number(order.film_id));else entitled=true;
  await act(async()=>{window.dispatchEvent(new dom.window.Event('focus'));await new Promise(resolve=>setTimeout(resolve,10));});
+
 };
 
 test('TAZA catalog and trailer are public but the only package is 12,000₮ for 30 days',async()=>{
