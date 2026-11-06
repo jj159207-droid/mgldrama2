@@ -114,12 +114,11 @@ export default function OfflineDownloadButton({film}:{film:Film}) {
     }
     const picker=(window as FileSaveWindow).showSaveFilePicker;
     if(!picker){
-      // iOS Safari / Firefox do not implement showSaveFilePicker.
-      // Opening the MP4 in the browser permits the native Share / Save-to-Files
-      // flow. We must not claim a file was saved or rely on cross-origin
-      // <a download>, which most browsers ignore.
+      // Safari / Firefox do not offer the native file picker. Use a
+      // same-origin authorized redirect rather than leaking a raw MP4 URL in
+      // a direct anchor. The native media player may require Save to Files.
       const link=document.createElement('a');
-      link.href=authorizedCandidates[0];link.target='_blank';link.rel='noopener noreferrer';
+      link.href=`/api/direct-download?id=${film.id}`;link.target='_blank';link.rel='noopener noreferrer';
       document.body.appendChild(link);link.click();link.remove();
       setState('idle');
       setMessage('Таны хөтөч файл сонгож хадгалах цонх дэмжихгүй. Видео шинэ цонхонд нээгдсэн бол цэснээс «Татах» эсвэл «Save to Files»-ийг сонгоно уу. Хэрэв 403 гарвал Bunny-ийн MP4 хандалтыг шалгах хэрэгтэй.');
@@ -130,7 +129,7 @@ export default function OfflineDownloadButton({film}:{film:Film}) {
     // user gesture (the browser rejects a picker opened after a network call).
     let handlePromise:ReturnType<NonNullable<FileSaveWindow['showSaveFilePicker']>>;
     try {
-      handlePromise=picker({suggestedName:filename,types:[{description:'MP4 кино',accept:{'video/mp4':['.mp4']}}]});
+      handlePromise=picker.call(window,{suggestedName:filename,types:[{description:'MP4 кино',accept:{'video/mp4':['.mp4']}}]});
     }catch(error){
       setState('error');setMessage('Файл хадгалах цонх нээгдсэнгүй. Chrome эсвэл Edge-д татаж үзнэ үү.');return;
     }
