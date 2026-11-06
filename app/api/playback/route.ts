@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { ApiError,canAdminSite,db,fail,json,requestSite,session } from '@/lib/server';
-import { canWatch,safeUrl } from '@/lib/domain';
+import { canWatch,paymentExpiry,safeUrl,tazaPackQuota } from '@/lib/domain';
+import { claimTazaFilm } from '@/lib/taza-bundles';
 import { entitlementPayments } from '@/lib/payments';
 export const runtime='nodejs';
 export async function GET(req:NextRequest) {
@@ -13,14 +14,19 @@ export async function GET(req:NextRequest) {
   // continue to work. Admin access remains authenticated and separate.
   const s=await session(req);
   const isAdmin=canAdminSite(s,site);
-  if(!s?.userId && !isAdmin)throw new ApiError(403,'Энэ киног 2,000₮-өөр эсвэл бүх 45 киног 9,500₮-өөр 30 хоног үзэх эрх шаардлагатай.','SUBSCRIPTION_REQUIRED');
+  const url=safeUrl(String(film.url||'').split('|||')[0]);
+  if(!s?.userId && !isAdmin)throw new ApiError(403,'Кино үзэх багц сонгож төлбөрөө баталгаажуулна уу.','SUBSCRIPTION_REQUIRED');
   if(!isAdmin){
     const payments=await entitlementPayments(Number(s?.userId),site);
     const required=site==='taza'?{...film,free:false,locked:true}:film;
-    if(!canWatch(required,payments))
-      throw new ApiError(403,site==='taza'?'Бүх киног үзэх 12,000₮ / 30 хоногийн эрх шаардлагатай.':'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.','SUBSCRIPTION_REQUIRED');
+    if(!canWatch(required,payments)) {
+      // Never consume a paid movie credit when the video link is missing.
+      if(!url)throw new ApiError(404,'Энэ киноны видео холбоос байхгүй. Үзэх эрх хасагдаагүй. Админд мэдэгдэнэ үү.','VIDEO_SOURCE_MISSING');
+      const hasCredits=site==='taza' && payments.some(p=>tazaPackQuota(String(p.plan||''))>0 && paymentExpiry(p)>Date.now());
+      if(!hasCredits || !await claimTazaFilm(Number(s!.userId),id))
+        throw new ApiError(403,site==='taza'?'3 кино, 6 кино эсвэл бүх киноны үзэх багц шаардлагатай.':'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.','SUBSCRIPTION_REQUIRED');
+    }
   }
-  const url=safeUrl(String(film.url||'').split('|||')[0]);
   if(!url)throw new ApiError(404,'Энэ киноны бүтэн видео холбоос байхгүй эсвэл буруу байна. Дахин төлбөр хийхгүй, админд киноны нэрийг мэдэгдэнэ үү.','VIDEO_SOURCE_MISSING');
   return json({...film,url,locked:false,site_id:site});
  }catch(e){return fail(e);}
