@@ -740,7 +740,10 @@ test('temporary MacroDroid download denies visitors and ordinary members',async(
 });
 
 test('master admin downloads matching SMS macro with private, noncacheable credentials',async(t)=>{
- t.mock.method(Date,'now',()=>Date.parse('2026-11-06T08:00:00Z'));
+ // Avoid making a newly issued 1-hour admin session look expired by mocking
+ // Date.now to an old fixed timestamp while new Date() uses the real time.
+ const realNow=Date.now();
+ t.mock.method(Date,'now',()=>realNow);
  const cookie=await admin();
  const response=await macroDownload.GET(req('/api/admin/macrodroid','GET',undefined,cookie));
  assert.equal(response.status,200);
