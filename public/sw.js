@@ -1,6 +1,6 @@
 // API responses, user data, and Next assets are never cached.
-const CACHE_NAME = 'mgldrama-static-v6';
-const ASSETS = ['/icon-192.png', '/icon-512.png', '/manifest.json', '/offline.html'];
+const CACHE_NAME = 'mgldrama-static-v7';
+const ASSETS = ['/icon-192.png', '/icon-512.png', '/manifest.json'];
 
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)));
@@ -16,16 +16,7 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
-  // No authenticated HTML/API data is cached. When the network is unavailable
-  // every navigation can fall back to the standalone offline movie library.
-  if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).catch(async () =>
-      (await caches.match('/offline.html')) || new Response('Offline', { status: 503 })
-    ));
-    return;
-  }
-  if (!ASSETS.includes(url.pathname)) return;
+  if (event.request.method !== 'GET' || url.origin !== self.location.origin || !ASSETS.includes(url.pathname)) return;
   event.respondWith(fetch(event.request).catch(async () => (await caches.match(event.request)) || new Response('Offline', { status: 503 })));
 });
 
