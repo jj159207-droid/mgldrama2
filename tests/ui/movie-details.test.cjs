@@ -76,7 +76,7 @@ beforeEach(()=>{
        const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
        if(existingTopup)return Response.json([existingTopup]);
      }
-     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='pick_3_30d_5000'?5000:body.plan==='pick_6_30d_9500'?9500:body.plan==='all_30d_12500'?12500:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:12500,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?3000:body.plan==='pick_5_30d_6000'?6000:body.plan==='pick_10_30d_9000'?9000:body.plan==='all_30d_15000'?15000:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:15000,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -89,6 +89,7 @@ afterEach(async()=>{await act(async()=>root.unmount());global.fetch=originalFetc
 after(()=>dom.window.close());
 const render=async(url='/')=>{window.history.replaceState({page:'home'},'',url);await act(async()=>root.render(React.createElement(App)));};
 const click=async(selector)=>{const el=document.querySelector(selector);assert.ok(el,selector);await act(async()=>el.click());};
+const choosePlan=async(index)=>{const el=document.querySelectorAll('.taza-offer-card')[index];assert.ok(el,'plan '+index);await act(async()=>el.click());};
 const fill=async(selector,value)=>act(async()=>{const el=document.querySelector(selector);assert.ok(el,selector);Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype,'value').set.call(el,value);el.dispatchEvent(new dom.window.Event('input',{bubbles:true}));});
 const login=async()=>{await fill('#user-phone','99112233');await fill('#user-pin','1234');await act(async()=>document.querySelector('.login-dialog form').dispatchEvent(new dom.window.Event('submit',{bubbles:true,cancelable:true})));};
 const pop=async(url,state={page:'home'})=>act(async()=>{window.history.replaceState(state,'',url);window.dispatchEvent(new dom.window.PopStateEvent('popstate',{state}));});
@@ -97,41 +98,56 @@ const title=()=>document.querySelector('#selected-film-title')?.textContent;
 const confirmSubscription=async()=>{
  assert.equal(orders.length,1,'payment order must exist before bank confirmation');
  const order=orders[0];
- assert.ok((order.plan==='pick_3_30d_5000'&&order.amount===5000)||(order.plan==='pick_6_30d_9500'&&order.amount===9500)||(order.plan==='all_30d_12500'&&order.amount===12500));
+ assert.ok((order.plan==='single'&&order.amount===3000)||(order.plan==='pick_5_30d_6000'&&order.amount===6000)||(order.plan==='pick_10_30d_9000'&&order.amount===9000)||(order.plan==='all_30d_15000'&&order.amount===15000));
  order.status='confirmed';
- if(order.plan==='pick_3_30d_5000')credits+=3;else if(order.plan==='pick_6_30d_9500')credits+=6;else entitled=true;
+ if(order.plan==='single')purchased.add(Number(order.film_id));else if(order.plan==='pick_5_30d_6000')credits+=5;else if(order.plan==='pick_10_30d_9000')credits+=10;else entitled=true;
  await act(async()=>{window.dispatchEvent(new dom.window.Event('focus'));await new Promise(resolve=>setTimeout(resolve,10));});
 
 };
 
-test('TAZA public details offer two purchase options without a premature order',async()=>{
+test('TAZA public details offer four purchase options without a premature order',async()=>{
  await render('/?film=7&fbclid=tracking');
  assert.equal(title(),'Гэрэл');
  assert.equal(orders.length,0);
  await click('.film-hero-watch');
- assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,4);
  assert.equal(orders.length,0);
 });
 
-test('three-film choice creates a 5,000₮ order and opens first selected movie',async()=>{
+test('five-film choice creates a 6,000₮ order and opens first selected movie',async()=>{
  await render('/?film=7');
  assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
  assert.equal(document.querySelector('#film-payment'),null);
  assert.match(document.querySelector('.detail-description').textContent,/<b>Хадмалтай<\/b>/);
  await click('.film-hero-watch');
  assert.equal(orders.length,0);
- await click('.taza-offer-card:not(.taza-offer-featured)');
+ await choosePlan(1);
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'pick_3_30d_5000');
+ assert.equal(orders[0].plan,'pick_5_30d_6000');
  assert.equal(orders[0].film_id,null);
- assert.equal(orders[0].amount,5000);
+ assert.equal(orders[0].amount,6000);
  assert.ok(/^\d{6}$/.test(orders[0].ref_code));
- assert.match(document.querySelector('.wallet-entry-pricing').textContent,/5,000₮/);
+ assert.match(document.querySelector('.wallet-entry-pricing').textContent,/6,000₮/);
  assert.equal(document.querySelector('.login-dialog'),null);
  assert.equal(requests.filter(r=>r.path==='/api/device').length,1);
  await confirmSubscription();
  assert.equal(movie(),films[0].url);
+});
+
+test('one selected film costs 3,000₮ and cannot unlock unrelated films',async()=>{
+ await render('/?film=7');
+ await click('.film-hero-watch');
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,4);
+ await choosePlan(0);
+ assert.equal(orders.length,1);
+ assert.equal(orders[0].plan,'single');
+ assert.equal(orders[0].film_id,7);
+ assert.equal(orders[0].amount,3000);
+ assert.equal(movie(),undefined);
+ await confirmSubscription();
+ assert.equal(movie(),films[0].url);
+ assert.equal(purchased.has(34),false);
 });
 
 test('missing trailer never falls back to a private movie, and a failed trailer can be closed',async()=>{
@@ -143,7 +159,7 @@ test('missing trailer never falls back to a private movie, and a failed trailer 
  await act(async()=>trailer.dispatchEvent(new dom.window.Event('error')));
  assert.ok(document.querySelector('.trailer-error'));await click('.trailer-close');assert.ok(document.querySelector('.detail-poster'));assert.equal(document.querySelector('video'),null);
 });
-test('related films stay public and offer both plans on watch',async()=>{
+test('related films stay public and offer four plans on watch',async()=>{
  const original=films.length;
  films.push({id:8,title:'Найз',badge:'Хэлтэй|Гадаад',views:50},{id:9,title:'Салхи',badge:'Хадмал|Гадаад',views:200},{id:10,title:'Зам',badge:'Хэлтэй|Гадаад',views:100},{id:11,title:'Уул',badge:'Хэлтэй|Гадаад',views:80});
  try{
@@ -153,12 +169,12 @@ test('related films stay public and offer both plans on watch',async()=>{
   await click('.related-film');assert.equal(title(),'Салхи');
   assert.equal(new URL(window.location.href).searchParams.get('film'),'9');
   await click('.film-hero-watch');
-  assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+  assert.equal(document.querySelectorAll('.taza-offer-card').length,4);
   assert.equal(orders.length,0);
  } finally {films.splice(original);}
 });
 
-test('full catalog package creates 12,500₮ order only after selection',async()=>{
+test('full catalog package creates 15,000₮ order only after selection',async()=>{
  await render('/?film=7');
  assert.equal(document.querySelectorAll('.detail-plan').length,0);
  assert.equal(document.querySelector('.checkout-inline'),null);
@@ -167,8 +183,8 @@ test('full catalog package creates 12,500₮ order only after selection',async()
  assert.equal(orders.length,0);
  await click('.taza-offer-featured');
  assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'all_30d_12500');
- assert.equal(orders[0].amount,12500);
+ assert.equal(orders[0].plan,'all_30d_15000');
+ assert.equal(orders[0].amount,15000);
  assert.equal(orders[0].film_id,null);
  await confirmSubscription();
  assert.equal(movie(),films[0].url);
@@ -187,7 +203,7 @@ test('full player Back returns to the main page and stops playback',async()=>{
 test('full playback remains locked until the bank confirms payment',async()=>{
  await render('/?film=7');
  await click('.film-hero-watch');
- await click('.taza-offer-card:not(.taza-offer-featured)');
+ await choosePlan(1);
  assert.ok(document.querySelector('.checkout-inline'));
  assert.equal(document.querySelector('.checkout-dialog'),null);
  assert.equal(movie(),undefined);
@@ -197,7 +213,7 @@ test('full playback remains locked until the bank confirms payment',async()=>{
  assert.equal(movie(),films[0].url);
 });
 
-test('Facebook direct film links let guests choose the full 12,500₮ package',async()=>{
+test('Facebook direct film links let guests choose the full 15,000₮ package',async()=>{
  failCatalog=true;
  await render('/?utm_source=facebook&film=34&fbclid=tracking');
  assert.equal(title(),'Алсын зам');
@@ -206,22 +222,22 @@ test('Facebook direct film links let guests choose the full 12,500₮ package',a
  await click('.taza-offer-featured');
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
- assert.equal(orders[0].amount,12500);
+ assert.equal(orders[0].amount,15000);
  assert.equal(requests.some(r=>r.path==='/api/device'),true);
  assert.equal(document.querySelector('.login-dialog'),null);
  assert.equal(new URL(window.location.href).searchParams.get('film'),'34');
 });
 
-test('guest can choose a three-film checkout during login restoration',async()=>{
+test('guest can choose a five-film checkout during login restoration',async()=>{
  authGate=defer();
  await render('/?film=7');
  assert.equal(title(),'Гэрэл');
  await click('.film-hero-watch');
  assert.equal(orders.length,0);
- await click('.taza-offer-card:not(.taza-offer-featured)');
+ await choosePlan(1);
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
- assert.equal(orders[0].amount,5000);
+ assert.equal(orders[0].amount,6000);
  await act(async()=>authGate.resolve());
 });
 
@@ -233,7 +249,7 @@ test('unregistered visitor creates device-bound order only after selecting a pla
  await click('.taza-offer-featured');
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'all_30d_12500');
+ assert.equal(orders[0].plan,'all_30d_15000');
  assert.ok(session.user?.guest);
  assert.equal(requests.some(r=>r.path==='/api/device'),true);
 });
@@ -306,12 +322,12 @@ test('home header opens three packages and starts checkout only after selection'
  assert.match(document.querySelector('.header-nav').textContent,/БАГЦУУД/);
  assert.equal(orders.length,0);
  await click('.header-nav button');
- assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,4);
  assert.equal(orders.length,0);
  await click('.taza-offer-featured');
  assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'all_30d_12500');
- assert.equal(orders[0].amount,12500);
+ assert.equal(orders[0].plan,'all_30d_15000');
+ assert.equal(orders[0].amount,15000);
 });
 
 test('native history back restores catalog and forward restores details without playback',async()=>{
