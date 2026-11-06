@@ -737,7 +737,7 @@ test('SMS diagnostics show pending 9500 orders without user phone or secrets',as
  const report=await response.json();
  assert.equal(report.recentPending.length,1);
  assert.equal(report.recentPending[0].ref,'894321');
- assert.equal(report.recentPending[0].amount,12000);
+ assert.equal(report.recentPending[0].amount,9500);
  assert.equal('phone' in report.recentPending[0],false);
 });
 
