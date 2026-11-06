@@ -4,11 +4,13 @@ import { safeUrl } from "@/lib/domain";
 import { filmCategory } from "@/lib/catalog";
 import { filmPlans, getVideoEmbed, relatedFilms, trailerUrl, type FilmDetails } from "@/lib/film-details";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
+import TazaPlanPicker from "@/app/components/TazaPlanPicker";
 
 type Props = {
   film: FilmDetails | null;
   freeCatalog?: boolean;
   subscriptionCatalog?: boolean;
+  bundleRemaining?: number;
   films: FilmDetails[];
   loading: boolean;
   error: string;
@@ -61,7 +63,7 @@ export default function FilmLanding(props:Props) {
   useEffect(() => setOfferOpen(false), [film?.id]);
   const watch = () => {
     setPreviewOpen(false);
-    if (props.subscriptionCatalog && !props.available) { setOfferOpen(true); return; }
+    if (props.subscriptionCatalog && !props.available && !props.bundleRemaining) { setOfferOpen(true); return; }
     props.onWatch();
   };
   const choosePlan = (plan:string) => {setPreviewOpen(false);setOfferOpen(false);props.onPlan(plan);};
@@ -83,39 +85,12 @@ export default function FilmLanding(props:Props) {
   const preview = trailerUrl(film);
   const busy = props.watching || (!props.subscriptionCatalog && !props.freeCatalog && !props.authReady);
   const description = film.description?.trim() || "";
-  const priceLabel = props.subscriptionCatalog ? "Энэ кино · 2,000₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
+  const priceLabel = props.subscriptionCatalog ? "3 кино 5,000₮ · 6 кино 9,500₮ · бүх кино 12,500₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
   const movieCount = props.films.length || 45;
 
   return <main className="film-destination catalog-shell film-reference-page">
-    {props.subscriptionCatalog && !props.available && offerOpen && (
-      <div className="taza-offer-backdrop">
-        <section className="taza-offer-dialog" role="dialog" aria-modal="true" aria-labelledby="taza-offer-title">
-          <button type="button" className="taza-offer-close" onClick={() => setOfferOpen(false)} aria-label="Сонголт хаах">×</button>
-          <span className="taza-offer-eyebrow">TAZA SITE · ҮЗЭХ ЭРХ</span>
-          <h2 id="taza-offer-title">Киногоо хэрхэн үзэх вэ?</h2>
-          <p className="taza-offer-intro">Өөрт тохирох нэг сонголтыг дараарай.</p>
-          <button type="button" className="taza-offer-card" disabled={busy} onClick={() => choosePlan("single")}>
-            <span className="taza-offer-card-copy">
-              <strong>🎬 Энэ киног үзэх</strong>
-              <small>{film.title} · 72 цагийн эрх</small>
-            </span>
-            <span className="taza-offer-amount">2,000₮</span>
-            <span className="taza-offer-go">Сонгох →</span>
-          </button>
-          <button type="button" className="taza-offer-card taza-offer-featured" disabled={busy} onClick={() => choosePlan("all_30d_9500")}>
-            <span className="taza-offer-best">ИЛҮҮ ХЭМНЭЛТТЭЙ</span>
-            <span className="taza-offer-card-copy">
-              <strong>🌟 Бүх {movieCount} кино үзэх</strong>
-              <small>Бүх киног 1 сарын турш хязгааргүй үзнэ</small>
-            </span>
-            <span className="taza-offer-amount">9,500₮</span>
-            <span className="taza-offer-go">Багц сонгох →</span>
-          </button>
-          <p className="taza-offer-note">Төлбөр баталгаажмагц үзэх эрх автоматаар нээгдэнэ.</p>
-        </section>
-      </div>
-    )}
+    {props.subscriptionCatalog && !props.available && offerOpen && <TazaPlanPicker busy={busy} onSelect={choosePlan} onClose={()=>setOfferOpen(false)} />}
     <nav className="detail-top" aria-label="Киноны навигац">
       <button className="icon-button film-back" onClick={onBack} aria-label="Нүүр рүү буцах">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8"/></svg>
@@ -140,6 +115,7 @@ export default function FilmLanding(props:Props) {
           </button>
         </div>
       </div>
+      {props.subscriptionCatalog && !props.available && Number(props.bundleRemaining)>0 && <p className="film-landing-note">Таны багцад {props.bundleRemaining} кино сонгох эрх үлдсэн. Энэ киног нээхэд 1 эрх ашиглагдана.</p>}
       {props.available && <p className="film-landing-note">{props.freeCatalog ? "Бүртгэл, төлбөргүйгээр бүтэн үзэх боломжтой." : "Танд энэ киног үзэх эрх байна."}</p>}
       {props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}
     </section>
