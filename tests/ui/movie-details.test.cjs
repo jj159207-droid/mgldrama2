@@ -155,15 +155,22 @@ test('related films stay public and offer both plans on watch',async()=>{
  } finally {films.splice(original);}
 });
 
-test('an unpaid movie opens only the fixed 12,000₮ subscription',async()=>{
+test('monthly package creates 9,500₮ order only after selection',async()=>{
  await render('/?film=7');
- assert.equal(document.querySelectorAll('.detail-plan').length,1);
+ assert.equal(document.querySelectorAll('.detail-plan').length,0);
  assert.equal(document.querySelector('.checkout-inline'),null);
  await click('.film-hero-watch');
  assert.equal(movie(),undefined);
+ assert.equal(orders.length,0);
+ await click('.taza-offer-featured');
  assert.equal(orders.length,1);
- assert.equal(orders[0].amount,12000);
+ assert.equal(orders[0].plan,'all_30d_9500');
+ assert.equal(orders[0].amount,9500);
+ assert.equal(orders[0].film_id,null);
+ await confirmSubscription();
+ assert.equal(movie(),films[0].url);
 });
+
 test('leaving during a full movie request prevents its late result from opening a player',async()=>{
  session={user:{id:12,phone:'99112233'}};entitled=true;await render('/?film=34');playbackGate=defer();await click('.film-hero-watch');await click('.film-back');
  await act(async()=>playbackGate.resolve());assert.ok(document.querySelector('.catalog-browser'));assert.equal(movie(),undefined);
@@ -174,15 +181,19 @@ test('full player Back returns to the main page and stops playback',async()=>{
  await click('[aria-label="Нүүр рүү буцах"]');
  assert.ok(document.querySelector('.site-header'));assert.equal(window.location.search,'');assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
 });
-test('full playback is blocked until bank confirmation creates entitlement',async()=>{
+test('full playback remains locked until the bank confirms payment',async()=>{
  await render('/?film=7');
  await click('.film-hero-watch');
+ await click('.taza-offer-card:not(.taza-offer-featured)');
  assert.ok(document.querySelector('.checkout-inline'));
  assert.equal(document.querySelector('.checkout-dialog'),null);
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
  assert.equal(orders[0].status,'pending');
+ await confirmSubscription();
+ assert.equal(movie(),films[0].url);
 });
+
 test('Facebook direct links show checkout without a phone login',async()=>{
  failCatalog=true;
  await render('/?utm_source=facebook&film=34&fbclid=tracking');
