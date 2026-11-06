@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
-import { plans,safeUrl,TAZA_ALL_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
+import { plans,safeUrl,TAZA_3_PLAN,TAZA_6_PLAN,TAZA_ALL_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
@@ -91,8 +91,8 @@ async function handler(req:NextRequest) {
         const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
-        // TAZA sells one movie or a 30-day all-movie pass; old passes stay valid but are not sold again.
-        if(site==='taza' && !['single',TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'1 кино 2,000₮ эсвэл бүх 45 кино 9,500₮ / 30 хоног.');
+        // Only three current TAZA plans are sold. Legacy confirmed receipts retain their rights.
+        if(site==='taza' && ![TAZA_3_PLAN,TAZA_6_PLAN,TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'3 кино 5,000₮, 6 кино 9,500₮, бүх кино 12,500₮ / 30 хоног.');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {
