@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="mn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#05070c">
+  <title>Татсан кино · ТАЗА САЙТ</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100dvh;font:15px/1.5 system-ui,-apple-system,sans-serif;background:radial-gradient(ellipse at top,#252132 0%,#090b10 50%,#05070c 100%);color:#f9fafb}
+    .wrap{width:min(760px,100%);margin:0 auto;padding:24px 16px 64px}
+    .brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .logo{font-weight:900;letter-spacing:2px;color:#e9c15b;font-size:20px;text-decoration:none}
+    .online{color:#9aa6ba;font-size:12px}
+    h1{font-size:clamp(25px,5vw,36px);margin:28px 0 6px}
+    .intro{margin:0 0 22px;color:#c2c9d3}
+    .card{border:1px solid #444048;background:rgba(22,25,33,.92);padding:16px;border-radius:16px;margin:12px 0}
+    .film{display:flex;align-items:center;gap:12px;justify-content:space-between}
+    .info{min-width:0}.info strong{display:block;font-size:17px;overflow-wrap:anywhere}
+    .info small{display:block;color:#9aa6ba;margin-top:4px}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    button,.link{border:1px solid #596170;border-radius:10px;background:#282c36;color:white;padding:10px 13px;min-height:42px;font:inherit;font-weight:650;cursor:pointer;text-decoration:none}
+    button.primary{background:#e2b749;border-color:#e2b749;color:#181b22}
+    button.danger{color:#fca5a5}.empty{padding:34px 18px;text-align:center;color:#b8c1ce;background:#191b23;border-radius:14px}
+    #playerPane[hidden],#ageGate[hidden],#app[hidden]{display:none}
+    #playerPane{margin:20px 0;padding:14px;border-radius:16px;background:#12141a;border:1px solid #49433a}
+    video{width:100%;max-height:65dvh;aspect-ratio:16/9;background:black;border-radius:8px}
+    .notice{color:#a3aebd;font-size:13px;margin-top:18px;line-height:1.6}
+    .gate{min-height:100dvh;display:grid;place-items:center;padding:24px;text-align:center}
+    .gate-content{width:min(430px,100%)}.gate h1{font-size:27px;margin:12px 0}
+    .gate .mark{font-size:52px;font-weight:900;color:#eac457}
+    .gate p{color:#abb6c8}.gate button{display:block;width:100%;margin:10px 0}
+    @media(max-width:480px){.film{align-items:flex-start;flex-direction:column}.actions{width:100%}.actions button{flex:1}}
+  </style>
+</head>
+<body>
+  <main id="ageGate" class="gate">
+    <div class="gate-content"><div class="mark">21+</div><h1>Та 21 нас хүрсэн үү?</h1>
+      <p>Энэ хэсэг нь зөвхөн 21 нас хүрсэн хэрэглэгчдэд зориулагдсан.</p>
+      <button id="enter" class="primary" type="button">Тийм, би 21 нас хүрсэн</button>
+      <button id="leave" type="button">Үгүй, 21 нас хүрээгүй</button>
+    </div>
+  </main>
+  <main id="app" class="wrap" hidden>
+    <header class="brand"><a class="logo" href="/">▶ TAZA SITE</a><span id="network" class="online">Офлайн киноны сан</span></header>
+    <h1>📁 Татсан кино</h1>
+    <p class="intro">Интернэтгүй үед ч энэ төхөөрөмж дээр хадгалсан киногоо үзээрэй.</p>
+    <section id="playerPane" hidden>
+      <div class="brand"><strong id="playingTitle"></strong><button id="stop" type="button">Хаах ×</button></div>
+      <video id="movie" controls playsinline preload="metadata" controlslist="nodownload"></video>
+    </section>
+    <section id="films" aria-live="polite"><div class="empty">Хадгалсан киног шалгаж байна…</div></section>
+    <p class="notice">Кино зөвхөн энэ хөтөч эсвэл суулгасан TAZA аппын хадгалах санд байрлана. Үзэх эрхийн хугацаа дууссан, эсвэл төхөөрөмжийн санах ой цэвэрлэгдсэн бол нээгдэхгүй. Сайтын эрхийг сунгах болон шинэ кино татахад интернэт хэрэгтэй.</p>
+    <p><a class="link" href="/">← Нүүр хуудас руу буцах</a></p>
+  </main>
+  <script>
+    (function(){
+      'use strict';
+      var name='taza-offline-movies-v1',root=document.getElementById('app'),gate=document.getElementById('ageGate');
+      var list=document.getElementById('films'),pane=document.getElementById('playerPane'),video=document.getElementById('movie');
+      var objectURL=null;
+      function key(type,id){return '/__taza_offline__/'+type+'/'+id;}
+      function closePlayer(){
+        video.pause();video.removeAttribute('src');video.load();
+        if(objectURL)URL.revokeObjectURL(objectURL);objectURL=null;pane.hidden=true;
+      }
+      function onlineLabel(){document.getElementById('network').textContent=navigator.onLine?'● Холбогдсон':'● Интернэтгүй';}
+      window.addEventListener('online',onlineLabel);window.addEventListener('offline',onlineLabel);
+      document.getElementById('stop').addEventListener('click',closePlayer);
+      document.getElementById('leave').addEventListener('click',function(){location.replace('about:blank');});
+      function start(){
+        gate.hidden=true;root.hidden=false;onlineLabel();void render();
+      }
+      document.getElementById('enter').addEventListener('click',function(){
+        try{sessionStorage.setItem('taza_age_21_session_v2','yes');}catch(e){}
+        start();
+      });
+      try{if(sessionStorage.getItem('taza_age_21_session_v2')==='yes')start();}catch(e){}
+
+      async function render(){
+        list.replaceChildren();
+        if(!('caches' in window)){list.textContent='Энэ хөтөч офлайн хадгалах санг дэмжихгүй байна.';return;}
+        var cache=await caches.open(name),requests=await cache.keys(),valid=[];
+        for(var i=0;i<requests.length;i++){
+          var path=new URL(requests[i].url).pathname;
+          var match=/^\/__taza_offline__\/meta\/(\d+)$/.exec(path);
+          if(!match)continue;
+          var id=Number(match[1]);
+          try{
+            var response=await cache.match(key('meta',id));if(!response)continue;
+            var meta=await response.json();
+            if(Number(meta.filmId)!==id||!Number.isFinite(Number(meta.expiresAt))||Date.now()>=Number(meta.expiresAt)){
+              await cache.delete(key('meta',id));await cache.delete(key('movie',id));continue;
+            }
+            if(!await cache.match(key('movie',id))){await cache.delete(key('meta',id));continue;}
+            valid.push(meta);
+          }catch(e){await cache.delete(key('meta',id));}
+        }
+        if(!valid.length){var empty=document.createElement('div');empty.className='empty';empty.textContent='Одоогоор татсан кино алга. Интернэттэй үед кино нээгээд «Татаж хадгалах» товчийг дарна уу.';list.append(empty);return;}
+        valid.sort(function(a,b){return b.storedAt-a.storedAt;});
+        valid.forEach(function(meta){
+          var card=document.createElement('article'),info=document.createElement('div'),title=document.createElement('strong'),small=document.createElement('small'),actions=document.createElement('div');
+          var play=document.createElement('button'),del=document.createElement('button');
+          card.className='card film';info.className='info';actions.className='actions';
+          title.textContent=String(meta.title||'Кино');
+          small.textContent='Эрх дуусах: '+new Date(meta.expiresAt).toLocaleDateString('mn-MN');
+          play.className='primary';play.type='button';play.textContent='▶ Үзэх';
+          play.addEventListener('click',async function(){
+            if(Date.now()>=Number(meta.expiresAt)){await render();return;}
+            var response=await cache.match(key('movie',meta.filmId));
+            if(!response){await render();return;}
+            closePlayer();
+            var blob=await response.blob();objectURL=URL.createObjectURL(blob);
+            video.src=objectURL;
+            document.getElementById('playingTitle').textContent=String(meta.title||'Кино');
+            pane.hidden=false;pane.scrollIntoView({behavior:'smooth'});
+            void video.play().catch(function(){});
+          });
+          del.className='danger';del.type='button';del.textContent='Устгах';
+          del.addEventListener('click',async function(){
+            closePlayer();await cache.delete(key('movie',meta.filmId));
+            await cache.delete(key('meta',meta.filmId));await render();
+          });
+          info.append(title,small);actions.append(play,del);card.append(info,actions);list.append(card);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
