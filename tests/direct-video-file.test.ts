@@ -22,9 +22,9 @@ test('only readable MP4 response types are saved',()=>{
 test('direct MP4 saving asks for a file in the click handler before awaiting network',()=>{
   const source=readFileSync(new URL('../app/components/OfflineDownloadButton.tsx',import.meta.url),'utf8');
   const handler=source.split('const saveDirectFile=async()=>{')[1]?.split('  return <div className=')[0]||'';
-  assert.ok(handler.includes('handlePromise=picker('));
-  assert.ok(handler.indexOf('handlePromise=picker(')<handler.indexOf('await handlePromise'));
-  assert.ok(handler.indexOf('handlePromise=picker(')<handler.indexOf("fetch(`/api/playback?id="));
+  assert.ok(handler.includes('handlePromise=picker.call(window,'));
+  assert.ok(handler.indexOf('handlePromise=picker.call(window,')<handler.indexOf('await handlePromise'));
+  assert.ok(handler.indexOf('handlePromise=picker.call(window,')<handler.indexOf("fetch(`/api/playback?id="));
   assert.match(handler,/pipeTo\(writable\)/);
   assert.match(handler,/isDirectMp4Response/);
   assert.match(handler,/credentials:'same-origin'/);
