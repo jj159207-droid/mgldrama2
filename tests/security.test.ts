@@ -289,6 +289,49 @@ test('TAZA disables new single-film sales but preserves previously confirmed sin
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,cookie))).status,403);
 });
 
+test('3-film plan opens exactly three distinct movies, with unlimited repeats of those titles',async()=>{
+ const cookie=await register();
+ for(let id=2;id<=8;id++)tables.films.push({...tables.films[0],id,title:'Movie '+id});
+ const order=await api.POST(dbReq('pending_payments','POST',{ref_code:'610001',plan:'pick_3_30d_5000',amount:1,status:'confirmed'},cookie));
+ assert.equal(order.status,200);
+ assert.equal((await order.json())[0].amount,5000);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await bankSms('610001','5,000.00')).status,200);
+ const initial=await (await access.GET(req('/api/access','GET',undefined,cookie))).json();
+ assert.equal(initial.bundleRemaining,3);
+ for(const id of [1,2,3])assert.equal((await playback.GET(req('/api/playback?id='+id,'GET',undefined,cookie))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+ assert.equal(tables.taza_pack_claims.length,3);
+ const after=await (await access.GET(req('/api/access','GET',undefined,cookie))).json();
+ assert.equal(after.bundleRemaining,0);
+ assert.ok(after.access.film_1>Date.now());
+ assert.equal((await playback.GET(req('/api/playback?id=4','GET',undefined,cookie))).status,403);
+ const other=await register('99771188');
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,other))).status,403);
+ tables.pending_payments.find(p=>p.ref_code==='610001')!.confirmed_at=new Date(Date.now()-31*86400000).toISOString();
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+});
+
+test('6-film plan opens six distinct titles and blocks a seventh',async()=>{
+ const cookie=await register();
+ for(let id=2;id<=8;id++)tables.films.push({...tables.films[0],id,title:'Movie '+id});
+ assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'610006',plan:'pick_6_30d_9500'},cookie))).status,200);
+ assert.equal((await bankSms('610006','9,500.00')).status,200);
+ for(let id=1;id<=6;id++)assert.equal((await playback.GET(req('/api/playback?id='+id,'GET',undefined,cookie))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=7','GET',undefined,cookie))).status,403);
+ assert.equal(tables.taza_pack_claims.length,6);
+ const a=await (await access.GET(req('/api/access','GET',undefined,cookie))).json();
+ assert.equal(a.bundleRemaining,0);
+});
+
+test('video without playback URL never consumes a film credit',async()=>{
+ const cookie=await register();
+ tables.films[0].url='';
+ assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'610010',plan:'pick_3_30d_5000'},cookie))).status,200);
+ assert.equal((await bankSms('610010','5,000.00')).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,404);
+ assert.equal(tables.taza_pack_claims.length,0);
+});
 test('TAZA public film catalog remains visible, paid player remains locked after expired grants',async()=>{
   assert.equal((await api.GET(dbReq('films?select=*'))).status,200);
   assert.equal((await playback.GET(req('/api/playback?id=1'))).status,403);
