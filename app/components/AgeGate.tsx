@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-const AGE_GATE_KEY = 'taza_age_21_v1';
+// Remember consent only for the active browser tab/session. Previous permanent
+// localStorage consent deliberately does not bypass the age check anymore.
+const AGE_GATE_KEY = 'taza_age_21_session_v2';
 
 type Props = { children: ReactNode };
 
@@ -12,7 +14,7 @@ export default function AgeGate({ children }: Props) {
 
   useEffect(() => {
     try {
-      setAllowed(window.localStorage.getItem(AGE_GATE_KEY) === 'yes');
+      setAllowed(window.sessionStorage.getItem(AGE_GATE_KEY) === 'yes');
     } catch {
       setAllowed(false);
     }
@@ -23,12 +25,12 @@ export default function AgeGate({ children }: Props) {
   }, [allowed]);
 
   const enter = () => {
-    try { window.localStorage.setItem(AGE_GATE_KEY, 'yes'); } catch {}
+    try { window.sessionStorage.setItem(AGE_GATE_KEY, 'yes'); } catch {}
     setAllowed(true);
   };
 
   const leave = () => {
-    try { window.localStorage.removeItem(AGE_GATE_KEY); } catch {}
+    try { window.sessionStorage.removeItem(AGE_GATE_KEY); } catch {}
     if (window.history.length > 1) {
       window.history.back();
       window.setTimeout(() => {
