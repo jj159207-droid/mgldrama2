@@ -194,27 +194,34 @@ test('full playback remains locked until the bank confirms payment',async()=>{
  assert.equal(movie(),films[0].url);
 });
 
-test('Facebook direct links show checkout without a phone login',async()=>{
+test('Facebook direct film links let guests choose a 9,500₮ package',async()=>{
  failCatalog=true;
  await render('/?utm_source=facebook&film=34&fbclid=tracking');
  assert.equal(title(),'Алсын зам');
  await click('.film-hero-watch');
+ assert.equal(orders.length,0);
+ await click('.taza-offer-featured');
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
- assert.equal(orders[0].amount,12000);
+ assert.equal(orders[0].amount,9500);
  assert.equal(requests.some(r=>r.path==='/api/device'),true);
  assert.equal(document.querySelector('.login-dialog'),null);
  assert.equal(new URL(window.location.href).searchParams.get('film'),'34');
 });
-test('a guest can open checkout while prior login restoration is pending',async()=>{
+
+test('guest can choose single-film checkout during login restoration',async()=>{
  authGate=defer();
  await render('/?film=7');
  assert.equal(title(),'Гэрэл');
  await click('.film-hero-watch');
+ assert.equal(orders.length,0);
+ await click('.taza-offer-card:not(.taza-offer-featured)');
  assert.equal(movie(),undefined);
  assert.equal(orders.length,1);
+ assert.equal(orders[0].amount,2000);
  await act(async()=>authGate.resolve());
 });
+
 test('unregistered visitors receive a device-bound payment order',async()=>{
  await render('/?film=7&fbclid=tracking');
  assert.equal(title(),'Гэрэл');
