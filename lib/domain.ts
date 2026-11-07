@@ -1,6 +1,7 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
-export const TAZA_SINGLE_PRICE = 2000;
+export const TAZA_SINGLE_PRICE = 2500;
+export const TAZA_2_PLAN = 'pick_2_30d_5000';
 export const TAZA_5_PLAN = 'pick_5_30d_6000';
 export const TAZA_10_PLAN = 'pick_10_30d_9000';
 export const TAZA_ALL_PLAN = 'all_30d_15000';
@@ -10,9 +11,9 @@ export const TAZA_6_PLAN = 'pick_6_30d_9500';
 export const TAZA_PREVIOUS_ALL_PLAN = 'all_30d_12500';
 export const TAZA_LEGACY_ALL_PLAN = 'all_30d_9500';
 export const TAZA_ALL_PRICE = 15000;
-export const TAZA_PACK_PRICES = {[TAZA_5_PLAN]:6000,[TAZA_10_PLAN]:9000,[TAZA_ALL_PLAN]:15000} as const;
+export const TAZA_PACK_PRICES = {[TAZA_2_PLAN]:5000,[TAZA_5_PLAN]:6000,[TAZA_10_PLAN]:9000,[TAZA_ALL_PLAN]:15000} as const;
 export function tazaPackQuota(plan:string) {
-  return plan===TAZA_5_PLAN?5:plan===TAZA_10_PLAN?10:plan===TAZA_3_PLAN?3:plan===TAZA_6_PLAN?6:0;
+  return plan===TAZA_2_PLAN?2:plan===TAZA_5_PLAN?5:plan===TAZA_10_PLAN?10:plan===TAZA_3_PLAN?3:plan===TAZA_6_PLAN?6:0;
 }
 export const plans: Record<string, number> = {
   single:TAZA_SINGLE_PRICE,
@@ -30,6 +31,7 @@ export function planLabel(plan: string): string {
     erotic_3day:'Эротик · 72 цаг', gadaad_3day:'Гадаад · 72 цаг', hyatad_3day:'Хятад · 72 цаг', oros_3day:'Орос · 72 цаг',
     erotic_1month:'Эротик · 72 цаг', gadaad_1month:'Гадаад · 72 цаг', hyatad_1month:'Хятад · 72 цаг', oros_1month:'Орос · 72 цаг',
     all_30d_12000:'Бүх кино · 30 хоног · 12,000₮', // legacy purchases stay valid
+    [TAZA_2_PLAN]:'2 кино · 30 хоног · 5,000₮',
     [TAZA_5_PLAN]:'5 кино · 30 хоног · 6,000₮',
     [TAZA_10_PLAN]:'10 кино · 30 хоног · 9,000₮',
     [TAZA_ALL_PLAN]:'Бүх кино · 30 хоног · 15,000₮',
