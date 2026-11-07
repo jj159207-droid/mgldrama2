@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
-import { plans,safeUrl,TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
+import { plans,safeUrl,TAZA_2_PLAN,TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
@@ -91,8 +91,8 @@ async function handler(req:NextRequest) {
         const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
-        // Only the four new TAZA products may be purchased; confirmed legacy receipts retain access.
-        if(site==='taza' && !['single',TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'1 кино 2,000₮; 5 кино 6,000₮; 10 кино 9,000₮; бүх кино 15,000₮.');
+        // New TAZA purchases have a minimum of two films / 5,000₮; confirmed legacy single-film receipts remain valid.
+        if(site==='taza' && ![TAZA_2_PLAN,TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'1 кино 2,500₮; хамгийн багадаа 2 кино 5,000₮; 5 кино 6,000₮; 10 кино 9,000₮; бүх кино 15,000₮.');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {
@@ -126,6 +126,13 @@ async function handler(req:NextRequest) {
           const [film]=await db(`films?id=eq.${filmId}&site_id=eq.${site}&select=id,price,free,locked`);
           if(!film || (site!=='taza' && (film.free===true || film.locked===false)))throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
           amount=site==='taza'?TAZA_SINGLE_PRICE:Number(film.price);
+        }
+        if(site==='taza'&&plan===TAZA_2_PLAN&&b.film_id!=null){
+          const selected=Number(b.film_id);
+          if(!Number.isSafeInteger(selected)||selected<=0)throw new ApiError(400,'Сонгосон киноны ID буруу.');
+          const [picked]=await db(`films?id=eq.${selected}&site_id=eq.taza&select=id&limit=1`);
+          if(!picked)throw new ApiError(404,'Сонгосон кино олдсонгүй.');
+          filmId=selected;
         }
         if(!Number.isSafeInteger(amount)||amount<=0)throw new ApiError(400,'Багц эсвэл үнэ буруу.');
         b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan,site_id:site};
