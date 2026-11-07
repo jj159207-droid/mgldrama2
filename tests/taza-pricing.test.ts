@@ -7,8 +7,8 @@ import {
 } from '../lib/domain';
 
 test('Taza sells one, five, ten, and all-film access at the correct new prices',()=>{
-  assert.equal(plans.single,3000);
-  assert.equal(TAZA_SINGLE_PRICE,3000);
+  assert.equal(plans.single,2000);
+  assert.equal(TAZA_SINGLE_PRICE,2000);
   assert.equal(plans[TAZA_5_PLAN],6000);
   assert.equal(plans[TAZA_10_PLAN],9000);
   assert.equal(plans[TAZA_ALL_PLAN],15000);
@@ -60,7 +60,7 @@ test('four new watch options are shared between film and home sections',()=>{
   assert.match(picker,/TAZA_5_PLAN/);
   assert.match(picker,/TAZA_10_PLAN/);
   assert.match(picker,/TAZA_ALL_PLAN/);
-  for(const amount of ['3,000₮','6,000₮','9,000₮','15,000₮'])assert.ok(picker.includes(amount),amount);
+  for(const amount of ['2,000₮','6,000₮','9,000₮','15,000₮'])assert.ok(picker.includes(amount),amount);
   const landing=readFileSync(new URL('../app/components/FilmLanding.tsx',import.meta.url),'utf8');
   assert.match(landing,/TazaPlanPicker/);
   const home=readFileSync(new URL('../app/page.tsx',import.meta.url),'utf8');
