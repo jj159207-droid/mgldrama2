@@ -280,20 +280,20 @@ test('TAZA rejects new purchases of the retired 12,000₮ plan but honors an old
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
 });
 
-test('TAZA charges exactly 3,000₮ per selected film for 72 hours and preserves older 2,000₮ rights',async()=>{
+test('TAZA charges exactly 2,000₮ per selected film for 72 hours and preserves older 3,000₮ rights',async()=>{
  const cookie=await register();
  tables.films.push({...tables.films[0],id:2,title:'Other movie'});
  const order=await api.POST(dbReq('pending_payments','POST',{ref_code:'711224',plan:'single',film_id:1,amount:1,status:'confirmed'},cookie));
  assert.equal(order.status,200);
  const [pending]=await order.json();
- assert.equal(pending.amount,3000);assert.equal(pending.status,'pending');
+ assert.equal(pending.amount,2000);assert.equal(pending.status,'pending');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
- assert.equal((await bankSms('711224','3,000.00')).status,200);
+ assert.equal((await bankSms('711224','2,000.00')).status,200);
  assert.equal(paymentExpiry(tables.pending_payments[0])-Date.parse(String(tables.pending_payments[0].confirmed_at)),72*3600000);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,cookie))).status,403);
  const legacy=await register('99887766');
- tables.pending_payments.push({id:33,user_id:tables.users[1].id,site_id:'taza',plan:'single',film_id:2,amount:2000,status:'confirmed',created_at:now(),confirmed_at:now()});
+ tables.pending_payments.push({id:33,user_id:tables.users[1].id,site_id:'taza',plan:'single',film_id:2,amount:3000,status:'confirmed',created_at:now(),confirmed_at:now()});
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,legacy))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,legacy))).status,403);
 });
