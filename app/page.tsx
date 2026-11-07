@@ -795,7 +795,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} mediaFirst={freeCatalog} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "1 кино 3,000₮ · 5 кино 6,000₮ · 10 кино 9,000₮ · Бүх кино 15,000₮" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "1 кино 2,000₮ · 5 кино 6,000₮ · 10 кино 9,000₮ · Бүх кино 15,000₮" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
