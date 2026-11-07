@@ -23,8 +23,8 @@ export async function POST(req: NextRequest) {
     const [order] = await db(
       `pending_payments?site_id=eq.taza&user_id=eq.${s.userId}&ref_code=eq.${ref}&select=id,ref_code,plan,amount,status,film_id,created_at&limit=1`
     );
-    if (!order || !((order.plan === 'single' && Number(order.amount) === 2000) || (order.plan === 'pick_2_30d_5000' && Number(order.amount) === 5000)))
-      throw new ApiError(404, 'Энэ кодтой 2,000₮-ийн хуучин захиалга эсвэл 5,000₮-ийн 2 киноны багц олдсонгүй.');
+    if (!order || !((order.plan === 'single' && Number(order.amount) === 2000) || (order.plan === 'pick_2_30d_5000' && Number(order.amount) === 5000) || (order.plan === 'pick_5_30d_10000' && Number(order.amount) === 10000) || (order.plan === 'pick_40_30d_12000' && Number(order.amount) === 12000)))
+      throw new ApiError(404, 'Энэ кодтой төлбөрийн захиалга олдсонгүй. 2/5/40 киноны багцын кодыг шалгана уу.');
     if (order.status === 'confirmed') return json({ok: true, already_paid: true});
     if (order.status !== 'pending') throw new ApiError(409, 'Захиалгын хугацаа дууссан эсвэл цуцлагдсан. Админтай холбогдоно уу.');
     const age = Date.now() - Date.parse(String(order.created_at || ''));
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const title = String(film?.title || '2 киноны багц').replace(/\s+/g, ' ').slice(0, 140);
     const priceLabel = Number(order.amount).toLocaleString('mn-MN');
-    const label = order.plan === 'single' ? 'Өмнөх нэг киноны захиалга' : '2 киноны багц';
+    const label = order.plan === 'single' ? 'Өмнөх нэг киноны захиалга' : order.plan === 'pick_2_30d_5000' ? '2 киноны багц' : order.plan === 'pick_5_30d_10000' ? '5 киноны багц' : '40 киноны багц';
     const message = `🧾 ${label} · БАНКААР ШАЛГАХ\nКино: ${title}\nГүйлгээний код: ${ref}\nДүн: ${priceLabel}₮\nБаримтын зураг хавсаргав. Зураг дангаараа төлбөр баталгаажуулахгүй. Банкны бодит орлого, дүн, код таарсны дараа эрх нээнэ үү.`;
     const rows = await db('rpc/kino_chat_send_site', 'POST', {
       p_site: 'taza', p_user: s.userId, p_sender: 'user',
