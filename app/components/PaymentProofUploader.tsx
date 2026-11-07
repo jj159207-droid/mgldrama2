@@ -40,7 +40,7 @@ export default function PaymentProofUploader({
   };
 
   const submit = async () => {
-    if (!prepared || sending.current || !ready || ![2000,5000].includes(Number(amount))) return;
+    if (!prepared || sending.current || !ready || ![2000,5000,10000,12000].includes(Number(amount))) return;
     sending.current = true;
     setError('');
     setState('sending');
@@ -79,7 +79,7 @@ export default function PaymentProofUploader({
         <span>{prepared.name}</span>
       </div>}
       <button type="button" className="primary-button payment-proof-submit" onClick={()=>{void submit();}}
-        disabled={!prepared || !ready || ![2000,5000].includes(Number(amount)) || state==='preparing' || state==='sending'}>
+        disabled={!prepared || !ready || ![2000,5000,10000,12000].includes(Number(amount)) || state==='preparing' || state==='sending'}>
         {state==='preparing'?'Зураг бэлтгэж байна…':state==='sending'?'Илгээж байна…':'Баримтаа илгээх'}
       </button>
     </>}

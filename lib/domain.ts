@@ -2,6 +2,10 @@ export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
 export const TAZA_SINGLE_PRICE = 2500;
 export const TAZA_2_PLAN = 'pick_2_30d_5000';
+export const TAZA_5_10000_PLAN = 'pick_5_30d_10000';
+export const TAZA_40_PLAN = 'pick_40_30d_12000';
+export const TAZA_40_PRICE = 12000;
+// Retired TAZA plans are kept solely for previously confirmed receipts.
 export const TAZA_5_PLAN = 'pick_5_30d_6000';
 export const TAZA_10_PLAN = 'pick_10_30d_9000';
 export const TAZA_ALL_PLAN = 'all_30d_15000';
@@ -11,13 +15,14 @@ export const TAZA_6_PLAN = 'pick_6_30d_9500';
 export const TAZA_PREVIOUS_ALL_PLAN = 'all_30d_12500';
 export const TAZA_LEGACY_ALL_PLAN = 'all_30d_9500';
 export const TAZA_ALL_PRICE = 15000;
-export const TAZA_PACK_PRICES = {[TAZA_2_PLAN]:5000,[TAZA_5_PLAN]:6000,[TAZA_10_PLAN]:9000,[TAZA_ALL_PLAN]:15000} as const;
+export const TAZA_PACK_PRICES = {[TAZA_2_PLAN]:5000,[TAZA_5_10000_PLAN]:10000,[TAZA_40_PLAN]:TAZA_40_PRICE} as const;
 export function tazaPackQuota(plan:string) {
-  return plan===TAZA_2_PLAN?2:plan===TAZA_5_PLAN?5:plan===TAZA_10_PLAN?10:plan===TAZA_3_PLAN?3:plan===TAZA_6_PLAN?6:0;
+  return plan===TAZA_2_PLAN?2:plan===TAZA_5_10000_PLAN?5:plan===TAZA_40_PLAN?40:plan===TAZA_5_PLAN?5:plan===TAZA_10_PLAN?10:plan===TAZA_3_PLAN?3:plan===TAZA_6_PLAN?6:0;
 }
 export const plans: Record<string, number> = {
   single:TAZA_SINGLE_PRICE,
   ...TAZA_PACK_PRICES,
+  [TAZA_5_PLAN]:6000,[TAZA_10_PLAN]:9000,[TAZA_ALL_PLAN]:15000,
   [TAZA_3_PLAN]:5000,[TAZA_6_PLAN]:9500,[TAZA_PREVIOUS_ALL_PLAN]:12500,
   [TAZA_LEGACY_ALL_PLAN]:9500,
   erotic_3day:12500,gadaad_3day:12500,hyatad_3day:12500,oros_3day:12500,
@@ -32,6 +37,8 @@ export function planLabel(plan: string): string {
     erotic_1month:'Эротик · 72 цаг', gadaad_1month:'Гадаад · 72 цаг', hyatad_1month:'Хятад · 72 цаг', oros_1month:'Орос · 72 цаг',
     all_30d_12000:'Бүх кино · 30 хоног · 12,000₮', // legacy purchases stay valid
     [TAZA_2_PLAN]:'2 кино · 30 хоног · 5,000₮',
+    [TAZA_5_10000_PLAN]:'5 кино · 30 хоног · 10,000₮',
+    [TAZA_40_PLAN]:'40 кино · 30 хоног · 12,000₮',
     [TAZA_5_PLAN]:'5 кино · 30 хоног · 6,000₮',
     [TAZA_10_PLAN]:'10 кино · 30 хоног · 9,000₮',
     [TAZA_ALL_PLAN]:'Бүх кино · 30 хоног · 15,000₮',

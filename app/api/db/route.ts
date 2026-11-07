@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
-import { plans,safeUrl,TAZA_2_PLAN,TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
+import { plans,safeUrl,TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
@@ -92,7 +92,7 @@ async function handler(req:NextRequest) {
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
         // New TAZA purchases have a minimum of two films / 5,000₮; confirmed legacy single-film receipts remain valid.
-        if(site==='taza' && ![TAZA_2_PLAN,TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'1 кино 2,500₮; хамгийн багадаа 2 кино 5,000₮; 5 кино 6,000₮; 10 кино 9,000₮; бүх кино 15,000₮.');
+        if(site==='taza' && ![TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(plan))throw new ApiError(400,'Шинэ багцууд: 2 кино 5,000₮; 5 кино 10,000₮; 40 кино 12,000₮. Хуучин төлсөн эрх хэвээр хүчинтэй.');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {
