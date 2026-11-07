@@ -419,6 +419,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         </div>
       </div>
 
+      {isEntryGate && film.plan===TAZA_2_PLAN && tazaTransfer && <PaymentProofUploader refCode={refCode} amount={orderAmount} ready={orderReady&&transferReady} />}
       {isEntryGate && <div className="wallet-single-topbar wallet-single-bottom-banner">
         <AdminEntryLogo onOpen={()=>onAdmin?.()} />
         <span />
@@ -456,7 +457,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         </section>
         <section className={isWalletTopup ? "reference-section wallet-reference-blink" : "reference-section"}><h3>2. Гүйлгээний утгад энэ кодыг бичнэ</h3><button disabled={!orderReady||!transferReady} className="copy-reference" onClick={() => copyText(refCode,"ref")}><strong>{orderReady ? refCode : "…"}</strong><span>{copied === "ref" ? "Хуулагдлаа ✓" : "Код хуулах"}</span></button><p>{orderReady ? "Энэ 6 оронтой утгыг яг хэвээр бичнэ. Утга таарвал таны орсон бодит дүнгээр үлдэгдэл цэнэглэгдэнэ." : "Захиалга үүсэж дуустал мөнгө шилжүүлэхгүй түр хүлээнэ үү."}</p></section>
       </div>}
-      {!isWalletTopup && ["single",TAZA_2_PLAN].includes(String(film.plan)) && tazaTransfer && <PaymentProofUploader refCode={refCode} amount={orderAmount} ready={orderReady&&transferReady} />}
+      {!isWalletTopup && film.plan==="single" && tazaTransfer && <PaymentProofUploader refCode={refCode} amount={orderAmount} ready={orderReady&&transferReady} />}
       <div className="checkout-status" role="status"><span className="status-ring" aria-hidden="true"/><div><strong>{autoStatus === "timeout" ? "Шалгах хугацаа дууслаа" : autoStatus === "checking" ? "Баталгаажуулалт шалгаж байна…" : "Баталгаажуулалтыг хүлээж байна"}</strong><p>{autoStatus === "timeout" ? "Төлбөр шилжүүлсэн бол дахин төлөхөөс өмнө админтай холбогдоно уу." : "Төлбөр баталгаажсаны дараа үзэх эрх нээгдэнэ."}</p></div></div>
       {!isWalletTopup && <>
         <button className="secondary-button checkout-back" disabled={!orderReady || manualChecking} onClick={()=>handleSmsFound(refCode)}>{manualChecking ? "Шалгаж байна…" : "Төлбөрөө шалгах"}</button>
