@@ -700,7 +700,8 @@
     position: fixed !important;
     inset: 0 !important;
     z-index: 600 !important;
-    width: 100vw !important;
+    width: 100% !important;
+    max-width: 100vw !important;
     height: 100dvh !important;
     max-height: 100dvh !important;
     margin: 0 !important;
@@ -708,8 +709,11 @@
       max(12px, env(safe-area-inset-top))
       14px
       max(18px, env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden !important;
     overflow-y: auto !important;
     overscroll-behavior: contain;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
     background:
       radial-gradient(circle at 50% -10%, rgba(251,191,36,.08), transparent 32%),
       #070b11 !important;
@@ -961,4 +965,40 @@
 .wallet-single-account b {
   color: #cbd5e1;
   background: rgba(148, 163, 184, .12);
+}
+
+
+/* Prevent sideways movement in the mobile bank-transfer checkout.
+   Long IBANs, receipt previews and horizontal swipe gestures must not
+   stretch the screen beyond the device's visible width. */
+.film-reference-page .detail-payment,
+.film-reference-page .detail-payment > .checkout-inline,
+.film-reference-page .detail-payment .wallet-single-instructions,
+.film-reference-page .detail-payment .wallet-single-copy,
+.film-reference-page .detail-payment .wallet-single-copy > span,
+.film-reference-page .detail-payment .payment-proof-panel {
+  min-width: 0;
+  max-width: 100%;
+}
+.wallet-single-fullscreen .wallet-single-copy strong {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.wallet-single-fullscreen .wallet-single-copy b {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .film-reference-page .detail-payment > .checkout-inline.wallet-single-fullscreen {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
+  .wallet-single-fullscreen .wallet-video-start-animation {
+    max-width: calc(100% + 24px);
+  }
 }
