@@ -1,6 +1,6 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
-export const TAZA_SINGLE_PRICE = 3000;
+export const TAZA_SINGLE_PRICE = 2000;
 export const TAZA_5_PLAN = 'pick_5_30d_6000';
 export const TAZA_10_PLAN = 'pick_10_30d_9000';
 export const TAZA_ALL_PLAN = 'all_30d_15000';

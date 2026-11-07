@@ -12,7 +12,7 @@ type Props = {
 };
 
 const packages=[
-  {id:'single',count:'1 кино',price:'3,000₮',description:'Сонгосон нэг киногоо 72 цагийн турш дахин үзнэ',featured:false},
+  {id:'single',count:'1 кино',price:'2,000₮',description:'Сонгосон нэг киногоо 72 цагийн турш дахин үзнэ',featured:false},
   {id:TAZA_5_PLAN,count:'5 кино',price:'6,000₮',description:'Сонгосон 5 өөр киногоо 30 хоногийн дотор үзнэ',featured:false},
   {id:TAZA_10_PLAN,count:'10 кино',price:'9,000₮',description:'Сонгосон 10 өөр киногоо 30 хоногийн дотор үзнэ',featured:false},
   {id:TAZA_ALL_PLAN,count:'Бүх кино',price:'15,000₮',description:'Сайтын бүх киног 30 хоног хязгааргүй үзнэ',featured:true},
