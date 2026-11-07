@@ -27,6 +27,7 @@ export async function POST(req:NextRequest) {
     const b=await bodyJson(req,4096);
     let result:any;
     if(b.action==='purchase'){
+      if(site==='taza')throw new ApiError(400,'TAZA SITE-д хамгийн багадаа 2 киноны 5,000₮-ийн эрх сонгоно уу.');
       const filmId=Number(b.film_id);
       if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
       [result]=await db('rpc/kino_wallet_purchase_site','POST',{

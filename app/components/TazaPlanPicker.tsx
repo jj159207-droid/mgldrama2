@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { TAZA_5_PLAN, TAZA_10_PLAN, TAZA_ALL_PLAN } from '@/lib/domain';
+import { TAZA_2_PLAN, TAZA_5_PLAN, TAZA_10_PLAN, TAZA_ALL_PLAN } from '@/lib/domain';
 
 type Props = {
   onSelect: (plan:string)=>void;
@@ -12,7 +12,7 @@ type Props = {
 };
 
 const packages=[
-  {id:'single',count:'1 кино',price:'2,000₮',description:'Сонгосон нэг киногоо 72 цагийн турш дахин үзнэ',featured:false},
+  {id:TAZA_2_PLAN,count:'2 кино',price:'5,000₮',description:'1 кино 2,500₮. Хамгийн багадаа 2 өөр киног 30 хоног үзэх эрх',featured:false},
   {id:TAZA_5_PLAN,count:'5 кино',price:'6,000₮',description:'Сонгосон 5 өөр киногоо 30 хоногийн дотор үзнэ',featured:false},
   {id:TAZA_10_PLAN,count:'10 кино',price:'9,000₮',description:'Сонгосон 10 өөр киногоо 30 хоногийн дотор үзнэ',featured:false},
   {id:TAZA_ALL_PLAN,count:'Бүх кино',price:'15,000₮',description:'Сайтын бүх киног 30 хоног хязгааргүй үзнэ',featured:true},
@@ -31,7 +31,7 @@ export default function TazaPlanPicker({onSelect,onClose,busy=false,hasSelectedF
       <button ref={closeRef} type="button" className="taza-offer-close" onClick={onClose} aria-label="Сонголт хаах">×</button>
       <span className="taza-offer-eyebrow">TAZA SITE · ҮЗЭХ БАГЦ</span>
       <h2 id="taza-offer-title">Киногоо хэрхэн үзэх вэ?</h2>
-      <p className="taza-offer-intro">Өөрт тохирох багцаа сонгоно уу.</p>
+      <p className="taza-offer-intro">1 кино 2,500₮. Хамгийн багадаа 2 киноны эрх буюу 5,000₮-ийн багц авна.</p>
       {packages.map(item=><button type="button" key={item.id}
         className={`taza-offer-card${item.featured?' taza-offer-featured':''}`}
         onClick={()=>onSelect(item.id)} disabled={busy}>
@@ -41,9 +41,9 @@ export default function TazaPlanPicker({onSelect,onClose,busy=false,hasSelectedF
           <small>{item.description}</small>
         </span>
         <span className="taza-offer-amount">{item.price}</span>
-        <span className="taza-offer-go">{item.id==='single' && !hasSelectedFilm ? 'КИНОГОО СОНГОХ →' : 'ЭНЭ БАГЦЫГ СОНГОХ →'}</span>
+        <span className="taza-offer-go">{hasSelectedFilm&&item.id===TAZA_2_PLAN?'ЭНЭ КИНОГ НЭЭХ →':'ЭНЭ БАГЦЫГ СОНГОХ →'}</span>
       </button>)}
-      <p className="taza-offer-note">5/10 киноны багцад нэг киног анх нээхэд 1 эрх ашиглагдана. Тэр киногоо багцын хугацаанд дахин үзэж болно. Төлбөр баталгаажмагц эрх нээгдэнэ.</p>
+      <p className="taza-offer-note">2/5/10 киноны багцад нэг киног анх нээхэд 1 эрх ашиглагдана. Тэр киногоо багцын хугацаанд дахин үзэж болно. Төлбөр баталгаажмагц эрх нээгдэнэ.</p>
     </section>
   </div>;
 }

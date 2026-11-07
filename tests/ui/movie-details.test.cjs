@@ -76,7 +76,7 @@ beforeEach(()=>{
        const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
        if(existingTopup)return Response.json([existingTopup]);
      }
-     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?3000:body.plan==='pick_5_30d_6000'?6000:body.plan==='pick_10_30d_9000'?9000:body.plan==='all_30d_15000'?15000:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:15000,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?2500:body.plan==='pick_2_30d_5000'?5000:body.plan==='pick_5_30d_6000'?6000:body.plan==='pick_10_30d_9000'?9000:body.plan==='all_30d_15000'?15000:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:15000,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -98,9 +98,9 @@ const title=()=>document.querySelector('#selected-film-title')?.textContent;
 const confirmSubscription=async()=>{
  assert.equal(orders.length,1,'payment order must exist before bank confirmation');
  const order=orders[0];
- assert.ok((order.plan==='single'&&order.amount===3000)||(order.plan==='pick_5_30d_6000'&&order.amount===6000)||(order.plan==='pick_10_30d_9000'&&order.amount===9000)||(order.plan==='all_30d_15000'&&order.amount===15000));
+ assert.ok((order.plan==='pick_2_30d_5000'&&order.amount===5000)||(order.plan==='pick_5_30d_6000'&&order.amount===6000)||(order.plan==='pick_10_30d_9000'&&order.amount===9000)||(order.plan==='all_30d_15000'&&order.amount===15000));
  order.status='confirmed';
- if(order.plan==='single')purchased.add(Number(order.film_id));else if(order.plan==='pick_5_30d_6000')credits+=5;else if(order.plan==='pick_10_30d_9000')credits+=10;else entitled=true;
+ if(order.plan==='pick_2_30d_5000')credits+=2;else if(order.plan==='pick_5_30d_6000')credits+=5;else if(order.plan==='pick_10_30d_9000')credits+=10;else entitled=true;
  await act(async()=>{window.dispatchEvent(new dom.window.Event('focus'));await new Promise(resolve=>setTimeout(resolve,10));});
 
 };
@@ -135,19 +135,20 @@ test('five-film choice creates a 6,000₮ order and opens first selected movie',
  assert.equal(movie(),films[0].url);
 });
 
-test('one selected film costs 3,000₮ and cannot unlock unrelated films',async()=>{
+test('first selected movie starts two-film 5,000₮ pass with one remaining movie credit',async()=>{
  await render('/?film=7');
  await click('.film-hero-watch');
  assert.equal(document.querySelectorAll('.taza-offer-card').length,4);
  await choosePlan(0);
  assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'single');
+ assert.equal(orders[0].plan,'pick_2_30d_5000');
  assert.equal(orders[0].film_id,7);
- assert.equal(orders[0].amount,3000);
+ assert.equal(orders[0].amount,5000);
  assert.equal(movie(),undefined);
  await confirmSubscription();
  assert.equal(movie(),films[0].url);
  assert.equal(purchased.has(34),false);
+ assert.equal(credits,1);
 });
 
 test('missing trailer never falls back to a private movie, and a failed trailer can be closed',async()=>{

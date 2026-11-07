@@ -40,7 +40,7 @@ export default function PaymentProofUploader({
   };
 
   const submit = async () => {
-    if (!prepared || sending.current || !ready || amount !== 2000) return;
+    if (!prepared || sending.current || !ready || ![2000,5000].includes(Number(amount))) return;
     sending.current = true;
     setError('');
     setState('sending');
@@ -62,7 +62,7 @@ export default function PaymentProofUploader({
 
   return <section className="payment-proof-panel" aria-label="Нэг киноны төлбөрийн баримт илгээх">
     <h3>3. Төлбөрийн screenshot оруулах</h3>
-    <p>Та 2,000₮-ийн гүйлгээ хийсэн бол банкны апп дээрх <strong>“Гүйлгээ амжилттай”</strong> гэсэн дэлгэцийн зургаа энд оруулна уу.</p>
+    <p>Та гүйлгээ хийсэн бол банкны апп дээрх <strong>“Гүйлгээ амжилттай”</strong> гэсэн дэлгэцийн зургаа энд оруулна уу.</p>
     <div className="payment-proof-order">
       <span>Дүн <strong>{amount===null ? '…' : `${amount.toLocaleString('mn-MN')}₮`}</strong></span>
       <span>Гүйлгээний код <strong>{ready ? refCode : '…'}</strong></span>
@@ -79,11 +79,11 @@ export default function PaymentProofUploader({
         <span>{prepared.name}</span>
       </div>}
       <button type="button" className="primary-button payment-proof-submit" onClick={()=>{void submit();}}
-        disabled={!prepared || !ready || amount!==2000 || state==='preparing' || state==='sending'}>
+        disabled={!prepared || !ready || ![2000,5000].includes(Number(amount)) || state==='preparing' || state==='sending'}>
         {state==='preparing'?'Зураг бэлтгэж байна…':state==='sending'?'Илгээж байна…':'Баримтаа илгээх'}
       </button>
     </>}
     {error && <p className="payment-proof-error" role="alert">{error}</p>}
-    <p className="payment-proof-note">Баримтын зураг дангаараа төлбөр баталдаггүй. Манай дансанд яг 2,000₮ орж, гүйлгээний код таарсныг банкны SMS-ээр баталгаажмагц кино автоматаар нээгдэнэ. SMS ирээгүй бол админ банкны бодит гүйлгээг шалгаж эрх нээнэ.</p>
+    <p className="payment-proof-note">Баримтын зураг дангаараа төлбөр баталдаггүй. Манай дансанд захиалгын яг тохирсон дүн орж, гүйлгээний код таарсныг банкны SMS-ээр баталгаажмагц кино автоматаар нээгдэнэ. SMS ирээгүй бол админ банкны бодит гүйлгээг шалгаж эрх нээнэ.</p>
   </section>;
 }
