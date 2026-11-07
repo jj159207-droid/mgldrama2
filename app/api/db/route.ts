@@ -92,7 +92,7 @@ async function handler(req:NextRequest) {
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
         // Only the four new TAZA products may be purchased; confirmed legacy receipts retain access.
-        if(site==='taza' && !['single',TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'1 кино 3,000₮; 5 кино 6,000₮; 10 кино 9,000₮; бүх кино 15,000₮.');
+        if(site==='taza' && !['single',TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN].includes(plan))throw new ApiError(400,'1 кино 2,000₮; 5 кино 6,000₮; 10 кино 9,000₮; бүх кино 15,000₮.');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {
