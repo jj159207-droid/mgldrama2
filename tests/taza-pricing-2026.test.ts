@@ -39,3 +39,10 @@ test('checkout and bank subscription picker expose the same four prices without 
  assert.ok(!page.includes("3 кино 5,000₮"));
  assert.ok(!page.includes("6 кино 9,500₮"));
 });
+
+test('TAZA homepage package CTA advertises packages from 6,000₮ without changing other sites',()=>{
+ const hero=readFileSync(new URL('../app/components/CinematicHeroMount.tsx',import.meta.url),'utf8');
+ assert.ok(hero.includes('Кино үзэх багц <strong>6,000₮-өөс эхэлнэ</strong>'));
+ assert.ok(hero.includes('TAZA SITE-ийн кино үзэх багцууд 6,000₮-өөс эхэлнэ'));
+ assert.ok(hero.includes('Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>12,000₮</strong>'));
+});
