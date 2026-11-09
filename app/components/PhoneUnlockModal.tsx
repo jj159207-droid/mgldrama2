@@ -8,7 +8,7 @@ type Film={id:number;title:string};
 type Access='single'|'all';
 type Settings={bankName:string;bankAccount:string;accountName:string;bankIban:string;messengerUrl:string};
 type Props={film:Film|null;preferredPlan?:Access;onClose:()=>void;onUnlocked:()=>Promise<void>|void};
-const fallbackMessenger='https://m.me/1431907480007581'; // HD MOVIE КИНО page ID from Meta Business Suite.
+const fallbackMessenger='https://m.me/1453362271192628'; // Facebook page ID provided by the owner.
 
 export default function PhoneUnlockModal({film,preferredPlan='single',onClose,onUnlocked}:Props){
   const [phone,setPhone]=useState('');
@@ -91,7 +91,7 @@ export default function PhoneUnlockModal({film,preferredPlan='single',onClose,on
       <p style={{fontSize:13,opacity:.85,lineHeight:1.55,margin:'8px 0 14px'}}>Утасны дугаараа оруулж эрхээ шалгана уу. Эрх байхгүй бол төлбөрийн заавар гарна.</p>
       <div role="group" aria-label="Үзэх эрхийн төрөл" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:15}}>
         <button type="button" aria-pressed={access==='single'} onClick={()=>chooseAccess('single')} style={{...buttonStyle,background:access==='single'?'var(--accent,#e4b54a)':'var(--surface-raised,#27303c)',color:access==='single'?'#000':'inherit',border:access==='single'?'2px solid #e4b54a':'2px solid transparent'}}>1 кино · 2,000₮</button>
-        <button type="button" aria-pressed={access==='all'} onClick={()=>chooseAccess('all')} style={{...buttonStyle,background:access==='all'?'var(--accent,#e4b54a)':'var(--surface-raised,#27303c)',color:access==='all'?'#000':'inherit',border:access==='all'?'2px solid #e4b54a':'2px solid transparent'}}>Бүх кино · 12,000₮</button>
+        <button type="button" aria-pressed={access==='all'} onClick={()=>chooseAccess('all')} style={{...buttonStyle,background:access==='all'?'var(--accent,#e4b54a)':'var(--surface-raised,#27303c)',color:access==='all'?'#000':'inherit',border:access==='all'?'2px solid #e4b54a':'2px solid transparent'}}>45 кино бүгд · 12,000₮</button>
       </div>
       <form onSubmit={submit}>
         <label htmlFor="phone-unlock-input" style={{display:'block',fontWeight:700,marginBottom:7}}>Утасны дугаар</label>
@@ -103,6 +103,7 @@ export default function PhoneUnlockModal({film,preferredPlan='single',onClose,on
       {error&&<p role="alert" style={{color:'#f87171',fontSize:13,lineHeight:1.5}}>{error}</p>}
       {stage==='payment'&&<div style={{marginTop:16,borderTop:'1px solid var(--border,#445)',paddingTop:14}}>
         {paymentReason&&<p role="status" style={{color:'#fbbf24',fontSize:13,lineHeight:1.6}}>{paymentReason}</p>}
+        <p style={{fontSize:14,lineHeight:1.7,margin:'8px 0 12px',fontWeight:700}}>1 кино — 2,000₮, 45 кино бүгд — 12,000₮. Сонголтоо хийгээд шилжүүлнэ үү.</p>
         <h3 style={{fontSize:17,margin:'8px 0 10px'}}>💳 ХААН Банкны данс</h3>
         {settingsError&&<p role="alert" style={{color:'#f87171',fontSize:13}}>{settingsError}</p>}
         {!settings&&!settingsError&&<p style={{fontSize:13}}>Дансны мэдээлэл ачаалж байна...</p>}
@@ -123,13 +124,11 @@ export default function PhoneUnlockModal({film,preferredPlan='single',onClose,on
             <button type="button" onClick={()=>void copy(phone,'phone')} style={{...buttonStyle,background:'var(--surface-raised,#253040)',color:'inherit',flexShrink:0}}>{copied==='phone'?'Хуулсан ✓':'Хуулах'}</button>
           </div>
         </div>}
-        <p style={{fontSize:14,lineHeight:1.75,marginTop:13}}>Та <strong>гүйлгээний утга дээр утасны дугаараа бичиж</strong>, сонгосон дүнгээ шилжүүлсний дараа манай <strong>Facebook пэйж рүү гүйлгээний screenshot</strong> явуулна уу. Админ банкны орлогыг шалгаж баталгаажуулсны дараа киноны эрхийг нээнэ.</p>
+        <p style={{fontSize:14,lineHeight:1.75,marginTop:13}}>Та <strong>гүйлгээний утга дээр утасны дугаараа бичиж</strong>, сонгосон дүнгээ шилжүүлсний дараа манай <strong>Facebook пэйж рүү гүйлгээний screenshot</strong> явуулна уу.</p>
         {settings&&<a href={settings.messengerUrl||fallbackMessenger} target="_blank" rel="noopener noreferrer" style={{...buttonStyle,display:'block',textAlign:'center',textDecoration:'none',background:'#1677f2',color:'#fff',fontSize:15,padding:14,marginTop:12}}>
           📩 Facebook пэйж рүү screenshot илгээх
         </a>}
-        <p style={{fontSize:12,opacity:.78,lineHeight:1.6}}>Зөвхөн зураг илгээснээр эрх автоматаар нээгдэхгүй. Админ шалгаж баталгаажуулна. Нэг төлбөрийг давхар шилжүүлж болохгүй.</p>
         {!film&&access==='single'&&<p style={{fontSize:12,opacity:.8}}>1 киноны эрх идэвхжсэний дараа киноны жагсаалтаас үзэх киногоо сонгоно.</p>}
-        <button type="button" onClick={()=>{setStage('phone');setPaymentReason('');}} disabled={busy} style={{...buttonStyle,width:'100%',background:'var(--surface-raised,#253040)',color:'inherit',marginTop:4}}>Админ эрх нээсэн бол дахин шалгах</button>
       </div>}
     </section>
   </div>;
