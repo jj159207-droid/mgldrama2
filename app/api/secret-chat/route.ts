@@ -52,8 +52,9 @@ export async function GET(req:NextRequest){
   }
   if(m) return json({status:m.blocked===true?'blocked':'joined',phone:m.phone,joinedAt:m.created_at});
   if(await confirmedPayment(userId))return json({status:'paid'});
-  const [pending]=await db('pending_payments?site_id=eq.taza&user_id=eq.'+userId+'&plan=eq.'+PLAN+'&status=eq.pending&select=id,ref_code,amount,created_at&order=id.desc&limit=1');
-  return json({status:pending?'pending':'unpaid'});
+  const rows=await db('pending_payments?site_id=eq.taza&user_id=eq.'+userId+'&plan=eq.'+PLAN+'&status=eq.pending&select=id,ref_code,amount,created_at&order=id.desc&limit=5');
+  const pending=rows.find(row=>Number(row.amount)===AMOUNT&&/^\d{6}$/.test(String(row.ref_code))&&Date.now()-Date.parse(String(row.created_at))>=0&&Date.now()-Date.parse(String(row.created_at))<24*3600000);
+  return json(pending?{status:'pending',ref:pending.ref_code,amount:AMOUNT,createdAt:pending.created_at}:{status:'unpaid'});
  }catch(e){return fail(e);}
 }
 
