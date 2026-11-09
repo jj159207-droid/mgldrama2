@@ -55,7 +55,7 @@ export default function SecretChatRoom({onClose}:{onClose:()=>void}){
    if(!PHONE.test(phone)){setError('8 оронтой утасны дугаар оруулна уу.');return;}
    if(!adult){setError('18 нас хүрсэн гэдгээ баталгаажуулна уу.');return;}
    setBusy(true);setError('');
-   try{const data=await requestJson('/api/secret-chat',{method:'POST',body:JSON.stringify({action:'join',phone})},true);setStatus({status:data.status,phone:data.phone});}
+   try{const data=await requestJson('/api/secret-chat',{method:'POST',body:JSON.stringify({action:'join',phone,adultConfirmed:adult})},true);setStatus({status:data.status,phone:data.phone});}
    catch(e){setError(e instanceof Error?e.message:'Дугаар хадгалсангүй.');}finally{setBusy(false);}
  };
  const send=async()=>{

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test, beforeEach, after } from 'node:test';
 import { NextRequest } from 'next/server';
 import sharp from 'sharp';
+import {readFileSync} from 'node:fs';
 import { accessFromPayments, canWatch, parseBankSms, paymentExpiry, safeUrl, type Row } from '../lib/domain';
 import { canAdminSite, pinHash, pinMatches } from '../lib/server';
 import * as auth from '../app/api/auth/route';
@@ -9,6 +10,8 @@ import * as device from '../app/api/device/route';
 import * as api from '../app/api/db/route';
 import * as playback from '../app/api/playback/route';
 import * as sms from '../app/api/sms/route';
+import * as secretChat from '../app/api/secret-chat/route';
+import * as secretOrder from '../app/api/secret-chat/order/route';
 import * as paymentProof from '../app/api/payment-proof/route';
 import * as settings from '../app/api/settings/route';
 import * as access from '../app/api/access/route';
@@ -33,6 +36,8 @@ beforeEach(()=>{
   taza_phone_grants:[],
   taza_phone_sessions:[],
   taza_phone_sms_receipts:[],
+  taza_secret_chat_members:[],
+  taza_secret_chat_messages:[],
   support_messages:[],
   taza_pack_claims:[],
   app_sessions:[],
@@ -1082,4 +1087,78 @@ test('retired packages and phone-only client checkout cannot forge new 6-digit p
   assert.equal((await response.json()).code,'PACKAGE_RETIRED');
  }
  assert.equal(tables.pending_payments.length,0);
+});
+
+
+test('secret chat 10k payment creates a single six-digit order and never movie rights',async()=>{
+ const unauth=await secretOrder.POST(req('/api/secret-chat/order','POST',{}));
+ assert.equal(unauth.status,401);
+ const cookie=await register();
+ const order=await secretOrder.POST(req('/api/secret-chat/order','POST',{},cookie));
+ assert.equal(order.status,200);
+ const first=await order.json();
+ assert.equal(first.status,'pending');assert.equal(first.amount,10000);
+ assert.match(first.ref,/^\d{6}$/);
+ assert.equal(tables.pending_payments.length,1);
+ assert.equal(tables.pending_payments[0].plan,'secret_chat_10000');
+ assert.equal(tables.pending_payments[0].site_id,'taza');
+ const repeat=await secretOrder.POST(req('/api/secret-chat/order','POST',{},cookie));
+ assert.equal((await repeat.json()).ref,first.ref);
+ assert.equal(tables.pending_payments.length,1);
+ const status=await secretChat.GET(req('/api/secret-chat','GET',undefined,cookie));
+ assert.equal((await status.json()).status,'pending');
+ assert.equal((await secretChat.GET(req('/api/secret-chat?messages=1','GET',undefined,cookie))).status,403);
+ assert.equal((await secretChat.POST(req('/api/secret-chat','POST',{action:'join',phone:'99112233',adultConfirmed:true},cookie))).status,403);
+ assert.equal((await bankSms(first.ref,'9,000.00')).status,400);
+ assert.equal(tables.pending_payments[0].status,'pending');
+ assert.equal((await bankSms(first.ref,'10,000.00')).status,200);
+ assert.equal(tables.pending_payments[0].status,'confirmed');
+ assert.equal((await secretChat.GET(req('/api/secret-chat','GET',undefined,cookie)).then(x=>x.json())).status,'paid');
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await secretOrder.POST(req('/api/secret-chat/order','POST',{},cookie)).then(x=>x.json())).status,'paid');
+});
+
+test('secret chat phone is stored only after verified payment and remains private to members/admin',async()=>{
+ const owner=await register();
+ const order=await secretOrder.POST(req('/api/secret-chat/order','POST',{},owner));
+ const ref=(await order.json()).ref;
+ assert.equal((await bankSms(ref,'10,000.00')).status,200);
+ assert.equal((await secretChat.POST(req('/api/secret-chat','POST',{action:'join',phone:'123'},owner))).status,400);
+ assert.equal((await secretChat.POST(req('/api/secret-chat','POST',{action:'join',phone:'99112233',adultConfirmed:false},owner))).status,400);
+ const joined=await secretChat.POST(req('/api/secret-chat','POST',{action:'join',phone:'99112233',adultConfirmed:true},owner));
+ assert.equal(joined.status,200);
+ assert.equal((await joined.json()).status,'joined');
+ assert.equal(tables.taza_secret_chat_members.length,1);
+ assert.equal(tables.taza_secret_chat_members[0].phone,'99112233');
+ const guest=await register('88112233');
+ assert.equal((await secretChat.GET(req('/api/secret-chat?messages=1','GET',undefined,guest))).status,403);
+ assert.equal((await secretChat.GET(req('/api/secret-chat?admin=1','GET',undefined,guest))).status,403);
+ const id='123e4567-e89b-42d3-a456-426614174000';
+ const sent=await secretChat.POST(req('/api/secret-chat','POST',{action:'send',text:'Сайн байна уу!',clientId:id},owner));
+ assert.equal(sent.status,200);
+ assert.equal((await sent.json()).message.text,'Сайн байна уу!');
+ assert.equal((await secretChat.POST(req('/api/secret-chat','POST',{action:'send',text:'Төлбөргүй',clientId:'123e4567-e89b-42d3-a456-426614174001'},guest))).status,403);
+ const view=await secretChat.GET(req('/api/secret-chat?messages=1','GET',undefined,owner));
+ assert.equal(view.status,200);
+ const b=await view.json();
+ assert.equal(b.messages.length,1);
+ assert.equal(b.messages[0].text,'Сайн байна уу!');
+ assert.equal(JSON.stringify(b).includes('99112233'),false,'member telephone numbers must not leak in chat response');
+ const adminCookie=await admin();
+ const adm=await secretChat.GET(req('/api/secret-chat?admin=1','GET',undefined,adminCookie));
+ assert.equal(adm.status,200);
+ assert.equal((await adm.json()).members[0].phone,'99112233');
+ const blocked=await secretChat.PATCH(req('/api/secret-chat','PATCH',{memberId:tables.taza_secret_chat_members[0].id,blocked:true},adminCookie));
+ assert.equal(blocked.status,200);
+ assert.equal((await secretChat.GET(req('/api/secret-chat?messages=1','GET',undefined,owner))).status,403);
+});
+
+test('secret chat page exposes separate banner and forbids joining on movie purchase alone',()=>{
+ const source=readFileSync(new URL('../app/page.tsx',import.meta.url),'utf8');
+ const room=readFileSync(new URL('../app/components/SecretChatRoom.tsx',import.meta.url),'utf8');
+ const order=readFileSync(new URL('../app/api/secret-chat/order/route.ts',import.meta.url),'utf8');
+ assert.ok(source.includes('secret-room-banner')&&source.includes('Халуун өрөөнд орох төлбөр'));
+ assert.ok(source.includes('<SecretChatRoom')&&source.includes('<SecretChatAdminTab'));
+ assert.ok(room.includes('10,000₮')&&room.includes('6 ОРОНТОЙ КОД'));
+ assert.ok(order.includes("secret_chat_10000")&&order.includes('randomInt(100000,1000000)'));
 });

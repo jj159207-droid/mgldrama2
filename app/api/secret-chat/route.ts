@@ -66,7 +66,8 @@ export async function POST(req:NextRequest){
   const userId=s.userId,b=await bodyJson(req,2200);
   const action=String(b.action||'');
   if(action==='join'){
-    if(Object.keys(b).some(k=>!['action','phone'].includes(k)))throw new ApiError(400,'Хүсэлтийн формат буруу.');
+    if(Object.keys(b).some(k=>!['action','phone','adultConfirmed'].includes(k)))throw new ApiError(400,'Хүсэлтийн формат буруу.');
+    if(b.adultConfirmed!==true)throw new ApiError(400,'18 нас хүрсэн гэдгээ баталгаажуулна уу.');
     const phone=String(b.phone||'').trim();
     if(!phonePattern.test(phone))throw new ApiError(400,'8 оронтой утасны дугаар оруулна уу.');
     const previous=await memberFor(userId);
