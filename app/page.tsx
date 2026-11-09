@@ -24,6 +24,8 @@ import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import PhoneGrantsAdminTab from "@/app/components/PhoneGrantsAdminTab";
 import TazaPlanPicker from "@/app/components/TazaPlanPicker";
+import SecretChatRoom from "@/app/components/SecretChatRoom";
+import SecretChatAdminTab from "@/app/components/SecretChatAdminTab";
 import PaymentProofUploader from "@/app/components/PaymentProofUploader";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
@@ -743,7 +745,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
     </dialog>;
 }
 
-function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ", admin=false, freeCatalog=false }: any) {
+function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, onSecretChat, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ", admin=false, freeCatalog=false }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   const [tazaOffersOpen,setTazaOffersOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
@@ -794,6 +796,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       </div>
     </div></header>
     <main className="catalog-shell">
+      {freeCatalog && !preview && <button type="button" className="secret-room-banner" onClick={onSecretChat} aria-label="Нууц чат өрөөний 10,000 төгрөгийн төлбөрийн хуудас нээх"><span className="secret-room-banner-symbol">🔥</span><span className="secret-room-banner-text"><strong>НУУЦ ЧАТ ӨРӨӨ</strong><small>Халуун өрөөнд орох төлбөр · 10,000₮</small></span><span className="secret-room-banner-go">ЭНД ДАРЖ ОРОХ →</span></button>}
       <section className="package-banner hero-mount-host" aria-label="Онцлох кинонууд" />
       {!preview && !freeCatalog && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
@@ -1932,7 +1935,7 @@ function AppearancePreview({films,brandName}: {films:any[];brandName:string}) {
 }
 
 function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=false, brandName="ТАЗА САЙТ" }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "phones" | "analytics" | "settings" | "appearance">("list");
+  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "phones" | "secret" | "analytics" | "settings" | "appearance">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -2000,6 +2003,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
         <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📋 Жагсаалт</button>
         <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🧾 Захиалга</button>
         <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>👥 Гишүүд</button>
+        {brandName === "ТАЗА САЙТ" && <button onClick={() => setTab("secret")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "secret" ? C.gold : C.card2, color: tab === "secret" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🔥 Нууц чат</button>}
         {brandName === "ТАЗА САЙТ" && <button onClick={() => setTab("phones")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "phones" ? C.gold : C.card2, color: tab === "phones" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📱 Дугаарын эрх</button>}
         <button onClick={() => setTab("analytics")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "analytics" ? C.gold : C.card2, color: tab === "analytics" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📊 Статистик</button>
         <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>➕ Нэмэх</button>
@@ -2017,6 +2021,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
       {tab === "settings" && <AdminSettingsTab masterAdmin={masterAdmin} />}
       {tab === "members" && <AdminMembersTab />}
       {tab === "phones" && brandName === "ТАЗА САЙТ" && <PhoneGrantsAdminTab />}
+      {tab === "secret" && brandName === "ТАЗА САЙТ" && <SecretChatAdminTab />}
       {tab === "analytics" && <AdminAnalyticsTab />}
       {tab === "sms" && <AdminChatInbox announcements={<AdminAnnouncements />} />}
 
@@ -2132,6 +2137,7 @@ export default function Home() {
   const [watchError, setWatchError] = useState("");
   const pendingActionRef = useRef<{kind:"watch";film:FilmDetails} | {kind:"plan";plan:string;film:FilmDetails|null} | null>(null);
   const [showContact, setShowContact] = useState(false);
+  const [showSecretChat, setShowSecretChat] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [user, setUser] = useState<any>(null);
   const chatUnread = useChatUnread(user?.id || null);
@@ -2573,6 +2579,15 @@ export default function Home() {
     else navigateTo("payment");
     setPayFilm({id:plan==='single'?Number(sourceFilm?.id||0):0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:plan!=='single',plan,locked:true,entryGate:siteId==="taza"&&TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]),returnFilm:sourceFilm});
   };
+  const openSecretChat = async () => {
+    if(siteId!=="taza")return;
+    if(adminAuth){setAppError("Чат өрөөнд орохын тулд админ горимоос гарна уу.");return;}
+    try{
+      const viewer=user || await ensureDeviceUser();
+      if(!viewer)throw new Error("Төхөөрөмжийн бүртгэл үүсээгүй.");
+      setShowSecretChat(true);
+    }catch(error){setAppError(error instanceof Error?error.message:"Чат өрөөг нээсэнгүй.");}
+  };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     if(siteId==="taza"){
       if(!TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]))return;
@@ -2701,7 +2716,7 @@ export default function Home() {
           )}
         </main>
       ) : <>
-      {(page === "home" || page === "payment") && <HomePage freeCatalog={siteId==="taza"} chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
+      {(page === "home" || page === "payment") && <HomePage freeCatalog={siteId==="taza"} chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} onSecretChat={()=>void openSecretChat()} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
       {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm && siteId==="taza" ? {...selectedFilm,free:false,locked:!hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)),price:TAZA_SINGLE_PRICE,op:TAZA_SINGLE_PRICE} : selectedFilm} subscriptionCatalog={siteId==="taza"} films={filmsWithUnlock} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={siteId==="taza" || authReady} bundleRemaining={bundleRemaining} available={!!selectedFilm && (adminAuth || (siteId!=="taza" && (selectedFilm.free || selectedFilm.locked===false)) || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setBundleRemaining(0);setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
@@ -2709,6 +2724,7 @@ export default function Home() {
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={()=>navigateTo("admin-choice")} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       <PushNotificationSetup key={user?.id||"none"} enabled={siteId!=="taza"&&!!user?.id&&!adminAuth} />
+      {showSecretChat && siteId==="taza" && mounted && createPortal(<SecretChatRoom onClose={()=>setShowSecretChat(false)} />,document.body)}
       {showContact && <ContactModal freeCatalog={siteId==="taza"} onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo(adminAuth?"admin-choice":"adminlogin");}} />}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
