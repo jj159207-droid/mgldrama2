@@ -37,7 +37,7 @@ export async function GET(req:NextRequest) {
       status:200,
       headers:{
         'Content-Type':'application/octet-stream',
-        'Content-Disposition':'attachment; filename="TAZA_MacroDroid_SMS_12000.macro"',
+        'Content-Disposition':'attachment; filename="TAZA_MacroDroid_SMS_2000_12000.macro"',
         'Cache-Control':'private, no-store, max-age=0',
         'Pragma':'no-cache',
         'Surrogate-Control':'no-store',
