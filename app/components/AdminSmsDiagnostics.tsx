@@ -25,7 +25,11 @@ const label:Record<string,string>={
  confirmed:'Эрх баталгаажсан',
  wallet_confirmed:'Үлдэгдэл нэмэгдсэн',
  already_confirmed:'Өмнө баталгаажсан',
- parse_failed:'SMS-ийн дүн эсвэл 6 оронтой код танигдсангүй',
+ parse_failed:'SMS-ийн дүн эсвэл гүйлгээний утга танигдсангүй',
+ phone_granted:'📱 Дугаарын киноны эрх автоматаар нээгдсэн',
+ phone_duplicate:'📱 Давтагдсан банкны SMS (эрх давхар нээгээгүй)',
+ phone_amount_rejected:'📱 2,000₮ / 12,000₮-ийн дүн биш',
+ phone_grant_failed:'📱 Дугаарын эрх олголтын алдаа',
  sender_rejected:'Банкны SMS илгээгч таараагүй',
  sender_not_configured:'Банкны SMS илгээгчийн тохиргоо дутуу',
  payment_not_found:'Гүйлгээний кодтой захиалга олдсонгүй',
@@ -65,7 +69,7 @@ export default function AdminSmsDiagnostics() {
    <strong style={{fontSize:12}}>Сүүлийн SMS үйл явдал ({report.events?.length||0})</strong>
    {report.events?.length?report.events.slice(0,15).map((ev,i)=><div key={i} style={{fontSize:12,borderTop:'1px solid #334155',padding:'8px 0'}}>
     <strong>{label[ev.outcome]||ev.outcome}</strong>
-    <div style={{color:'#cbd5e1',fontSize:11,overflowWrap:'anywhere'}}>{ev.ref?'Код: '+ev.ref+' · ':''}{ev.amount!==null?Number(ev.amount).toLocaleString('mn-MN')+'₮ · ':''}{ev.time?new Date(ev.time).toLocaleString('mn-MN'):''}</div>
+    <div style={{color:'#cbd5e1',fontSize:11,overflowWrap:'anywhere'}}>{ev.ref?(ev.ref.length===8?'Дугаар: '+ev.ref:'Код: '+ev.ref)+' · ':''}{ev.amount!==null?Number(ev.amount).toLocaleString('mn-MN')+'₮ · ':''}{ev.time?new Date(ev.time).toLocaleString('mn-MN'):''}</div>
    </div>):<p style={{fontSize:11,color:'#94a3b8',marginTop:5}}>SMS лог одоогоор харагдахгүй байна. MacroDroid SMS дамжуулаагүй, эсвэл логийн хүснэгт байхгүй байж болно.</p>}
    <strong style={{fontSize:12,display:'block',marginTop:14}}>Хүлээгдэж буй захиалга ({report.recentPending?.length||0})</strong>
    {report.recentPending?.length?report.recentPending.slice(0,15).map((p,i)=><div key={i} style={{padding:'7px 0',fontSize:12,borderTop:'1px solid #334155'}}>

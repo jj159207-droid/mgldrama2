@@ -121,13 +121,13 @@
     "m_category": "Uncategorized",
     "m_completed": true,
     "m_constraintList": [],
-    "m_description": "TAZA Khan Bank incoming SMS forwarding. Matches ORLOGO / Орлого and Khan Bank / KhanBank. Exact transfer amount and 6-digit reference verified by TAZA server. Disable old duplicate macro. Mobile data and SMS permissions required. If payment already happened before importing, do not pay twice; administrator can verify it in bank statement and confirm the existing pending order.",
+    "m_description": "TAZA Khan Bank incoming SMS forwarding. Matches ORLOGO / Орлого and Khan Bank / KhanBank. TAZA checks 8-digit phone reference plus exact 2000 / 12000 amount, automatically credits 1 film / all films once. Legacy 6-digit orders still work. Do not set a 5000 MNT minimum constraint: 2000 MNT must be forwarded. Disable old duplicate macros. Mobile data and SMS permissions required. Never forward outgoing SMS.",
     "m_descriptionOpen": false,
     "m_enabled": true,
     "m_excludeLog": true,
     "m_headingColor": 0,
     "m_isOrCondition": false,
-    "m_name": "TAZA - Khan Bank SMS - 12000",
+    "m_name": "TAZA - Khan Bank SMS - 2000 or 12000",
     "m_triggerList": [
       {
         "enableRegex": true,

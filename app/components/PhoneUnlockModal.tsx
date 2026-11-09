@@ -124,7 +124,7 @@ export default function PhoneUnlockModal({film,preferredPlan='single',onClose,on
             <button type="button" onClick={()=>void copy(phone,'phone')} style={{...buttonStyle,background:'var(--surface-raised,#253040)',color:'inherit',flexShrink:0}}>{copied==='phone'?'Хуулсан ✓':'Хуулах'}</button>
           </div>
         </div>}
-        <p style={{fontSize:14,lineHeight:1.75,marginTop:13}}>Та <strong>гүйлгээний утга дээр утасны дугаараа бичиж</strong>, сонгосон дүнгээ шилжүүлсний дараа манай <strong>Facebook пэйж рүү гүйлгээний screenshot</strong> явуулна уу.</p>
+        <p style={{fontSize:14,lineHeight:1.75,marginTop:13}}>Та <strong>гүйлгээний утга дээр утасны дугаараа бичиж</strong>, сонгосон дүнгээ шилжүүлнэ үү. ХААН Банкны орлогын SMS MacroDroid-оор баталгаажмагц эрх <strong>автоматаар нээгдэнэ</strong>. Хэрэв нээгдэхгүй бол манай <strong>Facebook пэйж рүү гүйлгээний screenshot</strong> явуулна уу.</p>
         {settings&&<a href={settings.messengerUrl||fallbackMessenger} target="_blank" rel="noopener noreferrer" style={{...buttonStyle,display:'block',textAlign:'center',textDecoration:'none',background:'#1677f2',color:'#fff',fontSize:15,padding:14,marginTop:12}}>
           📩 Facebook пэйж рүү screenshot илгээх
         </a>}
