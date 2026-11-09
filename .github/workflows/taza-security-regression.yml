@@ -44,13 +44,21 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - name: Install audited lockfile
-        run: npm ci --no-audit --no-fund
+      # CI uses the runner encoder, not a GitHub Releases download that can 504.
+      # Production Vercel deployments still provision the pinned FFmpeg binary.
+      - name: Install locked dependencies without external FFmpeg install scripts
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Use system FFmpeg for test-only media checks
+        run: |
+          command -v ffmpeg
+          ln -sf "$(command -v ffmpeg)" node_modules/ffmpeg-static/ffmpeg
       - name: TypeScript check
         run: npm run typecheck
       - name: Authentication and payment regression tests
         run: npm test
       - name: User interface regression tests
         run: npm run test:ui
-      - name: Production build
+      - name: Test production compilation without re-downloading CI FFmpeg
+        env:
+          npm_config_ignore_scripts: 'true'
         run: npm run build
