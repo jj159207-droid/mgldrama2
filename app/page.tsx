@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, TAZA_2_PLAN, TAZA_5_10000_PLAN, TAZA_40_PLAN, TAZA_40_PRICE, TAZA_SINGLE_PRICE, TAZA_MANUAL_ALL_PLAN } from "@/lib/domain";
+import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, TAZA_2_PLAN, TAZA_5_10000_PLAN, TAZA_40_PLAN, TAZA_40_PRICE, TAZA_SINGLE_PRICE, TAZA_MANUAL_ALL_PLAN, TAZA_10_10000_PLAN, TAZA_45_ALL_13000_PLAN, TAZA_45_ALL_13000_PRICE, TAZA_PUBLIC_PACKS } from "@/lib/domain";
 import { normalizeMongolianIban } from "@/lib/iban";
 import { SITES, siteFromPathname, type SiteId } from "@/lib/site";
 
@@ -22,10 +22,8 @@ import useSiteAppearance from "@/app/components/useSiteAppearance";
 import {appearanceStyle} from "@/lib/appearance";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
-import PhoneUnlockModal from "@/app/components/PhoneUnlockModal";
 import PhoneGrantsAdminTab from "@/app/components/PhoneGrantsAdminTab";
 import TazaPlanPicker from "@/app/components/TazaPlanPicker";
-import PaymentProofUploader from "@/app/components/PaymentProofUploader";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
 import { INITIAL_CATALOG, type CatalogState } from "@/lib/catalog";
@@ -363,7 +361,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       {!transferReady&&<p role="alert" className="checkout-error wallet-single-error">IBAN болон дансны дугаар тохироогүй байна. Админ засах хүртэл төлбөр шилжүүлэхгүй байна уу.</p>}
 
       <section className="wallet-single-instructions wallet-entry-auto-open" aria-label="Төлбөр автоматаар баталгаажих мэдээлэл">
-        <p><strong>{film.plan==="single" ? "Төлбөр баталгаажмагц сонгосон кино нээгдэнэ" : film.plan===TAZA_40_PLAN ? "Төлбөр баталгаажмагц 40 өөр кино сонгож үзэх эрх нээгдэнэ" : "Төлбөр баталгаажмагц сонгосон багцын эрх нээгдэнэ"}</strong></p>
+        <p><strong>{film.plan===TAZA_45_ALL_13000_PLAN ? "Төлбөр баталгаажмагц 45 кино бүгд нээгдэнэ" : film.plan===TAZA_10_10000_PLAN ? "Төлбөр баталгаажмагц 10 өөр кино сонгож үзэх эрх нээгдэнэ" : film.plan===TAZA_2_PLAN ? "Төлбөр баталгаажмагц 2 өөр кино сонгож үзэх эрх нээгдэнэ" : "Төлбөр баталгаажмагц үзэх эрх нээгдэнэ"}</strong></p>
       </section>
 
       <button type="button" className={`wallet-single-copy${tazaTransfer ? " wallet-single-iban" : ""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?transferIbanDisplay:transferDestination,tazaTransfer?"iban":"account")}>
@@ -377,7 +375,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
         <p><strong>Шилжүүлэх дүн {Number(orderAmount??film.price??TAZA_40_PRICE).toLocaleString("mn-MN")}₮</strong></p>
-        <p><strong>{film.plan===TAZA_40_PLAN ? "40 өөр кино сонгож 30 хоног үзэх эрх · 1 кино 300₮" : film.plan===TAZA_2_PLAN ? "2 өөр кино сонгож 30 хоног үзэх эрх" : film.plan===TAZA_5_10000_PLAN ? "5 кино сонгож 30 хоног үзэх эрх" : film.plan==='single' ? "Сонгосон 1 киног 72 цаг үзэх эрх" : "Кино үзэх эрх"}</strong></p>
+        <p><strong>{film.plan===TAZA_45_ALL_13000_PLAN ? "45 кино бүгдийг 30 хоног үзэх эрх" : film.plan===TAZA_2_PLAN ? "2 өөр кино сонгож 30 хоног үзэх эрх" : film.plan===TAZA_10_10000_PLAN ? "10 өөр кино сонгож 30 хоног үзэх эрх" : "Кино үзэх эрх"}</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady||!transferReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -421,7 +419,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         </div>
       </div>
 
-      {isEntryGate && [TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(String(film.plan)) && tazaTransfer && <PaymentProofUploader refCode={refCode} amount={orderAmount} ready={orderReady&&transferReady} />}
+      
       {isEntryGate && <div className="wallet-single-topbar wallet-single-bottom-banner">
         <AdminEntryLogo onOpen={()=>onAdmin?.()} />
         <span />
@@ -778,7 +776,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
     return()=>window.removeEventListener("tazaSubscribe",subscribe);
   },[freeCatalog]);
   return <div className="cinema-site">
-    {freeCatalog && tazaOffersOpen && <TazaPlanPicker onClose={()=>setTazaOffersOpen(false)} onSelect={plan=>{setTazaOffersOpen(false);if(plan==='single'){document.getElementById('catalog')?.scrollIntoView({behavior:'smooth'});return;}onMonthly(plan);}} />}
+    {freeCatalog && tazaOffersOpen && <TazaPlanPicker onClose={()=>setTazaOffersOpen(false)} onSelect={plan=>{setTazaOffersOpen(false);onMonthly(plan);}} />}
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
     <header className="site-header"><div className="header-inner">
       <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label={`${brandName} нүүр`}>{brandName}</a></div>
@@ -800,7 +798,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} mediaFirst={freeCatalog} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "1 кино 2,000₮ · Бүх кино 12,000₮" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "2 кино 5,000₮ · 10 кино 10,000₮ · 45 кино 13,000₮" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
@@ -2117,10 +2115,7 @@ export default function Home() {
   const [films, setFilms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [payFilm, setPayFilm] = useState<any>(null);
-  const [phoneUnlockFilm,setPhoneUnlockFilm] = useState<FilmDetails|null>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
-  const [phoneUnlockOpen,setPhoneUnlockOpen] = useState(false);
-  const [phoneUnlockPlan,setPhoneUnlockPlan] = useState<"single"|"all">("single");
   const [adminAuth, setAdminAuth] = useState(false);
   const [loadError, setLoadError] = useState("");
   const filmLoadRequest=useRef(0);
@@ -2389,7 +2384,6 @@ export default function Home() {
   };
   const handleFilm = (f: FilmDetails) => {
     playRequest.current++;
-    setPhoneUnlockFilm(null);setPhoneUnlockOpen(false);
     pendingActionRef.current=null;setWatching(false);setWatchError("");
     setSelectedFilm(null);setCurFilm(null);setPayFilm(null);setFilmError("");setFilmOpening(true);
     const filmUrl = filmNavigationUrl(window.location.href, Number(f.id));
@@ -2445,7 +2439,7 @@ export default function Home() {
             trackSiteEvent("payment_open",Number(film.id));
             await syncAccessFromDB(Number(viewer.id));
             setPayFilm(null);
-            setWatchError("Энэ кинонд эрх байхгүй. Утасны дугаараа оруулж эрхээ шалгана уу.");
+            setWatchError("Энэ киноны эрх дууссан. Багцаа сонгоод 6 оронтой кодоор төлбөрөө баталгаажуулна уу.");
             setPage("film");
           }else throw error;
         }
@@ -2495,17 +2489,12 @@ export default function Home() {
     if(!selectedFilm || filmOpening || watching || (siteId!=="taza" && !authReady))return;
     trackSiteEvent("watch_click",Number(selectedFilm.id));
     if(siteId==="taza"){
-      // Try the server first: paid legacy receipts and already verified phone grants
-      // must open without asking the visitor for their phone again.
-      setWatching(true);setWatchError("");
-      void (async()=>{
-        try{await playFilm(selectedFilm);}
-        catch(error){
-          if(error instanceof RequestError && error.status===403 && !adminAuth){
-            setPhoneUnlockFilm(selectedFilm);setPhoneUnlockPlan("single");setPhoneUnlockOpen(true);
-          }else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй.");
-        }finally{setWatching(false);}
-      })();
+      if(adminAuth || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)) || bundleRemaining>0){
+        void watchFilm(selectedFilm);
+      }else{
+        setWatchError("");
+        setShowPlanModal(true);
+      }
       return;
     }
     void watchFilm(selectedFilm);
@@ -2578,19 +2567,22 @@ export default function Home() {
       window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
     }
     if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan)) return;
-    if(siteId==='taza' ? ![TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(plan) : !!sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
+    if(siteId==='taza' ? !TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]) : !!sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
     if(sourceFilm){setPage("film");}
     else navigateTo("payment");
-    setPayFilm({id:plan==='single'?Number(sourceFilm?.id||0):0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:plan!=='single',plan,locked:true,entryGate:siteId==="taza"&&[TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(plan),returnFilm:sourceFilm});
+    setPayFilm({id:plan==='single'?Number(sourceFilm?.id||0):0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:plan!=='single',plan,locked:true,entryGate:siteId==="taza"&&TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]),returnFilm:sourceFilm});
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     if(siteId==="taza"){
-      if(!['single',TAZA_MANUAL_ALL_PLAN].includes(plan))return;
-      if(adminAuth){setAppError("Эрх авахын тулд админ горимоос гарна уу.");return;}
-      setShowPlanModal(false);
-      setPhoneUnlockPlan(plan==='single'?'single':'all');
-      setPhoneUnlockFilm(sourceFilm);
-      setPhoneUnlockOpen(true);
+      if(!TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]))return;
+      if(adminAuth){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
+      try {
+        let viewer=user;
+        if(!viewer)viewer=await ensureDeviceUser();
+        if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+        setShowPlanModal(false);
+        openPlanCheckout(plan,sourceFilm);
+      }catch(error){setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
       return;
     }
     try {
@@ -2659,8 +2651,8 @@ export default function Home() {
     : (hasAccess(f.id, decodeCat(f.badge)) ? { ...f, locked:false } : f));
   const entryBarrier=false; // TAZA is public, and the admin entry remains protected.
   const entryPaymentFilm={
-    id:0,title:"40 кино · 30 хоног",price:TAZA_40_PRICE,
-    monthly:true,plan:TAZA_40_PLAN,locked:true,entryGate:true,walletBefore:walletBalance
+    id:0,title:"45 кино бүгд · 30 хоног",price:TAZA_45_ALL_13000_PRICE,
+    monthly:true,plan:TAZA_45_ALL_13000_PLAN,locked:true,entryGate:true,walletBefore:walletBalance
   };
 
   return (
@@ -2731,18 +2723,8 @@ export default function Home() {
         </CinemaDialog>,
         document.body
       )}
-      {siteId==="taza" && phoneUnlockOpen && mounted && createPortal(
-        <PhoneUnlockModal
-          film={phoneUnlockFilm}
-          preferredPlan={phoneUnlockPlan}
-          onClose={()=>{setPhoneUnlockOpen(false);setPhoneUnlockFilm(null);}}
-          onUnlocked={async()=>{
-            const film=phoneUnlockFilm;
-            if(film)await playFilm(film);
-            setPhoneUnlockOpen(false);
-            setPhoneUnlockFilm(null);
-          }}
-        />,
+      {siteId==="taza" && page==="film" && showPlanModal && mounted && createPortal(
+        <TazaPlanPicker onClose={()=>setShowPlanModal(false)} onSelect={plan=>void handlePlanSelect(plan,selectedFilm)} />,
         document.body
       )}
     </div>
