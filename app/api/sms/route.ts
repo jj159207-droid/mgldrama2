@@ -76,7 +76,40 @@ export async function POST(req:NextRequest) {
   parsed=rawText.length<=2000?parseBankSms(rawText):null;
   if(!parsed){
     outcome='parse_failed';
-    throw new ApiError(400,'Орлогын дүн болон 6 оронтой гүйлгээний утгыг SMS-ээс таньж чадсангүй.');
+    throw new ApiError(400,'Орлогын дүн болон 6 оронтой код эсвэл 8 оронтой дугаарыг SMS-ээс таньж чадсангүй.');
+  }
+
+  // Eight-digit transaction references are customer phone numbers for the
+  // manual-access TAZA checkout. Six-digit references remain legacy orders.
+  if(parsed.ref.length===8){
+    if(parsed.amount!==2000 && parsed.amount!==12000){
+      outcome='phone_amount_rejected';
+      throw new ApiError(400,'Утасны дугаараар эрх нээх дүн 2,000₮ эсвэл 12,000₮ байна.','PHONE_PAYMENT_AMOUNT_INVALID');
+    }
+    // An identical forwarded bank SMS must never create a second entitlement.
+    // In the absence of a bank transaction ID, a byte-identical SMS is treated
+    // as a duplicate, including when MacroDroid retries after timeout.
+    const messageHash=createHash('sha256').update(rawText.normalize('NFKC').replace(/\r\n/g,'\n')).digest('hex');
+    const [grant]=await db('rpc/kino_taza_phone_confirm_sms','POST',{
+      p_phone:parsed.ref,
+      p_amount:parsed.amount,
+      p_message_hash:messageHash,
+      p_sender:String(sender||''),
+    });
+    if(grant?.result!=='granted'&&grant?.result!=='duplicate'){
+      outcome='phone_grant_failed';
+      throw new ApiError(502,'Дугаарын эрхийг баталгаажуулж чадсангүй.');
+    }
+    outcome=grant.result==='duplicate'?'phone_duplicate':'phone_granted';
+    await logSmsEvent({sender,ref:parsed.ref,amount:parsed.amount,outcome,rawText});
+    return json({
+      ok:true,
+      phoneGrant:true,
+      ref:parsed.ref,
+      amount:parsed.amount,
+      accessType:grant.result==='granted'?grant.access_type:null,
+      alreadyConfirmed:grant.result==='duplicate',
+    });
   }
 
   const lookup=()=>db(`pending_payments?ref_code=eq.${parsed!.ref}&select=id,user_id,amount,status,plan,created_at,confirmed_at`);

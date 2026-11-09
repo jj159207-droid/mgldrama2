@@ -92,14 +92,14 @@ export function safeUrl(value: unknown, image = false): string {
 }
 export function parseBankSms(text: string): {ref: string; amount: number} | null {
   // Accept the common Khan/Mongolian variants while still requiring an explicitly
-  // labelled incoming amount and a labelled six-digit transfer reference.
+  // labelled incoming amount and a labelled six-digit order OR eight-digit phone reference.
   const normalized=String(text||'')
     .normalize('NFKC')
     .replace(/\u00a0/g,' ')
     .replace(/[：﹕]/g,':')
     .replace(/[，]/g,',');
 
-  const refMatches=[...normalized.matchAll(/(?:Гүйлгээний\s*утга|Guilgeenii\s*utga|Утга|\bUtga)\s*[:=\-]?\s*(\d{6})(?!\d)/giu)];
+  const refMatches=[...normalized.matchAll(/(?:Гүйлгээний\s*утга|Guilgeenii\s*utga|Утга|\bUtga)\s*[:=\-]?\s*(?<!\d)(\d{8}|\d{6})(?!\d)/giu)];
   const refs=[...new Set(refMatches.map(match=>match[1]))];
   if(refs.length!==1)return null;
 
