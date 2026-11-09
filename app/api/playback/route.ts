@@ -26,7 +26,7 @@ export async function GET(req:NextRequest) {
       if(!url)throw new ApiError(404,'Энэ киноны видео холбоос байхгүй. Үзэх эрх хасагдаагүй. Админд мэдэгдэнэ үү.','VIDEO_SOURCE_MISSING');
       const hasCredits=site==='taza' && payments.some(p=>tazaPackQuota(String(p.plan||''))>0 && paymentExpiry(p)>Date.now());
       if(!hasCredits || !await claimTazaFilm(Number(s!.userId),id))
-        throw new ApiError(403,site==='taza'?'Киноны эрх байхгүй. 2, 10 эсвэл 45 киноны багц сонгож 6 оронтой кодоор төлбөрөө баталгаажуулна уу.':'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.','SUBSCRIPTION_REQUIRED');
+        throw new ApiError(403,site==='taza'?'Киноны эрх байхгүй. 2 эсвэл 45 киноны багц сонгож 6 оронтой кодоор төлбөрөө баталгаажуулна уу.':'Кино үзэх эрх байхгүй эсвэл хугацаа дууссан.','SUBSCRIPTION_REQUIRED');
     }
   }
   if(!url)throw new ApiError(404,'Энэ киноны бүтэн видео холбоос байхгүй эсвэл буруу байна. Дахин төлбөр хийхгүй, админд киноны нэрийг мэдэгдэнэ үү.','VIDEO_SOURCE_MISSING');
