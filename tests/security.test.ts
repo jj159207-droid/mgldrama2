@@ -30,6 +30,9 @@ beforeEach(()=>{
   users:[],
   films:[{id:1,title:'Test',price:5000,locked:true,free:false,url:'https://video.example/movie.mp4',preview_url:'https://video.example/trailer.mp4',badge:'Хэлтэй|Гадаад',site_id:'taza'}],
   pending_payments:[],
+  taza_phone_grants:[],
+  taza_phone_sessions:[],
+  taza_phone_sms_receipts:[],
   support_messages:[],
   taza_pack_claims:[],
   app_sessions:[],
@@ -61,6 +64,24 @@ beforeEach(()=>{
       }
     }
     return Response.json([{result:'exhausted',payment_id:null}]);
+  }
+  if(name==='rpc/kino_taza_phone_confirm_sms'){
+    const phone=String(body?.p_phone||''),amount=Number(body?.p_amount);
+    const hash=String(body?.p_message_hash||''),sender=String(body?.p_sender||'');
+    if(!/^[0-9]{8}$/.test(phone)||![2000,12000].includes(amount)||!/^[a-f0-9]{64}$/.test(hash)||!sender)return Response.json({code:'22023'},{status:400});
+    if(tables.taza_phone_sms_receipts.some(x=>x.message_hash===hash))
+      return Response.json([{result:'duplicate',grant_id:null,access_type:null}]);
+    let grant=tables.taza_phone_grants.find(x=>x.phone===phone);
+    if(!grant){
+      grant={id:nextId++,site_id:'taza',phone,active:true,access_type:amount===12000?'all':'single',film_id:null};
+      tables.taza_phone_grants.push(grant);
+    }else{
+      grant.access_type=amount===12000?'all':(grant.active&&grant.access_type==='all'?'all':'single');
+      grant.film_id=null;grant.active=true;
+    }
+    tables.taza_phone_sms_receipts.push({id:nextId++,phone,amount,message_hash:hash,sender,grant_id:grant.id});
+    tables.taza_phone_sessions=tables.taza_phone_sessions.filter(x=>x.grant_id!==grant.id);
+    return Response.json([{result:'granted',grant_id:grant.id,access_type:grant.access_type}]);
   }
   if(name==='rpc/kino_chat_send_site'){
     const row={id:nextId++,user_id:Number(body.p_user),site_id:String(body.p_site),sender:String(body.p_sender),message:String(body.p_message),client_id:String(body.p_client),has_image:!!body.p_image,created_at:now()};
@@ -942,4 +963,78 @@ test('Bunny diagnostic rechecks HEAD false 404 with GET and reports a healthy re
    assert.equal(head,1);
    assert.equal(get,1);
  }finally{global.fetch=native;}
+});
+
+
+test('eight-digit bank references require exact labelled incoming amounts and phone numbers',()=>{
+ assert.deepEqual(parseBankSms('ORLOGO:2,000.00MNT ... Utga:99112233'),{ref:'99112233',amount:2000});
+ assert.deepEqual(parseBankSms('Орлого: 12,000.00₮ Гүйлгээний утга: 88112233'),{ref:'88112233',amount:12000});
+ assert.deepEqual(parseBankSms('ORLOGO:12,000.00MNT Utga:123456'),{ref:'123456',amount:12000});
+ assert.equal(parseBankSms('ORLOGO:2,000.00MNT Utga:991122334'),null);
+ assert.equal(parseBankSms('ZARLAGA:2,000.00MNT Utga:99112233'),null);
+ assert.equal(parseBankSms('ORLOGO:2,000.00MNT Utga:99112233 Utga:88112233'),null);
+ assert.equal(parseBankSms('ORLOGO:2,000.50MNT Utga:99112233'),null);
+});
+
+test('trusted 2,000₮ MacroDroid SMS automatically grants one film and duplicate does not reissue',async()=>{
+ process.env.SMS_ALLOWED_SENDER='Khan Bank';
+ const first=await bankSms('99112233','2,000.00');
+ assert.equal(first.status,200);
+ assert.equal((await first.json()).phoneGrant,true);
+ assert.equal(tables.taza_phone_grants.length,1);
+ assert.equal(tables.taza_phone_grants[0].access_type,'single');
+ assert.equal(tables.taza_phone_grants[0].film_id,null);
+ assert.equal(tables.taza_phone_sms_receipts.length,1);
+ const duplicate=await bankSms('99112233','2,000.00');
+ assert.equal(duplicate.status,200);
+ assert.equal((await duplicate.json()).alreadyConfirmed,true);
+ assert.equal(tables.taza_phone_sms_receipts.length,1);
+ assert.equal(tables.taza_phone_grants.length,1);
+});
+
+test('12,000₮ MacroDroid SMS upgrades one-film phone to all films and preserves already all rights',async()=>{
+ process.env.SMS_ALLOWED_SENDER='Khan Bank';
+ assert.equal((await bankSms('99112233','2,000.00')).status,200);
+ let grant=tables.taza_phone_grants[0];
+ grant.film_id=1;
+ tables.taza_phone_sessions.push({grant_id:grant.id,token_hash:'a'.repeat(64)});
+ assert.equal((await bankSms('99112233','12,000.00')).status,200);
+ grant=tables.taza_phone_grants[0];
+ assert.equal(grant.access_type,'all');
+ assert.equal(grant.film_id,null);
+ assert.equal(tables.taza_phone_sessions.length,0);
+ assert.equal(tables.taza_phone_sms_receipts.length,2);
+ // A distinct later 2k transfer cannot downgrade an active all-film grant.
+ const newer=await sms.POST(new NextRequest('https://app.test/api/sms',{
+  method:'POST',headers:{'content-type':'text/plain',authorization:'Bearer '+process.env.SMS_WEBHOOK_SECRET,'x-sms-sender':'Khan Bank'},
+  body:'ORLOGO:2,000.00MNT ... ULDEGDEL:98,000.00MNT ... Utga:99112233'
+ }));
+ assert.equal(newer.status,200);
+ assert.equal(tables.taza_phone_grants[0].access_type,'all');
+ assert.equal(tables.taza_phone_sms_receipts.length,3);
+});
+
+test('new 2k verified transfer resets an already-used one-film slot without mixing phone numbers',async()=>{
+ process.env.SMS_ALLOWED_SENDER='Khan Bank';
+ assert.equal((await bankSms('99112233','2,000.00')).status,200);
+ tables.taza_phone_grants[0].film_id=1;
+ const newer=await sms.POST(new NextRequest('https://app.test/api/sms',{
+  method:'POST',headers:{'content-type':'text/plain',authorization:'Bearer '+process.env.SMS_WEBHOOK_SECRET,'x-sms-sender':'Khan Bank'},
+  body:'ORLOGO:2,000.00MNT ... ULDEGDEL:50,000.00MNT ... Utga:99112233'
+ }));
+ assert.equal(newer.status,200);
+ assert.equal(tables.taza_phone_grants[0].film_id,null);
+ assert.equal(tables.taza_phone_grants.length,1);
+ assert.equal(tables.taza_phone_sms_receipts.length,2);
+});
+
+test('phone SMS refuses wrong amounts, spoofed senders and unauthenticated posts',async()=>{
+ process.env.SMS_ALLOWED_SENDER='Khan Bank';
+ assert.equal((await bankSms('99112233','3,000.00')).status,400);
+ assert.equal((await bankSms('99112233','5,000.00')).status,400);
+ assert.equal((await bankSms('99112233','2,000.00','OTHER')).status,403);
+ const unauthorized=await sms.POST(req('/api/sms','POST',{sms_message:'ORLOGO:12,000.00MNT Utga:99112233'}));
+ assert.equal(unauthorized.status,401);
+ assert.equal(tables.taza_phone_grants.length,0);
+ assert.equal(tables.taza_phone_sms_receipts.length,0);
 });
