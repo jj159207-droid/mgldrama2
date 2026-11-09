@@ -125,15 +125,8 @@ async function handler(req:NextRequest) {
         }else if(plan==='single') {
           filmId=Number(b.film_id);if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
           const [film]=await db(`films?id=eq.${filmId}&site_id=eq.${site}&select=id,price,free,locked`);
-          if(!film || (site!=='taza' && (film.free===true || film.locked===false)))throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
-          amount=site==='taza'?TAZA_SINGLE_PRICE:Number(film.price);
-        }
-        if(site==='taza'&&plan===TAZA_2_PLAN&&b.film_id!=null){
-          const selected=Number(b.film_id);
-          if(!Number.isSafeInteger(selected)||selected<=0)throw new ApiError(400,'Сонгосон киноны ID буруу.');
-          const [picked]=await db(`films?id=eq.${selected}&site_id=eq.taza&select=id&limit=1`);
-          if(!picked)throw new ApiError(404,'Сонгосон кино олдсонгүй.');
-          filmId=selected;
+          if(!film || film.free===true || film.locked===false)throw new ApiError(400,'Төлбөр шаардах кино олдсонгүй.');
+          amount=Number(film.price);
         }
         if(!Number.isSafeInteger(amount)||amount<=0)throw new ApiError(400,'Багц эсвэл үнэ буруу.');
         b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan,site_id:site};

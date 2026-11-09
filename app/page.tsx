@@ -2599,7 +2599,7 @@ export default function Home() {
       if(adminAuth && !viewer){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
       if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
       if(!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan) || plan==="wallet_topup" || plan==="entry_72h")return;
-      if(siteId==='taza' ? ![TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(plan) : !!sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
+      if(sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
       openPlanCheckout(plan,sourceFilm);
     } catch(error) {setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
   };
