@@ -14,17 +14,14 @@ export default function TazaPlanPicker({onSelect,onClose,busy=false}:Props){
     <section className="taza-offer-dialog" role="dialog" aria-modal="true" aria-labelledby="taza-offer-title">
       <button ref={closeRef} type="button" className="taza-offer-close" onClick={onClose} aria-label="Сонголт хаах">×</button>
       <span className="taza-offer-eyebrow">TAZA SITE · КИНОНЫ ЭРХ</span>
-      <h2 id="taza-offer-title">Багцаа сонгоорой</h2>
-      <p className="taza-offer-intro">Гурван багцаас сонгоход ХААН Банкны данс, данс эзэмшигчийн нэр, гүйлгээний 6 оронтой код гарна. Банкны SMS баталгаажмагц эрх автоматаар нээгдэнэ.</p>
+      <h2 id="taza-offer-title">3 төрлийн багц сонголт</h2>
       {products.map(product=><button type="button" key={product.id}
         className={'taza-offer-card'+(product.featured?' taza-offer-featured':'')}
         onClick={()=>onSelect(product.id)} disabled={busy}>
         {product.featured&&<span className="taza-offer-best">БҮХ КИНО</span>}
         <span className="taza-offer-card-copy"><strong>{product.featured?'🌟':'🎬'} {product.title} үзэх эрх</strong><small>{product.description}</small></span>
         <span className="taza-offer-amount">{product.price.toLocaleString('mn-MN')}₮</span>
-        <span className="taza-offer-go">6 ОРОНТОЙ КОД АВАХ →</span>
       </button>)}
-      <p className="taza-offer-note">Гүйлгээний утгад зөвхөн сайтаас гаргасан 6 оронтой кодоо бичнэ. Утасны дугаараа бичихгүй.</p>
     </section>
   </div>;
 }
