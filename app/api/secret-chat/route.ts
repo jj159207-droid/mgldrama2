@@ -14,7 +14,7 @@ function safeMessage(row:Record<string,unknown>,ownerId:number|null){
  return {id:Number(row.id),memberId:Number(row.member_id),text:String(row.body||''),at:String(row.created_at||''),mine:Number(row.user_id)===ownerId};
 }
 async function memberFor(userId:number){
- const [m]=await db('taza_secret_chat_members?user_id=eq.'+userId+'&select=id,user_id,payment_id,phone,blocked,created_at&limit=1');
+ const [m]=await db('taza_secret_chat_members?user_id=eq.'+userId+'&select=id,user_id,payment_id,full_name,age,phone,blocked,created_at&limit=1');
  return m||null;
 }
 async function confirmedPayment(userId:number){
@@ -34,7 +34,7 @@ export async function GET(req:NextRequest){
   const s=await session(req),q=req.nextUrl.searchParams;
   if(q.get('admin')==='1'){
     if(!canAdminSite(s,'taza'))throw new ApiError(403,'Зөвхөн админ үзнэ.');
-    const members=await db('taza_secret_chat_members?select=id,user_id,phone,payment_id,blocked,created_at&order=id.desc&limit=200');
+    const members=await db('taza_secret_chat_members?select=id,user_id,full_name,age,phone,payment_id,blocked,created_at&order=id.desc&limit=200');
     if(q.get('messages')==='1'){
       const msgs=await db('taza_secret_chat_messages?select=id,member_id,user_id,body,created_at&order=id.desc&limit=80');
       return json({members,messages:msgs.map(m=>safeMessage(m,null)).reverse()});
@@ -50,7 +50,7 @@ export async function GET(req:NextRequest){
     const rows=await db('taza_secret_chat_messages?select=id,member_id,user_id,body,created_at&order=id.desc&limit=80');
     return json({messages:rows.map(row=>safeMessage(row,userId)).reverse(),myMemberId:Number(joined.id)});
   }
-  if(m) return json({status:m.blocked===true?'blocked':'joined',phone:m.phone,joinedAt:m.created_at});
+  if(m) return json({status:m.blocked===true?'blocked':'joined',phone:m.phone,name:m.full_name,age:m.age,joinedAt:m.created_at});
   if(await confirmedPayment(userId))return json({status:'paid'});
   const rows=await db('pending_payments?site_id=eq.taza&user_id=eq.'+userId+'&plan=eq.'+PLAN+'&status=eq.pending&select=id,ref_code,amount,created_at&order=id.desc&limit=5');
   const pending=rows.find(row=>Number(row.amount)===AMOUNT&&/^\d{6}$/.test(String(row.ref_code))&&Date.now()-Date.parse(String(row.created_at))>=0&&Date.now()-Date.parse(String(row.created_at))<24*3600000);
@@ -66,26 +66,29 @@ export async function POST(req:NextRequest){
   const userId=s.userId,b=await bodyJson(req,2200);
   const action=String(b.action||'');
   if(action==='join'){
-    if(Object.keys(b).some(k=>!['action','phone','adultConfirmed'].includes(k)))throw new ApiError(400,'Хүсэлтийн формат буруу.');
-    if(b.adultConfirmed!==true)throw new ApiError(400,'18 нас хүрсэн гэдгээ баталгаажуулна уу.');
+    if(Object.keys(b).some(k=>!['action','name','age','phone'].includes(k)))throw new ApiError(400,'Хүсэлтийн формат буруу.');
+    const name=typeof b.name==='string'?b.name.trim().normalize('NFC'):'';
+    if(name.length<2||name.length>80||!/^\p{L}[\p{L}\p{M} .'-]{1,79}$/u.test(name))throw new ApiError(400,'Нэрээ 2–80 тэмдэгтээр зөв оруулна уу.');
+    const age=b.age;
+    if(typeof age!=='number'||!Number.isInteger(age)||age<18||age>120)throw new ApiError(400,'Нас 18–120 хооронд байх ёстой.');
     const phone=String(b.phone||'').trim();
     if(!phonePattern.test(phone))throw new ApiError(400,'8 оронтой утасны дугаар оруулна уу.');
     const previous=await memberFor(userId);
     if(previous){
       if(previous.blocked===true)throw new ApiError(403,'Бүртгэлийг түр хаасан байна.');
-      return json({ok:true,status:'joined',phone:previous.phone,alreadyRegistered:true});
+      return json({ok:true,status:'joined',phone:previous.phone,name:previous.full_name,age:previous.age,alreadyRegistered:true});
     }
     await rateLimit('taza-secret-chat-join:'+userId);
     const payment=await confirmedPayment(userId);
     if(!payment)throw new ApiError(403,'ХААН Банкны 10,000₮ төлбөр баталгаажаагүй байна.','SECRET_CHAT_PAYMENT_REQUIRED');
     try{
-      const [member]=await db('taza_secret_chat_members','POST',{user_id:userId,payment_id:payment.id,phone});
+      const [member]=await db('taza_secret_chat_members','POST',{user_id:userId,payment_id:payment.id,full_name:name,age,phone});
       if(!member)throw new ApiError(502,'Бүртгэл хадгалагдсангүй.');
-      return json({ok:true,status:'joined',phone:member.phone});
+      return json({ok:true,status:'joined',phone:member.phone,name:member.full_name,age:member.age});
     }catch(error){
       if(error instanceof ApiError&&error.code==='23505'){
         const saved=await memberFor(userId);
-        if(saved&&saved.blocked!==true)return json({ok:true,status:'joined',phone:saved.phone,alreadyRegistered:true});
+        if(saved&&saved.blocked!==true)return json({ok:true,status:'joined',phone:saved.phone,name:saved.full_name,age:saved.age,alreadyRegistered:true});
       }
       throw error;
     }
