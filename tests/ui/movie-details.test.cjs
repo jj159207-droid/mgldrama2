@@ -43,11 +43,11 @@ beforeEach(()=>{
   if(url.pathname==='/api/phone-grants/claim'){
     const body=JSON.parse(opts.body||'{}');
     if(body.phone!=='99112233'||manualPhoneMode==='none')
-      return Response.json({message:'Энэ дугаарт үзэх эрх байхгүй.'},{status:403});
+      return Response.json({message:'Энэ дугаарт үзэх эрх байхгүй.',code:'PHONE_GRANT_MISSING'},{status:403});
     if(manualPhoneMode==='single'){
       if(manualPhoneFilm===null)manualPhoneFilm=body.film_id;
       if(manualPhoneFilm!==body.film_id)
-        return Response.json({message:'Энэ киноны эрх ашиглагдсан.'},{status:403});
+        return Response.json({message:'Энэ киноны эрх ашиглагдсан.',code:'PHONE_GRANT_DIFFERENT_FILM'},{status:403});
     }
     manualAllowed=true;
     return Response.json({ok:true,access_type:manualPhoneMode});
@@ -155,7 +155,8 @@ test('one-film phone grant opens only the first selected film',async()=>{
  await click('.film-hero-watch');
  await enterPhone();
  assert.equal(movie(),undefined);
- assert.ok(document.querySelector('[role="alert"]'));
+ assert.match(document.querySelector('[role="status"]').textContent,/1 киноны эрх/);
+ assert.match(document.querySelector('[role="dialog"]').textContent,/12,000₮/);
  assert.equal(manualPhoneFilm,7);
 });
 test('missing trailer never falls back to a private movie, and a failed trailer can be closed',async()=>{
@@ -206,8 +207,9 @@ test('unapproved phone cannot access full movie URL',async()=>{
  assert.equal(movie(),undefined);
  assert.equal(orders.length,0);
  assert.ok(document.querySelector('#phone-unlock-input'));
- assert.match(document.querySelector('[role="alert"]').textContent,/үзэх эрх/);
- assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
+ assert.match(document.querySelector('[role="status"]').textContent,/үзэх эрх/);
+ assert.match(document.querySelector('[role="dialog"]').textContent,/ХААН Банкны данс/);
+ assert.equal(requests.filter(r=>r.path==='/api/playback').length,1);
 });
 test('Facebook direct film links let guests enter admin-approved phone',async()=>{
  manualPhoneMode='all';failCatalog=true;
@@ -362,4 +364,26 @@ test('Back from a related movie opened from an ad also returns home',async()=>{
 });
 test('a delayed admin-session response after leaving an ad never replaces the home page with management',async()=>{
  authGate=defer();session={admin:true};await render('/?film=7');await click('.film-back');await act(async()=>authGate.resolve());assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
+});
+
+test('missing phone grant shows correct bank transfer, phone reference, and Facebook screenshot instructions',async()=>{
+ await render('/?film=7&fbclid=ad');
+ await click('.film-hero-watch');
+ await enterPhone('99112233');
+ const dialog=document.querySelector('[role="dialog"]');
+ assert.ok(dialog,'payment dialog remains visible');
+ const text=dialog.textContent;
+ assert.match(text,/2,000₮/);
+ assert.match(text,/12,000₮/);
+ assert.match(text,/5252017169/);
+ assert.match(text,/Т\.Жаргалбаяр/);
+ assert.match(text,/Гүйлгээний утга/);
+ assert.match(text,/99112233/);
+ assert.match(text,/Facebook пэйж рүү гүйлгээний screenshot/);
+ assert.match(text,/Админ банкны орлогыг шалгаж баталгаажуулсны дараа/);
+ const facebook=dialog.querySelector('a[href="https://m.me/1431907480007581"]');
+ assert.ok(facebook);
+ assert.equal(orders.length,0,'screenshot instructions never create an old payment order');
+ await act(async()=>[...dialog.querySelectorAll('button')].find(b=>b.textContent.includes('Бүх кино')).click());
+ assert.match(dialog.textContent,/12,000₮/);
 });
