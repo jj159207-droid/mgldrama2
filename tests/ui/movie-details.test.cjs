@@ -55,7 +55,7 @@ beforeEach(()=>{
   if(url.pathname==='/api/entry-access')return Response.json({allowed:entryAllowed,reason:entryAllowed?'paid':'payment_required'});
   if(url.pathname==='/api/access')return Response.json({access:{...(entitled?{monthly:Date.now()+30*86400000}:{}),...Object.fromEntries([...purchased].map(id=>[`film_${id}`,Date.now()+30*86400000]))},bundleRemaining:credits});
   if(url.pathname==='/api/wallet')return Response.json({balance:walletBalance});
-  if(url.pathname==='/api/settings')return Response.json({bankName:'Хаан банк',bankAccount:'5252017169',accountName:'Т.Жаргалбаяр',bankIban:'MN030000000000000000',messengerUrl:'https://m.me/1431907480007581'});
+  if(url.pathname==='/api/settings')return Response.json({bankName:'Хаан банк',bankAccount:'5252017169',accountName:'Т.Жаргалбаяр',bankIban:'MN030000000000000000',messengerUrl:'https://m.me/1453362271192628'});
   if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/playback'){
    if(playbackGate)await playbackGate.promise;
@@ -381,10 +381,12 @@ test('missing phone grant shows correct bank transfer, phone reference, and Face
  assert.match(text,/Гүйлгээний утга/);
  assert.match(text,/99112233/);
  assert.match(text,/Facebook пэйж рүү гүйлгээний screenshot/);
- assert.match(text,/Админ банкны орлогыг шалгаж баталгаажуулсны дараа/);
- const facebook=dialog.querySelector('a[href="https://m.me/1431907480007581"]');
+ assert.match(text,/45 кино бүгд — 12,000₮/);
+ assert.match(text,/Сонголтоо хийгээд шилжүүлнэ үү/);
+ assert.doesNotMatch(text,/Админ банкны орлогыг шалгаж баталгаажуулсны дараа|Зөвхөн зураг илгээснээр|Нэг төлбөрийг давхар|Админ эрх нээсэн бол дахин шалгах/);
+ const facebook=dialog.querySelector('a[href="https://m.me/1453362271192628"]');
  assert.ok(facebook);
  assert.equal(orders.length,0,'screenshot instructions never create an old payment order');
- await act(async()=>[...dialog.querySelectorAll('button')].find(b=>b.textContent.includes('Бүх кино')).click());
+ await act(async()=>[...dialog.querySelectorAll('button')].find(b=>b.textContent.includes('45 кино бүгд')).click());
  assert.match(dialog.textContent,/12,000₮/);
 });
