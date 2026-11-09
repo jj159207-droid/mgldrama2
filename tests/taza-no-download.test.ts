@@ -9,7 +9,7 @@ test('TAZA has online movie player only, without movie download buttons',()=>{
   assert.ok(page.includes('Татсан кино')===false,'remove saved-movies entry');
   assert.ok(page.includes('OfflineDownloadButton')===false,'remove player download actions');
   assert.ok(page.includes('offlineEnabled')===false,'remove offline feature toggles');
-  assert.ok(page.includes('TAZA_PUBLIC_PACKS')&&page.includes('TazaPlanPicker'),'three package streaming checkout remains');
+  assert.ok(page.includes('TAZA_PUBLIC_PACKS')&&page.includes('TazaPlanPicker'),'two package streaming checkout remains');
   const layout=readFileSync(new URL('../app/layout.tsx',import.meta.url),'utf8');
   assert.ok(!layout.includes('./offline.css'));
 });
