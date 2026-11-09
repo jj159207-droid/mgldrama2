@@ -14,7 +14,7 @@ create table if not exists public.taza_secret_chat_messages (
  member_id bigint not null references public.taza_secret_chat_members(id),
  user_id bigint not null references public.users(id),
  client_id uuid not null unique,
- body text not null check (char_length(body) between 1 and 600 and position(chr(0) in body)=0),
+ body text not null check (char_length(body) between 1 and 600),
  created_at timestamptz not null default now()
 );
 create index if not exists taza_secret_chat_messages_recent_idx on public.taza_secret_chat_messages(id desc);
