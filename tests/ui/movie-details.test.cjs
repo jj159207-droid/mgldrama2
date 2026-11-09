@@ -188,7 +188,8 @@ test('watch phone dialog does not silently create a paid order',async()=>{
  assert.equal(orders.length,0);
  await click('[aria-label="Хаах"]');
  assert.equal(document.querySelector('#phone-unlock-input'),null);
- assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
+ // One authorized server playback attempt precedes the manual phone dialog.
+ assert.equal(requests.filter(r=>r.path==='/api/playback').length,1);
 });
 test('leaving during a full movie request prevents its late result from opening a player',async()=>{
  session={user:{id:12,phone:'99112233'}};entitled=true;await render('/?film=34');playbackGate=defer();await click('.film-hero-watch');await click('.film-back');
