@@ -11,8 +11,9 @@ test('TAZA sells three six-digit 30-day checkout plans',()=>{
  assert.deepEqual([tazaPackQuota(TAZA_2_PLAN),tazaPackQuota(TAZA_10_10000_PLAN)],[2,10]);
  assert.match(planLabel(TAZA_45_ALL_13000_PLAN),/45 кино бүгд/);
  const picker=read('app/components/TazaPlanPicker.tsx');
- for(const text of ['TAZA_2_PLAN','TAZA_10_10000_PLAN','TAZA_45_ALL_13000_PLAN','6 ОРОНТОЙ КОД'])assert.ok(picker.includes(text),text);
- assert.doesNotMatch(picker,/Facebook пэйж рүү|утасны дугаараа бичиж/);
+ for(const text of ['TAZA_2_PLAN','TAZA_10_10000_PLAN','TAZA_45_ALL_13000_PLAN','3 төрлийн багц сонголт'])assert.ok(picker.includes(text),text);
+ assert.doesNotMatch(picker,/6 ОРОНТОЙ КОД АВАХ|Гурван багцаас сонгоход|Гүйлгээний утгад зөвхөн|Утасны дугаараа бичихгүй|Facebook пэйж рүү/);
+ assert.ok(picker.includes('onClick={()=>onSelect(product.id)}'),'Each package remains clickable');
 });
 test('all 45 film purchase grants 30-day movie access',()=>{
  assert.equal(paymentExpiry(paid(TAZA_45_ALL_13000_PLAN))-now,30*86400000);
