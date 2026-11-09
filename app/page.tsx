@@ -24,6 +24,7 @@ import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import PhoneGrantsAdminTab from "@/app/components/PhoneGrantsAdminTab";
 import TazaPlanPicker from "@/app/components/TazaPlanPicker";
+import PaymentProofUploader from "@/app/components/PaymentProofUploader";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
 import { AdminChatInbox, ChatPanel, ChatBadge, useChatUnread } from "@/app/components/SupportChat";
 import { INITIAL_CATALOG, type CatalogState } from "@/lib/catalog";
