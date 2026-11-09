@@ -12,18 +12,25 @@ export async function POST(req:NextRequest) {
     if(requestSite(req)!=='taza')throw new ApiError(404,'Энэ эрх зөвхөн TAZA сайтад үйлчилнэ.');
     const body=await bodyJson(req,2048);
     const phone=body.phone;
+    const accessType=String(body.access_type||'single');
     const filmId=Number(body.film_id);
-    if(!phoneIsValid(phone)||!Number.isSafeInteger(filmId)||filmId<=0)
+    if(!phoneIsValid(phone)||!['single','all'].includes(accessType)||
+      (body.film_id!=null&&(!Number.isSafeInteger(filmId)||filmId<=0))||
+      (body.film_id==null&&accessType!=='all'))
       throw new ApiError(400,'Утасны дугаар эсвэл киноны мэдээлэл буруу.');
     // Limit attempts per phone in the database, across all serverless instances.
     await rateLimit('taza-phone-entitlement:'+phone);
-    const [film]=await db('films?id=eq.'+filmId+'&site_id=eq.taza&select=id,url&limit=1');
-    if(!film)throw new ApiError(404,'Кино олдсонгүй.');
-    if(!safeUrl(String(film.url||'').split('|||')[0]))
-      throw new ApiError(404,'Энэ киноны бүтэн видео одоогоор байхгүй. Админд мэдэгдэнэ үү.','VIDEO_SOURCE_MISSING');
+    if(body.film_id!=null){
+      const [film]=await db('films?id=eq.'+filmId+'&site_id=eq.taza&select=id,url&limit=1');
+      if(!film)throw new ApiError(404,'Кино олдсонгүй.');
+      if(!safeUrl(String(film.url||'').split('|||')[0]))
+        throw new ApiError(404,'Энэ киноны бүтэн видео одоогоор байхгүй. Админд мэдэгдэнэ үү.','VIDEO_SOURCE_MISSING');
+    }
 
     let [grant]=await db('taza_phone_grants?site_id=eq.taza&phone=eq.'+phone+'&active=eq.true&select=id,access_type,film_id&limit=1');
-    if(!grant)throw new ApiError(403,'Энэ дугаарт үзэх эрх нээгдээгүй байна. Админтай холбогдоно уу.','PHONE_GRANT_MISSING');
+    if(!grant)throw new ApiError(403,'Энэ дугаарт үзэх эрх бүртгэгдээгүй байна.','PHONE_GRANT_MISSING');
+    if(accessType==='all'&&grant.access_type!=='all')
+      throw new ApiError(403,'Бүх киноны эрх бүртгэгдээгүй байна.','PHONE_GRANT_NOT_ALL');
     if(grant.access_type==='single'&&grant.film_id===null){
       // Atomic compare-and-set: two simultaneous film claims cannot both win.
       await db('taza_phone_grants?id=eq.'+grant.id+'&site_id=eq.taza&active=eq.true&access_type=eq.single&film_id=is.null',

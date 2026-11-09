@@ -60,9 +60,9 @@ export default function CatalogCardTuning() {
         const sub = copy ? Array.from(copy.children).find(child => child.tagName === "SPAN") as HTMLElement | undefined : undefined;
         const cta = banner.querySelector<HTMLElement>(".banner-cta");
 
-        const title=freeCatalog?"Бүх кино · 12,500₮":"Сайтын бүх киног 7,900 төгрөгөөр";
+        const title=freeCatalog?"1 кино 2,000₮ · Бүх кино 12,000₮":"Сайтын бүх киног 7,900 төгрөгөөр";
         if (lead && lead.textContent !== title) lead.textContent = title;
-        const subtitle=freeCatalog?"30 хоног үзэх эрх":"72 цаг үзэх эрх";
+        const subtitle=freeCatalog?"Дугаараар админ эрх нээнэ":"72 цаг үзэх эрх";
         if (sub && sub.textContent !== subtitle) sub.textContent = subtitle;
         if (cta && cta.textContent !== "ЭНД ДАРЖ ҮЗЭХ →") cta.textContent = "ЭНД ДАРЖ ҮЗЭХ →";
 
@@ -84,7 +84,7 @@ export default function CatalogCardTuning() {
       document.querySelectorAll<HTMLElement>(".cinema-site .movie-card").forEach(card => {
         const badge = card.querySelector<HTMLElement>(".movie-badge");
         const category = card.querySelector<HTMLElement>(".movie-category")?.textContent?.trim();
-        if (badge && category) badge.dataset.packageName = siteFromPathname(window.location.pathname)==="taza" ? "Бүх кино · 12,500₮" : `${category} багц`;
+        if (badge && category) badge.dataset.packageName = siteFromPathname(window.location.pathname)==="taza" ? "Бүх кино · 12,000₮" : `${category} багц`;
 
         if (!card.querySelector(".catalog-trailer-button")) {
           const button = document.createElement("button");
