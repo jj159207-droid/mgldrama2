@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
-import AgeGate from "@/app/components/AgeGate";
 import CinematicHeroMount from "@/app/components/CinematicHeroMount";
 import CatalogCardTuning from "@/app/components/CatalogCardTuning";
 import "./globals.css";
@@ -65,11 +64,9 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
-        <AgeGate>
-          {children}
-          <CinematicHeroMount />
-          <CatalogCardTuning />
-        </AgeGate>
+        {children}
+        <CinematicHeroMount />
+        <CatalogCardTuning />
         <Script src="/install.js" strategy="beforeInteractive" />
       </body>
     </html>
