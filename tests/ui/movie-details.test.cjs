@@ -55,7 +55,7 @@ beforeEach(()=>{
   if(url.pathname==='/api/entry-access')return Response.json({allowed:entryAllowed,reason:entryAllowed?'paid':'payment_required'});
   if(url.pathname==='/api/access')return Response.json({access:{...(entitled?{monthly:Date.now()+30*86400000}:{}),...Object.fromEntries([...purchased].map(id=>[`film_${id}`,Date.now()+30*86400000]))},bundleRemaining:credits});
   if(url.pathname==='/api/wallet')return Response.json({balance:walletBalance});
-  if(url.pathname==='/api/settings')return Response.json({});
+  if(url.pathname==='/api/settings')return Response.json({bankName:'Хаан банк',bankAccount:'5252017169',accountName:'Т.Жаргалбаяр',bankIban:'MN030000000000000000',messengerUrl:'https://m.me/1431907480007581'});
   if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/playback'){
    if(playbackGate)await playbackGate.promise;
@@ -303,20 +303,20 @@ test('an admin session previews full playback without replacing itself with a gu
  await click('.film-hero-watch');assert.equal(document.querySelector('.login-dialog'),null);assert.equal(movie(),films[1].url);assert.equal(requests.filter(r=>r.path==='/api/device').length,beforeDevice);
  assert.equal(document.querySelector('.admin-surface'),null);
 });
-test('home header opens three packages and starts checkout only after selection',async()=>{
+test('home header offers only 2,000₮ single or 12,000₮ all without creating an order',async()=>{
  await render('/');
  assert.equal(document.querySelector('.package-continue'),null);
  assert.equal(document.querySelector('.checkout-dialog'),null);
- assert.equal(document.querySelector('.login-button'),null);
  assert.match(document.querySelector('.header-nav').textContent,/БАГЦУУД/);
- assert.equal(orders.length,0);
  await click('.header-nav button');
- assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,2);
+ assert.match(document.querySelector('.taza-offer-dialog').textContent,/2,000₮/);
+ assert.match(document.querySelector('.taza-offer-dialog').textContent,/12,000₮/);
+ assert.doesNotMatch(document.querySelector('.taza-offer-dialog').textContent,/5,000₮|10,000₮|40 кино/);
  assert.equal(orders.length,0);
  await click('.taza-offer-featured');
- assert.equal(orders.length,1);
- assert.equal(orders[0].plan,'pick_40_30d_12000');
- assert.equal(orders[0].amount,12000);
+ assert.ok(document.querySelector('#phone-unlock-input'));
+ assert.equal(orders.length,0);
 });
 
 test('native history back restores catalog and forward restores details without playback',async()=>{
