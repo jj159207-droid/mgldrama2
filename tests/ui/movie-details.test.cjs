@@ -89,7 +89,7 @@ beforeEach(()=>{
        const existingTopup=orders.find(o=>o.plan==='wallet_topup'&&o.status==='pending'&&Number(o.amount)===Number(body.amount));
        if(existingTopup)return Response.json([existingTopup]);
      }
-     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?2500:body.plan==='pick_2_30d_5000'?5000:body.plan==='pick_5_30d_10000'?10000:body.plan==='pick_40_30d_12000'?12000:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:15000,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
+     const order={...body,id:90+orders.length,amount:body.plan==='wallet_topup'?Number(body.amount):body.plan==='single'?2500:body.plan==='pick_2_30d_5000'?5000:body.plan==='pick_10_30d_10000'?10000:body.plan==='all_30d_13000'?13000:body.plan==='pick_5_30d_10000'?10000:body.plan==='pick_40_30d_12000'?12000:body.plan==='entry_72h'?12500:body.plan==='all_48h'?7900:15000,status:'pending',created_at:new Date().toISOString()};orders.push(order);return Response.json([order]);
     }
     return Response.json(orders.filter(o=>(!q.has('ref_code')||o.ref_code===q.get('ref_code').slice(3))&&(!q.has('status')||o.status===q.get('status').slice(3))));
    }
@@ -112,52 +112,39 @@ const title=()=>document.querySelector('#selected-film-title')?.textContent;
 const confirmSubscription=async()=>{
  assert.equal(orders.length,1,'payment order must exist before bank confirmation');
  const order=orders[0];
- assert.ok((order.plan==='pick_2_30d_5000'&&order.amount===5000)||(order.plan==='pick_5_30d_10000'&&order.amount===10000)||(order.plan==='pick_40_30d_12000'&&order.amount===12000));
+ assert.ok((order.plan==='pick_2_30d_5000'&&order.amount===5000)||(order.plan==='pick_10_30d_10000'&&order.amount===10000)||(order.plan==='all_30d_13000'&&order.amount===13000));
  order.status='confirmed';
- if(order.plan==='pick_2_30d_5000')credits+=2;else if(order.plan==='pick_5_30d_10000')credits+=5;else if(order.plan==='pick_40_30d_12000')credits+=40;else entitled=true;
+ if(order.plan==='pick_2_30d_5000')credits+=2;else if(order.plan==='pick_10_30d_10000')credits+=10;else entitled=true;
  await act(async()=>{window.dispatchEvent(new dom.window.Event('focus'));await new Promise(resolve=>setTimeout(resolve,10));});
 
 };
 
-test('TAZA public movie opens phone number prompt without creating a payment order',async()=>{
+test('TAZA full watch opens exactly three 2/10/45 movie options',async()=>{
  await render('/?film=7&fbclid=tracking');
- assert.equal(title(),'Гэрэл');
- assert.equal(orders.length,0);
- await click('.film-hero-watch');
- assert.ok(document.querySelector('#phone-unlock-input'));
- assert.equal(document.querySelectorAll('.taza-offer-card').length,0);
- assert.equal(requests.some(r=>r.path==='/api/device'),false);
+ assert.equal(title(),'Гэрэл');await click('.film-hero-watch');
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+ const text=document.querySelector('.taza-offer-dialog').textContent;
+ for(const part of ['2 кино','5,000₮','10 кино','10,000₮','45 кино бүгд','13,000₮'])assert.ok(text.includes(part),part);
+ assert.equal(document.querySelector('#phone-unlock-input'),null);
  assert.equal(orders.length,0);
 });
-test('admin all-film phone grant opens the selected movie without payment',async()=>{
- manualPhoneMode='all';
- await render('/?film=7');
- assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
- assert.equal(document.querySelector('#film-payment'),null);
- await click('.film-hero-watch');
- assert.ok(document.querySelector('#phone-unlock-input'));
- await enterPhone();
- assert.equal(movie(),films[0].url);
- assert.equal(orders.length,0);
- assert.equal(requests.filter(r=>r.path==='/api/phone-grants/claim').length,1);
- assert.equal(requests.filter(r=>r.path==='/api/device').length,0);
-});
-test('one-film phone grant opens only the first selected film',async()=>{
- manualPhoneMode='single';
- await render('/?film=7');
- await click('.film-hero-watch');
- await enterPhone();
- assert.equal(movie(),films[0].url);
- assert.equal(manualPhoneFilm,7);
- assert.equal(orders.length,0);
- await click('[aria-label="Нүүр рүү буцах"]');
- await act(async()=>[...document.querySelectorAll('.movie-main')].find(b=>b.textContent.includes('Алсын зам')).click());
- await click('.film-hero-watch');
- await enterPhone();
+test('all 45 films create a 13,000₮ six-digit pending order',async()=>{
+ await render('/?film=7');await click('.film-hero-watch');await choosePlan(2);
+ assert.equal(orders.length,1);
+ assert.equal(orders[0].plan,'all_30d_13000');
+ assert.equal(orders[0].amount,13000);
+ assert.match(orders[0].ref_code,/^\d{6}$/);
+ assert.ok(document.querySelector('.wallet-single-ref'));
  assert.equal(movie(),undefined);
- assert.match(document.querySelector('[role="status"]').textContent,/1 киноны эрх/);
- assert.match(document.querySelector('[role="dialog"]').textContent,/12,000₮/);
- assert.equal(manualPhoneFilm,7);
+});
+test('2 movies create 5,000₮ pending order without phone entry',async()=>{
+ await render('/?film=7');await click('.film-hero-watch');await choosePlan(0);
+ assert.equal(orders.length,1);
+ assert.equal(orders[0].plan,'pick_2_30d_5000');
+ assert.equal(orders[0].amount,5000);
+ assert.match(orders[0].ref_code,/^\d{6}$/);
+ assert.equal(document.querySelector('#phone-unlock-input'),null);
+ assert.equal(movie(),undefined);
 });
 test('missing trailer never falls back to a private movie, and a failed trailer can be closed',async()=>{
  const preview=films[0].preview_url;films[0].preview_url='';
@@ -168,28 +155,25 @@ test('missing trailer never falls back to a private movie, and a failed trailer 
  await act(async()=>trailer.dispatchEvent(new dom.window.Event('error')));
  assert.ok(document.querySelector('.trailer-error'));await click('.trailer-close');assert.ok(document.querySelector('.detail-poster'));assert.equal(document.querySelector('video'),null);
 });
-test('related films remain public and request a phone on full-watch',async()=>{
+test('related film full watch presents all three packages',async()=>{
  const original=films.length;
  films.push({id:8,title:'Найз',badge:'Хэлтэй|Гадаад',views:50},{id:9,title:'Салхи',badge:'Хадмал|Гадаад',views:200},{id:10,title:'Зам',badge:'Хэлтэй|Гадаад',views:100},{id:11,title:'Уул',badge:'Хэлтэй|Гадаад',views:80});
  try{
-  await render('/?film=7&fbclid=tracking');
-  assert.deepEqual([...document.querySelectorAll('.related-film h3')].map(x=>x.textContent),['Салхи','Зам','Уул']);
-  await click('.related-film');assert.equal(title(),'Салхи');
-  await click('.film-hero-watch');
-  assert.ok(document.querySelector('#phone-unlock-input'));
-  assert.equal(orders.length,0);
+   await render('/?film=7&fbclid=tracking');
+   assert.deepEqual([...document.querySelectorAll('.related-film h3')].map(x=>x.textContent),['Салхи','Зам','Уул']);
+   await click('.related-film');assert.equal(title(),'Салхи');
+   await click('.film-hero-watch');
+   assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+   assert.equal(orders.length,0);
  }finally{films.splice(original);}
 });
-test('watch phone dialog does not silently create a paid order',async()=>{
- await render('/?film=7');
- await click('.film-hero-watch');
- assert.ok(document.querySelector('#phone-unlock-input'));
- assert.equal(movie(),undefined);
+test('closing package choices creates no payment order',async()=>{
+ await render('/?film=7');await click('.film-hero-watch');
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
  assert.equal(orders.length,0);
- await click('[aria-label="Хаах"]');
- assert.equal(document.querySelector('#phone-unlock-input'),null);
- // One authorized server playback attempt precedes the manual phone dialog.
- assert.equal(requests.filter(r=>r.path==='/api/playback').length,1);
+ await click('[aria-label="Сонголт хаах"]');
+ assert.equal(document.querySelector('.taza-offer-dialog'),null);
+ assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
 });
 test('leaving during a full movie request prevents its late result from opening a player',async()=>{
  session={user:{id:12,phone:'99112233'}};entitled=true;await render('/?film=34');playbackGate=defer();await click('.film-hero-watch');await click('.film-back');
@@ -201,50 +185,42 @@ test('full player Back returns to the main page and stops playback',async()=>{
  await click('[aria-label="Нүүр рүү буцах"]');
  assert.ok(document.querySelector('.site-header'));assert.equal(window.location.search,'');assert.equal(movie(),undefined);assert.equal(requests.filter(r=>r.path==='/api/playback').length,before);
 });
-test('unapproved phone cannot access full movie URL',async()=>{
- await render('/?film=7');
- await click('.film-hero-watch');
- await enterPhone('88000000');
+test('10 movies create 10,000₮ six-digit pending order and lock playback until confirmed',async()=>{
+ await render('/?film=7');await click('.film-hero-watch');await choosePlan(1);
+ assert.equal(orders.length,1);assert.equal(orders[0].plan,'pick_10_30d_10000');
+ assert.equal(orders[0].amount,10000);
+ assert.match(orders[0].ref_code,/^\d{6}$/);
+ assert.equal(orders[0].status,'pending');
  assert.equal(movie(),undefined);
- assert.equal(orders.length,0);
- assert.ok(document.querySelector('#phone-unlock-input'));
- assert.match(document.querySelector('[role="status"]').textContent,/үзэх эрх/);
- assert.match(document.querySelector('[role="dialog"]').textContent,/ХААН Банкны данс/);
- assert.equal(requests.filter(r=>r.path==='/api/playback').length,1);
 });
-test('Facebook direct film links let guests enter admin-approved phone',async()=>{
- manualPhoneMode='all';failCatalog=true;
- await render('/?utm_source=facebook&film=34&fbclid=tracking');
+test('Facebook direct film link opens plans and six-digit checkout',async()=>{
+ failCatalog=true;await render('/?utm_source=facebook&film=34&fbclid=tracking');
  assert.equal(title(),'Алсын зам');
- await click('.film-hero-watch');
- assert.ok(document.querySelector('#phone-unlock-input'));
- assert.equal(orders.length,0);
- await enterPhone();
- assert.equal(movie(),films[1].url);
- assert.equal(new URL(window.location.href).searchParams.get('film'),'34');
- assert.equal(requests.some(r=>r.path==='/api/device'),false);
+ await click('.film-hero-watch');assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+ await choosePlan(2);
+ assert.equal(orders.length,1);
+ assert.equal(orders[0].plan,'all_30d_13000');
+ assert.equal(orders[0].amount,13000);
+ assert.equal(movie(),undefined);
 });
-test('phone entry is usable even while legacy login restoration is pending',async()=>{
- manualPhoneMode='all';authGate=defer();
- await render('/?film=7');
- assert.equal(title(),'Гэрэл');
+test('guest package checkout can work while old login restoration completes',async()=>{
+ authGate=defer();await render('/?film=7');
  await click('.film-hero-watch');
- assert.ok(document.querySelector('#phone-unlock-input'));
- await enterPhone();
- assert.equal(movie(),films[0].url);
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
  await act(async()=>authGate.resolve());
- assert.equal(orders.length,0);
+ await choosePlan(0);
+ assert.equal(orders.length,1);
+ assert.equal(orders[0].amount,5000);
 });
-test('unregistered visitor uses phone grant without a guest device or payment',async()=>{
- manualPhoneMode='all';
+test('guest identity is created only after a package selection',async()=>{
  await render('/?film=7&fbclid=tracking');
- assert.equal(title(),'Гэрэл');
  await click('.film-hero-watch');
  assert.equal(requests.some(r=>r.path==='/api/device'),false);
- await enterPhone();
- assert.equal(movie(),films[0].url);
- assert.equal(orders.length,0);
- assert.equal(requests.some(r=>r.path==='/api/device'),false);
+ await choosePlan(1);
+ assert.equal(requests.some(r=>r.path==='/api/device'),true);
+ assert.equal(orders.length,1);
+ assert.equal(orders[0].plan,'pick_10_30d_10000');
+ assert.equal(movie(),undefined);
 });
 test('normal catalog movie selection also creates a reloadable direct link',async()=>{
  await render();await act(async()=>[...document.querySelectorAll('.movie-main')].find(b=>b.textContent.includes('Гэрэл')).click());
@@ -306,22 +282,18 @@ test('an admin session previews full playback without replacing itself with a gu
  await click('.film-hero-watch');assert.equal(document.querySelector('.login-dialog'),null);assert.equal(movie(),films[1].url);assert.equal(requests.filter(r=>r.path==='/api/device').length,beforeDevice);
  assert.equal(document.querySelector('.admin-surface'),null);
 });
-test('home header offers only 2,000₮ single or 12,000₮ all without creating an order',async()=>{
- await render('/');
- assert.equal(document.querySelector('.package-continue'),null);
- assert.equal(document.querySelector('.checkout-dialog'),null);
- assert.match(document.querySelector('.header-nav').textContent,/БАГЦУУД/);
- await click('.header-nav button');
- assert.equal(document.querySelectorAll('.taza-offer-card').length,2);
- assert.match(document.querySelector('.taza-offer-dialog').textContent,/2,000₮/);
- assert.match(document.querySelector('.taza-offer-dialog').textContent,/12,000₮/);
- assert.doesNotMatch(document.querySelector('.taza-offer-dialog').textContent,/5,000₮|10,000₮|40 кино/);
+test('home header offers 2/10/45 and waits for deliberate package selection',async()=>{
+ await render('/');await click('.header-nav button');
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,3);
+ const text=document.querySelector('.taza-offer-dialog').textContent;
+ for(const part of ['2 кино','5,000₮','10 кино','10,000₮','45 кино бүгд','13,000₮'])assert.ok(text.includes(part),part);
  assert.equal(orders.length,0);
  await click('.taza-offer-featured');
- assert.ok(document.querySelector('#phone-unlock-input'));
- assert.equal(orders.length,0);
+ assert.equal(orders.length,1);
+ assert.equal(orders[0].plan,'all_30d_13000');
+ assert.equal(orders[0].amount,13000);
+ assert.ok(document.querySelector('.wallet-single-ref'));
 });
-
 test('native history back restores catalog and forward restores details without playback',async()=>{
  await render();await act(async()=>[...document.querySelectorAll('.movie-main')].find(b=>b.textContent.includes('Алсын зам')).click());
  assert.equal(title(),'Алсын зам');assert.equal(movie(),undefined);
@@ -367,26 +339,15 @@ test('a delayed admin-session response after leaving an ad never replaces the ho
  authGate=defer();session={admin:true};await render('/?film=7');await click('.film-back');await act(async()=>authGate.resolve());assert.ok(document.querySelector('.site-header'));assert.equal(document.querySelector('.admin-surface'),null);
 });
 
-test('missing phone grant shows correct bank transfer, phone reference, and Facebook screenshot instructions',async()=>{
- await render('/?film=7&fbclid=ad');
- await click('.film-hero-watch');
- await enterPhone('99112233');
- const dialog=document.querySelector('[role="dialog"]');
- assert.ok(dialog,'payment dialog remains visible');
- const text=dialog.textContent;
- assert.match(text,/2,000₮/);
- assert.match(text,/12,000₮/);
- assert.match(text,/5252017169/);
+test('bank details show 6-digit transfer reference after package selection',async()=>{
+ await render('/?film=7&fbclid=ad');await click('.film-hero-watch');await choosePlan(0);
+ assert.equal(orders.length,1);
+ const text=document.body.textContent;
+ assert.match(text,/Хаан банк/i);
  assert.match(text,/Т\.Жаргалбаяр/);
+ assert.match(text,/5252017169/);
  assert.match(text,/Гүйлгээний утга/);
- assert.match(text,/99112233/);
- assert.match(text,/Facebook пэйж рүү гүйлгээний screenshot/);
- assert.match(text,/45 кино бүгд — 12,000₮/);
- assert.match(text,/Сонголтоо хийгээд шилжүүлнэ үү/);
- assert.doesNotMatch(text,/Админ банкны орлогыг шалгаж баталгаажуулсны дараа|Зөвхөн зураг илгээснээр|Нэг төлбөрийг давхар|Админ эрх нээсэн бол дахин шалгах/);
- const facebook=dialog.querySelector('a[href="https://m.me/1453362271192628"]');
- assert.ok(facebook);
- assert.equal(orders.length,0,'screenshot instructions never create an old payment order');
- await act(async()=>[...dialog.querySelectorAll('button')].find(b=>b.textContent.includes('45 кино бүгд')).click());
- assert.match(dialog.textContent,/12,000₮/);
+ assert.match(text,new RegExp(orders[0].ref_code));
+ assert.match(text,/5,000₮/);
+ assert.equal(document.querySelector('#phone-unlock-input'),null);
 });

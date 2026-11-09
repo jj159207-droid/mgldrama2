@@ -149,12 +149,12 @@ function Carousel({ films, onOpenPlans, packageFilmCount, brandName, taza }: { f
         </div>
       )}
 
-      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={taza ? "TAZA SITE — 1 кино 2,000₮, бүх кино 12,000₮" : `Сайтын бүх ${packageFilmCount} киног 12,000 төгрөгөөр 30 хоног үзэх эрх`}>
+      <button type="button" className="cinematic-package-cta" onClick={onOpenPlans} aria-label={taza ? "TAZA SITE — 2 кино 5,000₮, 10 кино 10,000₮, 45 кино 13,000₮" : `Сайтын бүх ${packageFilmCount} киног 12,000 төгрөгөөр 30 хоног үзэх эрх`}>
         <svg className="cinematic-package-icon" viewBox="0 0 32 32" aria-hidden="true">
           <path d="M4 10.5 20.5 4l2 3.5a4 4 0 0 0 3.5 6.5l2 3.5L11.5 28l-2-3.5A4 4 0 0 0 6 18z" />
           <path d="m12 10 1.5 2.5M15 15l1.5 2.5M18 20l1.5 2.5" />
         </svg>
-        <span>{taza ? <>1 кино <strong>2,000₮</strong> · Бүх кино <strong>12,000₮</strong></> : <>Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>12,000₮</strong> · <strong>30 хоног</strong></>}</span>
+        <span>{taza ? <>2 кино <strong>5,000₮</strong> · 10 кино <strong>10,000₮</strong> · 45 кино <strong>13,000₮</strong></> : <>Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>12,000₮</strong> · <strong>30 хоног</strong></>}</span>
       </button>
     </section>
   );

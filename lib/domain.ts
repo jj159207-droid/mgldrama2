@@ -3,11 +3,15 @@ export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !
 export const TAZA_SINGLE_PRICE = 2000;
 export const TAZA_MANUAL_ALL_PRICE = 12000;
 export const TAZA_MANUAL_ALL_PLAN = 'all_30d_12000';
+export const TAZA_10_10000_PLAN = 'pick_10_30d_10000';
+export const TAZA_45_ALL_13000_PLAN = 'all_30d_13000';
+export const TAZA_45_ALL_13000_PRICE = 13000;
 // Older plans stay only to validate previously confirmed entitlements; they are not sold on TAZA.
 export const TAZA_2_PLAN = 'pick_2_30d_5000';
 export const TAZA_5_10000_PLAN = 'pick_5_30d_10000';
 export const TAZA_40_PLAN = 'pick_40_30d_12000';
 export const TAZA_40_PRICE = 12000;
+export const TAZA_PUBLIC_PACKS = [TAZA_2_PLAN,TAZA_10_10000_PLAN,TAZA_45_ALL_13000_PLAN] as const;
 // Retired TAZA plans are kept solely for previously confirmed receipts.
 export const TAZA_5_PLAN = 'pick_5_30d_6000';
 export const TAZA_10_PLAN = 'pick_10_30d_9000';
@@ -20,11 +24,12 @@ export const TAZA_LEGACY_ALL_PLAN = 'all_30d_9500';
 export const TAZA_ALL_PRICE = 15000;
 export const TAZA_PACK_PRICES = {[TAZA_2_PLAN]:5000,[TAZA_5_10000_PLAN]:10000,[TAZA_40_PLAN]:TAZA_40_PRICE} as const;
 export function tazaPackQuota(plan:string) {
-  return plan===TAZA_2_PLAN?2:plan===TAZA_5_10000_PLAN?5:plan===TAZA_40_PLAN?40:plan===TAZA_5_PLAN?5:plan===TAZA_10_PLAN?10:plan===TAZA_3_PLAN?3:plan===TAZA_6_PLAN?6:0;
+  return plan===TAZA_2_PLAN?2:plan===TAZA_10_10000_PLAN?10:plan===TAZA_5_10000_PLAN?5:plan===TAZA_40_PLAN?40:plan===TAZA_5_PLAN?5:plan===TAZA_10_PLAN?10:plan===TAZA_3_PLAN?3:plan===TAZA_6_PLAN?6:0;
 }
 export const plans: Record<string, number> = {
   single:TAZA_SINGLE_PRICE,
   ...TAZA_PACK_PRICES,
+  [TAZA_10_10000_PLAN]:10000,[TAZA_45_ALL_13000_PLAN]:13000,
   [TAZA_5_PLAN]:6000,[TAZA_10_PLAN]:9000,[TAZA_ALL_PLAN]:15000,
   [TAZA_3_PLAN]:5000,[TAZA_6_PLAN]:9500,[TAZA_PREVIOUS_ALL_PLAN]:12500,
   [TAZA_LEGACY_ALL_PLAN]:9500,
@@ -42,6 +47,8 @@ export function planLabel(plan: string): string {
     [TAZA_2_PLAN]:'2 кино · 30 хоног · 5,000₮',
     [TAZA_5_10000_PLAN]:'5 кино · 30 хоног · 10,000₮',
     [TAZA_40_PLAN]:'40 кино · 30 хоног · 12,000₮',
+    [TAZA_10_10000_PLAN]:'10 кино · 30 хоног · 10,000₮',
+    [TAZA_45_ALL_13000_PLAN]:'45 кино бүгд · 30 хоног · 13,000₮',
     [TAZA_5_PLAN]:'5 кино · 30 хоног · 6,000₮',
     [TAZA_10_PLAN]:'10 кино · 30 хоног · 9,000₮',
     [TAZA_ALL_PLAN]:'Бүх кино · 30 хоног · 15,000₮',
@@ -58,7 +65,7 @@ export function paymentExpiry(p: Row): number {
   const plan = String(p.plan || 'single');
   const date = Date.parse(String(p.confirmed_at || p.created_at || ''));
   if (!Number.isFinite(date)) return 0;
-  if (plan === 'all_30d_12000' || plan === TAZA_LEGACY_ALL_PLAN || plan === TAZA_PREVIOUS_ALL_PLAN || plan === TAZA_ALL_PLAN || tazaPackQuota(plan)>0) return date + 30 * 86400000;
+  if (plan === TAZA_45_ALL_13000_PLAN || plan === 'all_30d_12000' || plan === TAZA_LEGACY_ALL_PLAN || plan === TAZA_PREVIOUS_ALL_PLAN || plan === TAZA_ALL_PLAN || tazaPackQuota(plan)>0) return date + 30 * 86400000;
   if (plan === 'all_48h' || plan === 'entry_72h' || plan === 'all_1month' || plan === 'monthly' || plan === '1month' || plan === '3day' || /^(erotic|gadaad|hyatad|oros)_(3day|1month)$/.test(plan)) return date + 72 * 3600000;
   if (plan === '1year') return date + 365 * 86400000;
   if (plan === 'single') return date + 3 * 86400000;
@@ -70,7 +77,7 @@ export function accessFromPayments(payments: Row[], now = Date.now()): Record<st
   for (const p of payments) {
     const expiry = paymentExpiry(p); if (expiry <= now) continue;
     const plan = String(p.plan || 'single');
-    if (['monthly','1month','3day','1year','all_48h','entry_72h','all_30d_12000',TAZA_LEGACY_ALL_PLAN,TAZA_PREVIOUS_ALL_PLAN,TAZA_ALL_PLAN].includes(plan)) add('monthly', expiry);
+    if (['monthly','1month','3day','1year','all_48h','entry_72h','all_30d_12000',TAZA_45_ALL_13000_PLAN,TAZA_LEGACY_ALL_PLAN,TAZA_PREVIOUS_ALL_PLAN,TAZA_ALL_PLAN].includes(plan)) add('monthly', expiry);
     else if (plan === 'all_1month') for (const cat of ['erotic','gadaad','hyatad','oros']) add(`cat_${cat}`,expiry);
     else if (/^(erotic|gadaad|hyatad|oros)_(3day|1month)$/.test(plan)) add(`cat_${plan.split('_')[0]}`, expiry);
     else if (plan === 'single' && p.film_id) add(`film_${p.film_id}`, expiry);

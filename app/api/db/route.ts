@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ApiError,bodyJson,canAdminSite,db,fail,json,originCheck,requestSite,session } from '@/lib/server';
-import { plans,safeUrl,TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN,TAZA_SINGLE_PRICE,type Row } from '@/lib/domain';
+import { plans,safeUrl,TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN,TAZA_SINGLE_PRICE,TAZA_10_10000_PLAN,TAZA_45_ALL_13000_PLAN,type Row } from '@/lib/domain';
 import { migrateInlinePoster } from '@/lib/posters';
 export const runtime='nodejs';
 const tables=['films','users','pending_payments','contact_messages','sms_logs'];
@@ -91,9 +91,10 @@ async function handler(req:NextRequest) {
         const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
-        // New TAZA purchases require manual phone grants after proof via Facebook.
-        // Do not accept cached, retired 2/5/40 package checkouts via the old API.
-        if(site==='taza')throw new ApiError(409,'TAZA-ийн шинэ үнэ: 1 кино 2,000₮, бүх кино 12,000₮. Гүйлгээний утгад утасны дугаараа бичиж Facebook пэйжид screenshot илгээсний дараа админ эрх нээнэ.','PHONE_PAYMENT_REQUIRED');
+        // Only current three packages may be created on TAZA. Legacy receipts
+        // remain valid but old cached checkouts may not sell retired prices.
+        if(site==='taza' && ![TAZA_2_PLAN,TAZA_10_10000_PLAN,TAZA_45_ALL_13000_PLAN].includes(plan))
+          throw new ApiError(409,'TAZA-ийн багц: 2 кино 5,000₮; 10 кино 10,000₮; 45 кино бүгд 13,000₮. 6 оронтой кодоор төлбөрөө баталгаажуулна уу.','PACKAGE_RETIRED');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {
@@ -122,6 +123,11 @@ async function handler(req:NextRequest) {
             }
             throw error;
           }
+        }else if(site==='taza' && [TAZA_2_PLAN,TAZA_10_10000_PLAN].includes(plan) && b.film_id!=null){
+          filmId=Number(b.film_id);
+          if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Сонгосон киноны ID буруу.');
+          const [picked]=await db(`films?id=eq.${filmId}&site_id=eq.taza&select=id&limit=1`);
+          if(!picked)throw new ApiError(404,'Сонгосон кино олдсонгүй.');
         }else if(plan==='single') {
           filmId=Number(b.film_id);if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
           const [film]=await db(`films?id=eq.${filmId}&site_id=eq.${site}&select=id,price,free,locked`);

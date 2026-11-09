@@ -1,55 +1,34 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN,TAZA_5_PLAN,TAZA_10_PLAN,TAZA_ALL_PLAN,TAZA_SINGLE_PRICE,TAZA_MANUAL_ALL_PRICE,TAZA_MANUAL_ALL_PLAN,plans,planLabel,tazaPackQuota,paymentExpiry,accessFromPayments} from '../lib/domain';
+import {TAZA_2_PLAN,TAZA_10_10000_PLAN,TAZA_45_ALL_13000_PLAN,TAZA_PUBLIC_PACKS,TAZA_5_10000_PLAN,TAZA_40_PLAN,plans,planLabel,tazaPackQuota,paymentExpiry,accessFromPayments,canWatch} from '../lib/domain';
 const now=Date.parse('2026-11-06T12:00:00.000Z');
-const paid=(plan:string,film_id:number|null=null)=>({plan,film_id,status:'confirmed',confirmed_at:new Date(now).toISOString()});
-const source=(name:string)=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
-
-test('TAZA new public prices are 1 movie 2,000₮ or all movies 12,000₮',()=>{
- assert.equal(TAZA_SINGLE_PRICE,2000);
- assert.equal(TAZA_MANUAL_ALL_PRICE,12000);
- assert.equal(TAZA_MANUAL_ALL_PLAN,'all_30d_12000');
- assert.equal(plans.single,2000);
- assert.equal(plans[TAZA_MANUAL_ALL_PLAN],12000);
- const picker=source('app/components/TazaPlanPicker.tsx');
- assert.equal((picker.match(/id:(?:'single'|TAZA_MANUAL_ALL_PLAN)/g)||[]).length,2);
- for(const text of ['TAZA_SINGLE_PRICE','TAZA_MANUAL_ALL_PRICE','Facebook пэйж рүү'])assert.ok(picker.includes(text),text);
- for(const old of ['TAZA_2_PLAN','TAZA_5_10000_PLAN','TAZA_40_PLAN','2 кино 5,000','5 кино 10,000','40 кино'])assert.ok(!picker.includes(old),old);
- const landing=source('app/components/FilmLanding.tsx');
- assert.match(landing,/1 кино · 2,000₮ \/ Бүх кино · 12,000₮/);
+const paid=(plan:string)=>({plan,status:'confirmed',confirmed_at:new Date(now).toISOString()});
+const read=(name:string)=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
+test('TAZA sells three six-digit 30-day checkout plans',()=>{
+ assert.deepEqual(TAZA_PUBLIC_PACKS,[TAZA_2_PLAN,TAZA_10_10000_PLAN,TAZA_45_ALL_13000_PLAN]);
+ assert.deepEqual(TAZA_PUBLIC_PACKS.map(plan=>plans[plan]),[5000,10000,13000]);
+ assert.deepEqual([tazaPackQuota(TAZA_2_PLAN),tazaPackQuota(TAZA_10_10000_PLAN)],[2,10]);
+ assert.match(planLabel(TAZA_45_ALL_13000_PLAN),/45 кино бүгд/);
+ const picker=read('app/components/TazaPlanPicker.tsx');
+ for(const text of ['TAZA_2_PLAN','TAZA_10_10000_PLAN','TAZA_45_ALL_13000_PLAN','6 ОРОНТОЙ КОД'])assert.ok(picker.includes(text),text);
+ assert.doesNotMatch(picker,/Facebook пэйж рүү|утасны дугаараа бичиж/);
 });
-
-test('old confirmed 2/5/40 purchases retain their historical quota and expiry',()=>{
- assert.deepEqual([plans[TAZA_2_PLAN],plans[TAZA_5_10000_PLAN],plans[TAZA_40_PLAN]],[5000,10000,12000]);
- assert.deepEqual([tazaPackQuota(TAZA_2_PLAN),tazaPackQuota(TAZA_5_10000_PLAN),tazaPackQuota(TAZA_40_PLAN)],[2,5,40]);
- for(const plan of [TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN,TAZA_5_PLAN,TAZA_10_PLAN,'pick_3_30d_5000','pick_6_30d_9500']){
-   assert.equal(paymentExpiry(paid(plan))-now,30*86400000);
-   assert.deepEqual(accessFromPayments([paid(plan)],now),{});
- }
- assert.equal(paymentExpiry(paid('single',1))-now,72*3600000);
- assert.equal(accessFromPayments([paid('single',17)],now).film_17,now+72*3600000);
- assert.equal(accessFromPayments([paid(TAZA_ALL_PLAN)],now).monthly,now+30*86400000);
- assert.match(planLabel(TAZA_40_PLAN),/40 кино/);
+test('all 45 film purchase grants 30-day movie access',()=>{
+ assert.equal(paymentExpiry(paid(TAZA_45_ALL_13000_PLAN))-now,30*86400000);
+ assert.equal(accessFromPayments([paid(TAZA_45_ALL_13000_PLAN)],now).monthly,now+30*86400000);
+ assert.equal(canWatch({id:999,locked:true,free:false},[paid(TAZA_45_ALL_13000_PLAN)],now),true);
 });
-
-test('public TAZA no longer creates retired 2/5/40 checkouts',()=>{
- const api=source('app/api/db/route.ts');
- const page=source('app/page.tsx');
- assert.ok(api.includes("if(site==='taza')throw new ApiError(409"));
- assert.match(api,/PHONE_PAYMENT_REQUIRED/);
- assert.match(page,/if\(siteId==="taza"\)\{/);
- assert.match(page,/setPhoneUnlockPlan\(plan==='single'\?'single':'all'\)/);
- assert.match(page,/1 кино 2,000₮ · Бүх кино 12,000₮/);
- assert.ok(!page.includes('40 кино 12,000₮ (1 кино 300₮)'));
+test('previous confirmed 5/40 purchases retain original prices and quotas',()=>{
+ assert.deepEqual([plans[TAZA_5_10000_PLAN],plans[TAZA_40_PLAN]],[10000,12000]);
+ assert.deepEqual([tazaPackQuota(TAZA_5_10000_PLAN),tazaPackQuota(TAZA_40_PLAN)],[5,40]);
+ assert.equal(paymentExpiry(paid(TAZA_40_PLAN))-now,30*86400000);
 });
-
-test('hero and badges use the new prices and other websites keep their existing copy',()=>{
- const hero=source('app/components/CinematicHeroMount.tsx');
- const tuning=source('app/components/CatalogCardTuning.tsx');
- assert.ok(hero.includes('1 кино <strong>2,000₮</strong> · Бүх кино <strong>12,000₮</strong>'));
- assert.ok(hero.includes('TAZA SITE — 1 кино 2,000₮, бүх кино 12,000₮'));
- assert.ok(hero.includes('Сайтын бүх <strong>{packageFilmCount}</strong> кино <strong>12,000₮</strong>'));
- assert.match(tuning,/1 кино 2,000₮ · Бүх кино 12,000₮/);
- assert.match(tuning,/Бүх кино · 12,000₮/);
+test('new orders are limited to current packs and six digit references',()=>{
+ const api=read('app/api/db/route.ts'),page=read('app/page.tsx');
+ assert.ok(api.includes('PACKAGE_RETIRED'));
+ assert.ok(api.includes('TAZA_10_10000_PLAN')&&api.includes('TAZA_45_ALL_13000_PLAN'));
+ assert.ok(api.includes(String.raw`/^\d{6}$/`));
+ assert.ok(page.includes('genRef()')&&page.includes('pending_payments'));
+ assert.doesNotMatch(page,/setPhoneUnlockOpen\(true\)/);
 });

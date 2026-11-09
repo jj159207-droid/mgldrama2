@@ -4,13 +4,13 @@ import {readFileSync} from 'node:fs';
 
 const read=(path:string)=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
-test('TAZA full-watch button offers a phone prompt and not a pricing picker',()=>{
+test('TAZA full-watch offers 3 bank packages while legacy admin phone grants remain manageable',()=>{
   const landing=read('app/components/FilmLanding.tsx');
   const page=read('app/page.tsx');
   assert.match(landing,/props\.onWatch\(\)/);
-  assert.doesNotMatch(landing,/if \(props\.subscriptionCatalog && !props\.available && !props\.bundleRemaining\)/);
-  assert.match(page,/setPhoneUnlockFilm\(selectedFilm\)/);
-  assert.match(page,/<PhoneUnlockModal/);
+  assert.match(page,/setShowPlanModal\(true\)/);
+  assert.match(page,/<TazaPlanPicker/);
+  assert.doesNotMatch(page,/<PhoneUnlockModal/);
   assert.match(page,/PhoneGrantsAdminTab/);
   assert.match(page,/📱 Дугаарын эрх/);
 });

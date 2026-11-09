@@ -63,8 +63,7 @@ export default function FilmLanding(props:Props) {
   useEffect(() => setOfferOpen(false), [film?.id]);
   const watch = () => {
     setPreviewOpen(false);
-    // For TAZA, always ask for the phone number through the watch action.
-    // The old package UI may remain reachable via other purchase controls.
+    // TAZA full-watch opens the three-pack six-digit bank transfer flow.
     props.onWatch();
   };
   const choosePlan = (plan:string) => {setPreviewOpen(false);setOfferOpen(false);props.onPlan(plan);};
@@ -86,7 +85,7 @@ export default function FilmLanding(props:Props) {
   const preview = trailerUrl(film);
   const busy = props.watching || (!props.subscriptionCatalog && !props.freeCatalog && !props.authReady);
   const description = film.description?.trim() || "";
-  const priceLabel = props.subscriptionCatalog ? "1 кино · 2,000₮ / Бүх кино · 12,000₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
+  const priceLabel = props.subscriptionCatalog ? "2 кино 5,000₮ · 10 кино 10,000₮ · 45 кино бүгд 13,000₮" : props.freeCatalog || film.free || film.locked === false ? "Үнэгүй" : `${Number(film.price || 0).toLocaleString("mn-MN")}₮`;
   const language = film.badge?.split("|")[0] || "Хэлтэй";
   const movieCount = props.films.length || 45;
 

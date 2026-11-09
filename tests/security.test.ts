@@ -52,12 +52,12 @@ beforeEach(()=>{
     const userId=Number(body.p_user),filmId=Number(body.p_film);
     if(!tables.films.some(f=>f.id===filmId && f.site_id==='taza'))return Response.json([{result:'film_missing',payment_id:null}]);
     const active=tables.pending_payments.filter(p=>Number(p.user_id)===userId&&p.site_id==='taza'&&p.status==='confirmed'&&
-      ['pick_2_30d_5000','pick_5_30d_10000','pick_40_30d_12000','pick_5_30d_6000','pick_10_30d_9000','pick_3_30d_5000','pick_6_30d_9500'].includes(String(p.plan))&&paymentExpiry(p)>Date.now())
+      ['pick_2_30d_5000','pick_10_30d_10000','pick_5_30d_10000','pick_40_30d_12000','pick_5_30d_6000','pick_10_30d_9000','pick_3_30d_5000','pick_6_30d_9500'].includes(String(p.plan))&&paymentExpiry(p)>Date.now())
       .sort((a,b)=>Number(a.id)-Number(b.id));
     for(const p of active)if(tables.taza_pack_claims.some(row=>row.payment_id===p.id&&row.film_id===filmId))return Response.json([{result:'already_claimed',payment_id:p.id}]);
     for(const p of active){
       const used=tables.taza_pack_claims.filter(row=>row.payment_id===p.id).length;
-      const quota=p.plan==='pick_2_30d_5000'?2:p.plan==='pick_5_30d_10000'?5:p.plan==='pick_40_30d_12000'?40:p.plan==='pick_5_30d_6000'?5:p.plan==='pick_10_30d_9000'?10:p.plan==='pick_3_30d_5000'?3:6;
+      const quota=p.plan==='pick_2_30d_5000'?2:p.plan==='pick_10_30d_10000'?10:p.plan==='pick_5_30d_10000'?5:p.plan==='pick_40_30d_12000'?40:p.plan==='pick_5_30d_6000'?5:p.plan==='pick_10_30d_9000'?10:p.plan==='pick_3_30d_5000'?3:6;
       if(used<quota){
         tables.taza_pack_claims.push({id:nextId++,site_id:'taza',user_id:userId,payment_id:p.id,film_id:filmId,claimed_at:now()});
         return Response.json([{result:'claimed',payment_id:p.id}]);
@@ -224,7 +224,7 @@ test('anonymous device keeps its identity but cannot buy retired public TAZA pac
  const cookie=first.headers.get('set-cookie')!.split(';')[0];assert.equal(tables.users.length,1);assert.equal(tables.users[0].is_guest,true);
  const second=await device.POST(req('/api/device','POST',{},cookie));assert.equal(second.status,200);assert.equal((await second.json()).user.id,firstBody.user.id);assert.equal(tables.users.length,1);
  const forbidden=await api.POST(dbReq('pending_payments','POST',{ref_code:'654321',film_id:1,plan:'pick_5_30d_10000'},cookie));
- assert.equal(forbidden.status,409);assert.equal((await forbidden.json()).code,'PHONE_PAYMENT_REQUIRED');
+ assert.equal(forbidden.status,409);assert.equal((await forbidden.json()).code,'PACKAGE_RETIRED');
  assert.equal(tables.pending_payments.length,0);
 });
 test('cross-origin mutation is rejected',async()=>{const r=await auth.POST(req('/api/auth','POST',{action:'register',phone:'99112233',pin:'1234'},undefined,{origin:'https://evil.test'}));assert.equal(r.status,403);});
@@ -292,7 +292,7 @@ test('retired new TAZA orders cannot forge amount, owner or confirmed payment',a
  const c=await register();
  const body={ref_code:'123456',film_id:1,plan:'pick_40_30d_12000',amount:1,status:'confirmed',user_id:999};
  const r=await api.POST(dbReq('pending_payments','POST',body,c));
- assert.equal(r.status,409);assert.equal((await r.json()).code,'PHONE_PAYMENT_REQUIRED');
+ assert.equal(r.status,409);assert.equal((await r.json()).code,'PACKAGE_RETIRED');
  assert.equal((await api.POST(dbReq('pending_payments','POST',body,c))).status,409);
  assert.equal(tables.pending_payments.length,0);
  assert.equal((await api.PATCH(dbReq('pending_payments?ref_code=eq.123456','PATCH',{status:'confirmed'},c))).status,403);
@@ -330,9 +330,10 @@ test('TAZA minimum purchase is two films at 5,000₮, while legacy 2,000₮/3,00
  tables.films.push({...tables.films[0],id:3,title:'Third film'});
  const blocked=await api.POST(dbReq('pending_payments','POST',{ref_code:'711224',plan:'single',film_id:1},cookie));
  assert.equal(blocked.status,409);
- assert.equal((await api.POST(dbReq('pending_payments','POST',{ref_code:'711225',plan:'pick_2_30d_5000',film_id:1},cookie))).status,409);
- assert.equal(tables.pending_payments.length,0);
- const pending=legacyPending('711225','pick_2_30d_5000',Number(tables.users[0].id),1);
+ const purchase=await api.POST(dbReq('pending_payments','POST',{ref_code:'711225',plan:'pick_2_30d_5000',film_id:1},cookie));
+ assert.equal(purchase.status,200);
+ const pending=(await purchase.json())[0];
+ assert.equal(tables.pending_payments.length,1);
  assert.equal(pending.amount,5000);
  assert.equal(pending.plan,'pick_2_30d_5000');
  assert.equal(pending.film_id,1);
@@ -1037,4 +1038,48 @@ test('phone SMS refuses wrong amounts, spoofed senders and unauthenticated posts
  assert.equal(unauthorized.status,401);
  assert.equal(tables.taza_phone_grants.length,0);
  assert.equal(tables.taza_phone_sms_receipts.length,0);
+});
+
+
+test('new 10-film 10,000₮ bank SMS opens exactly ten different films',async()=>{
+ const cookie=await register();
+ for(let id=2;id<=11;id++)tables.films.push({...tables.films[0],id,title:'Title '+id});
+ const order=await api.POST(dbReq('pending_payments','POST',{ref_code:'314159',plan:'pick_10_30d_10000',amount:1,user_id:999,status:'confirmed'},cookie));
+ assert.equal(order.status,200);
+ const [pending]=await order.json();
+ assert.equal(pending.amount,10000);
+ assert.equal(pending.status,'pending');
+ assert.equal(pending.user_id,tables.users[0].id);
+ assert.equal((await bankSms('314159','9,000.00')).status,400);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
+ assert.equal((await bankSms('314159','10,000.00')).status,200);
+ for(let id=1;id<=10;id++)assert.equal((await playback.GET(req('/api/playback?id='+id,'GET',undefined,cookie))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=11','GET',undefined,cookie))).status,403);
+ assert.equal(tables.taza_pack_claims.length,10);
+});
+
+test('new all-45 13,000₮ bank SMS unlocks every film, 12,000₮ fails',async()=>{
+ const cookie=await register();
+ tables.films.push({...tables.films[0],id:42,title:'Last film'});
+ const order=await api.POST(dbReq('pending_payments','POST',{ref_code:'271828',plan:'all_30d_13000'},cookie));
+ assert.equal(order.status,200);
+ const [row]=await order.json();
+ assert.equal(row.amount,13000);
+ assert.equal(row.status,'pending');
+ assert.equal((await bankSms('271828','12,000.00')).status,400);
+ assert.equal((await playback.GET(req('/api/playback?id=42','GET',undefined,cookie))).status,403);
+ assert.equal((await bankSms('271828','13,000.00')).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,200);
+ assert.equal((await playback.GET(req('/api/playback?id=42','GET',undefined,cookie))).status,200);
+});
+
+test('retired packages and phone-only client checkout cannot forge new 6-digit purchases',async()=>{
+ const cookie=await register();
+ for(const [ref,plan] of [['481001','single'],['481002','pick_5_30d_10000'],['481003','pick_40_30d_12000'],['481004','all_30d_12000']]){
+  const response=await api.POST(dbReq('pending_payments','POST',{ref_code:ref,plan},cookie));
+  assert.equal(response.status,409);
+  assert.equal((await response.json()).code,'PACKAGE_RETIRED');
+ }
+ assert.equal(tables.pending_payments.length,0);
 });
