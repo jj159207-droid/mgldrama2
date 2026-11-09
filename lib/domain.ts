@@ -1,6 +1,9 @@
 export type Row = Record<string, unknown>;
 export const isRow = (v: unknown): v is Row => !!v && typeof v === 'object' && !Array.isArray(v);
-export const TAZA_SINGLE_PRICE = 2500;
+export const TAZA_SINGLE_PRICE = 2000;
+export const TAZA_MANUAL_ALL_PRICE = 12000;
+export const TAZA_MANUAL_ALL_PLAN = 'all_30d_12000';
+// Older plans stay only to validate previously confirmed entitlements; they are not sold on TAZA.
 export const TAZA_2_PLAN = 'pick_2_30d_5000';
 export const TAZA_5_10000_PLAN = 'pick_5_30d_10000';
 export const TAZA_40_PLAN = 'pick_40_30d_12000';

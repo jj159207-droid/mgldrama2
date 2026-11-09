@@ -91,8 +91,9 @@ async function handler(req:NextRequest) {
         const [owner]=await db(`users?id=eq.${s.userId}&select=phone&limit=1`);
         if(!owner)throw new ApiError(404,'Хэрэглэгч олдсонгүй.');
         const plan=String(b.plan||'single'),ref=String(b.ref_code||'');
-        // New TAZA purchases have a minimum of two films / 5,000₮; confirmed legacy single-film receipts remain valid.
-        if(site==='taza' && ![TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(plan))throw new ApiError(400,'Шинэ багцууд: 2 кино 5,000₮; 5 кино 10,000₮; 40 кино 12,000₮. Хуучин төлсөн эрх хэвээр хүчинтэй.');
+        // New TAZA purchases require manual phone grants after proof via Facebook.
+        // Do not accept cached, retired 2/5/40 package checkouts via the old API.
+        if(site==='taza')throw new ApiError(409,'TAZA-ийн шинэ үнэ: 1 кино 2,000₮, бүх кино 12,000₮. Гүйлгээний утгад утасны дугаараа бичиж Facebook пэйжид screenshot илгээсний дараа админ эрх нээнэ.','PHONE_PAYMENT_REQUIRED');
         if(!/^\d{6}$/.test(ref))throw new ApiError(400,'Гүйлгээний код буруу.');
         let amount=plans[plan],filmId:number|null=null;
         if(plan==='wallet_topup') {

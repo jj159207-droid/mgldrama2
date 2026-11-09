@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, TAZA_2_PLAN, TAZA_5_10000_PLAN, TAZA_40_PLAN, TAZA_40_PRICE, TAZA_SINGLE_PRICE } from "@/lib/domain";
+import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, TAZA_2_PLAN, TAZA_5_10000_PLAN, TAZA_40_PLAN, TAZA_40_PRICE, TAZA_SINGLE_PRICE, TAZA_MANUAL_ALL_PLAN } from "@/lib/domain";
 import { normalizeMongolianIban } from "@/lib/iban";
 import { SITES, siteFromPathname, type SiteId } from "@/lib/site";
 
@@ -800,7 +800,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
         <CatalogBrowser films={films} mediaFirst={freeCatalog} state={catalogState} onChange={onCatalogChange} loading={loading} error={loadError} onRetry={onRetry}
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
-          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "2 кино 5,000₮ · 5 кино 10,000₮ · 40 кино 12,000₮ (1 кино 300₮)" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
+          renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "1 кино 2,000₮ · Бүх кино 12,000₮" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
       <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
     </main>
@@ -2119,6 +2119,8 @@ export default function Home() {
   const [payFilm, setPayFilm] = useState<any>(null);
   const [phoneUnlockFilm,setPhoneUnlockFilm] = useState<FilmDetails|null>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
+  const [phoneUnlockOpen,setPhoneUnlockOpen] = useState(false);
+  const [phoneUnlockPlan,setPhoneUnlockPlan] = useState<"single"|"all">("single");
   const [adminAuth, setAdminAuth] = useState(false);
   const [loadError, setLoadError] = useState("");
   const filmLoadRequest=useRef(0);
@@ -2387,7 +2389,7 @@ export default function Home() {
   };
   const handleFilm = (f: FilmDetails) => {
     playRequest.current++;
-    setPhoneUnlockFilm(null);
+    setPhoneUnlockFilm(null);setPhoneUnlockOpen(false);
     pendingActionRef.current=null;setWatching(false);setWatchError("");
     setSelectedFilm(null);setCurFilm(null);setPayFilm(null);setFilmError("");setFilmOpening(true);
     const filmUrl = filmNavigationUrl(window.location.href, Number(f.id));
@@ -2443,7 +2445,7 @@ export default function Home() {
             trackSiteEvent("payment_open",Number(film.id));
             await syncAccessFromDB(Number(viewer.id));
             setPayFilm(null);
-            setWatchError("Энэ кинонд үзэх эрх байхгүй. «Киног бүтэн үзэх» товчийг дараад 1 кино, 5 кино, 10 кино эсвэл бүх киноноос сонгоно уу.");
+            setWatchError("Энэ кинонд эрх байхгүй. Утасны дугаараа оруулж эрхээ шалгана уу.");
             setPage("film");
           }else throw error;
         }
@@ -2492,8 +2494,18 @@ export default function Home() {
   const continueFilm = () => {
     if(!selectedFilm || filmOpening || watching || (siteId!=="taza" && !authReady))return;
     trackSiteEvent("watch_click",Number(selectedFilm.id));
-    if(siteId==="taza" && !adminAuth && !hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge))){
-      setPhoneUnlockFilm(selectedFilm);
+    if(siteId==="taza"){
+      // Try the server first: paid legacy receipts and already verified phone grants
+      // must open without asking the visitor for their phone again.
+      setWatching(true);setWatchError("");
+      void (async()=>{
+        try{await playFilm(selectedFilm);}
+        catch(error){
+          if(error instanceof RequestError && error.status===403 && !adminAuth){
+            setPhoneUnlockFilm(selectedFilm);setPhoneUnlockPlan("single");setPhoneUnlockOpen(true);
+          }else setWatchError(error instanceof Error?error.message:"Кино нээж чадсангүй.");
+        }finally{setWatching(false);}
+      })();
       return;
     }
     void watchFilm(selectedFilm);
@@ -2572,6 +2584,15 @@ export default function Home() {
     setPayFilm({id:plan==='single'?Number(sourceFilm?.id||0):0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:plan!=='single',plan,locked:true,entryGate:siteId==="taza"&&[TAZA_2_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(plan),returnFilm:sourceFilm});
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
+    if(siteId==="taza"){
+      if(!['single',TAZA_MANUAL_ALL_PLAN].includes(plan))return;
+      if(adminAuth){setAppError("Эрх авахын тулд админ горимоос гарна уу.");return;}
+      setShowPlanModal(false);
+      setPhoneUnlockPlan(plan==='single'?'single':'all');
+      setPhoneUnlockFilm(sourceFilm);
+      setPhoneUnlockOpen(true);
+      return;
+    }
     try {
       let viewer=user;
       if(!viewer && !adminAuth)viewer=await ensureDeviceUser();
@@ -2710,13 +2731,15 @@ export default function Home() {
         </CinemaDialog>,
         document.body
       )}
-      {siteId==="taza" && phoneUnlockFilm && mounted && createPortal(
+      {siteId==="taza" && phoneUnlockOpen && mounted && createPortal(
         <PhoneUnlockModal
           film={phoneUnlockFilm}
-          onClose={()=>setPhoneUnlockFilm(null)}
+          preferredPlan={phoneUnlockPlan}
+          onClose={()=>{setPhoneUnlockOpen(false);setPhoneUnlockFilm(null);}}
           onUnlocked={async()=>{
             const film=phoneUnlockFilm;
-            await playFilm(film);
+            if(film)await playFilm(film);
+            setPhoneUnlockOpen(false);
             setPhoneUnlockFilm(null);
           }}
         />,
