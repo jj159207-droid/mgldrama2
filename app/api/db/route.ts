@@ -123,6 +123,11 @@ async function handler(req:NextRequest) {
             }
             throw error;
           }
+        }else if(site==='taza' && [TAZA_2_PLAN,TAZA_10_10000_PLAN].includes(plan) && b.film_id!=null){
+          filmId=Number(b.film_id);
+          if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Сонгосон киноны ID буруу.');
+          const [picked]=await db(`films?id=eq.${filmId}&site_id=eq.taza&select=id&limit=1`);
+          if(!picked)throw new ApiError(404,'Сонгосон кино олдсонгүй.');
         }else if(plan==='single') {
           filmId=Number(b.film_id);if(!Number.isSafeInteger(filmId)||filmId<=0)throw new ApiError(400,'Киноны ID буруу.');
           const [film]=await db(`films?id=eq.${filmId}&site_id=eq.${site}&select=id,price,free,locked`);

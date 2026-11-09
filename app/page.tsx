@@ -287,7 +287,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
     };
     const start=async()=>{
       try{
-        const rows=await dbFetch("pending_payments",{method:"POST",body:JSON.stringify({ref_code:refCode,film_id:film.plan==="single" || film.plan===TAZA_2_PLAN ? Number(film.returnFilm?.id || film.id)||null : film.id||null,plan:film.plan||(film.monthly?"monthly":"single"),...(film.plan==="wallet_topup"?{amount:Number(film.topupAmount||film.price||5000)}:{})})},true);
+        const rows=await dbFetch("pending_payments",{method:"POST",body:JSON.stringify({ref_code:refCode,film_id:film.plan==="single" || film.plan===TAZA_2_PLAN || film.plan===TAZA_10_10000_PLAN ? Number(film.returnFilm?.id || film.id)||null : film.id||null,plan:film.plan||(film.monthly?"monthly":"single"),...(film.plan==="wallet_topup"?{amount:Number(film.topupAmount||film.price||5000)}:{})})},true);
         if(!Array.isArray(rows)||!rows.length)throw new Error("Захиалга үүссэнгүй.");
         const savedRef=String(rows[0].ref_code||"");
         if(savedRef && savedRef!==refCode){if(!cancelled)setRefCode(savedRef);return;}
@@ -420,7 +420,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         </div>
       </div>
 
-      
+      {isEntryGate && TAZA_PUBLIC_PACKS.includes(String(film.plan) as typeof TAZA_PUBLIC_PACKS[number]) && tazaTransfer && <PaymentProofUploader refCode={refCode} amount={orderAmount} ready={orderReady&&transferReady} />}
       {isEntryGate && <div className="wallet-single-topbar wallet-single-bottom-banner">
         <AdminEntryLogo onOpen={()=>onAdmin?.()} />
         <span />
