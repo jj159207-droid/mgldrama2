@@ -3,6 +3,7 @@ import { ApiError,canAdminSite,db,fail,json,requestSite,session } from '@/lib/se
 import { canWatch,paymentExpiry,safeUrl,tazaPackQuota } from '@/lib/domain';
 import { claimTazaFilm } from '@/lib/taza-bundles';
 import { entitlementPayments } from '@/lib/payments';
+import { phoneGrantAllowsPlayback } from '@/lib/taza-phone-access';
 export const runtime='nodejs';
 export async function GET(req:NextRequest) {
  try {
@@ -14,9 +15,10 @@ export async function GET(req:NextRequest) {
   // continue to work. Admin access remains authenticated and separate.
   const s=await session(req);
   const isAdmin=canAdminSite(s,site);
+  const manuallyAllowed=site==='taza' && await phoneGrantAllowsPlayback(req,id);
   const url=safeUrl(String(film.url||'').split('|||')[0]);
-  if(!s?.userId && !isAdmin)throw new ApiError(403,'Кино үзэх багц сонгож төлбөрөө баталгаажуулна уу.','SUBSCRIPTION_REQUIRED');
-  if(!isAdmin){
+  if(!s?.userId && !isAdmin && !manuallyAllowed)throw new ApiError(403,'Кино үзэх багц сонгож төлбөрөө баталгаажуулна уу.','SUBSCRIPTION_REQUIRED');
+  if(!isAdmin && !manuallyAllowed){
     const payments=await entitlementPayments(Number(s?.userId),site);
     const required=site==='taza'?{...film,free:false,locked:true}:film;
     if(!canWatch(required,payments)) {

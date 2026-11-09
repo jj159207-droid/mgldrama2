@@ -63,7 +63,8 @@ export default function FilmLanding(props:Props) {
   useEffect(() => setOfferOpen(false), [film?.id]);
   const watch = () => {
     setPreviewOpen(false);
-    if (props.subscriptionCatalog && !props.available && !props.bundleRemaining) { setOfferOpen(true); return; }
+    // For TAZA, always ask for the phone number through the watch action.
+    // The old package UI may remain reachable via other purchase controls.
     props.onWatch();
   };
   const choosePlan = (plan:string) => {setPreviewOpen(false);setOfferOpen(false);props.onPlan(plan);};

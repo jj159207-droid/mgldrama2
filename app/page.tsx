@@ -22,6 +22,8 @@ import useSiteAppearance from "@/app/components/useSiteAppearance";
 import {appearanceStyle} from "@/lib/appearance";
 import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
+import PhoneUnlockModal from "@/app/components/PhoneUnlockModal";
+import PhoneGrantsAdminTab from "@/app/components/PhoneGrantsAdminTab";
 import TazaPlanPicker from "@/app/components/TazaPlanPicker";
 import PaymentProofUploader from "@/app/components/PaymentProofUploader";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
@@ -1931,7 +1933,7 @@ function AppearancePreview({films,brandName}: {films:any[];brandName:string}) {
 }
 
 function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=false, brandName="ТАЗА САЙТ" }: any) {
-  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "analytics" | "settings" | "appearance">("list");
+  const [tab, setTab] = useState<"list" | "add" | "sms" | "orders" | "members" | "phones" | "analytics" | "settings" | "appearance">("list");
   const [editId, setEditId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1999,6 +2001,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
         <button onClick={() => setTab("list")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "list" ? C.gold : C.card2, color: tab === "list" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📋 Жагсаалт</button>
         <button onClick={() => setTab("orders")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "orders" ? C.gold : C.card2, color: tab === "orders" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>🧾 Захиалга</button>
         <button onClick={() => setTab("members")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "members" ? C.gold : C.card2, color: tab === "members" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>👥 Гишүүд</button>
+        {brandName === "ТАЗА САЙТ" && <button onClick={() => setTab("phones")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "phones" ? C.gold : C.card2, color: tab === "phones" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📱 Дугаарын эрх</button>}
         <button onClick={() => setTab("analytics")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "analytics" ? C.gold : C.card2, color: tab === "analytics" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>📊 Статистик</button>
         <button onClick={() => setTab("add")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "add" ? C.gold : C.card2, color: tab === "add" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11 }}>➕ Нэмэх</button>
         <button onClick={() => { setTab("sms"); window.dispatchEvent(new Event("kinoChatChanged")); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: tab === "sms" ? C.gold : C.card2, color: tab === "sms" ? "#000" : C.muted, fontWeight: 700, cursor: "pointer", fontSize: 11, position: "relative" }}>
@@ -2014,6 +2017,7 @@ function AdminPage({ films, onBack, onRefresh, onAppearanceSaved, masterAdmin=fa
       {tab === "orders" && <AdminOrdersTab />}
       {tab === "settings" && <AdminSettingsTab masterAdmin={masterAdmin} />}
       {tab === "members" && <AdminMembersTab />}
+      {tab === "phones" && brandName === "ТАЗА САЙТ" && <PhoneGrantsAdminTab />}
       {tab === "analytics" && <AdminAnalyticsTab />}
       {tab === "sms" && <AdminChatInbox announcements={<AdminAnnouncements />} />}
 
@@ -2113,6 +2117,7 @@ export default function Home() {
   const [films, setFilms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [payFilm, setPayFilm] = useState<any>(null);
+  const [phoneUnlockFilm,setPhoneUnlockFilm] = useState<FilmDetails|null>(null);
   const [curFilm, setCurFilm] = useState<any>(null);
   const [adminAuth, setAdminAuth] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -2382,6 +2387,7 @@ export default function Home() {
   };
   const handleFilm = (f: FilmDetails) => {
     playRequest.current++;
+    setPhoneUnlockFilm(null);
     pendingActionRef.current=null;setWatching(false);setWatchError("");
     setSelectedFilm(null);setCurFilm(null);setPayFilm(null);setFilmError("");setFilmOpening(true);
     const filmUrl = filmNavigationUrl(window.location.href, Number(f.id));
@@ -2486,6 +2492,10 @@ export default function Home() {
   const continueFilm = () => {
     if(!selectedFilm || filmOpening || watching || (siteId!=="taza" && !authReady))return;
     trackSiteEvent("watch_click",Number(selectedFilm.id));
+    if(siteId==="taza" && !adminAuth && !hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge))){
+      setPhoneUnlockFilm(selectedFilm);
+      return;
+    }
     void watchFilm(selectedFilm);
   };
   const handlePaid = async (stillActive = () => true) => {
@@ -2698,6 +2708,18 @@ export default function Home() {
           <p className="login-note">Утасны дугаар, PIN кодоороо нэвтэрнэ үү.</p>
           <LoginModal onLogin={(u:any)=>{handleLogin(u);setShowLoginModal(false);}}/>
         </CinemaDialog>,
+        document.body
+      )}
+      {siteId==="taza" && phoneUnlockFilm && mounted && createPortal(
+        <PhoneUnlockModal
+          film={phoneUnlockFilm}
+          onClose={()=>setPhoneUnlockFilm(null)}
+          onUnlocked={async()=>{
+            const film=phoneUnlockFilm;
+            await playFilm(film);
+            setPhoneUnlockFilm(null);
+          }}
+        />,
         document.body
       )}
     </div>
