@@ -836,7 +836,7 @@ test('master admin downloads matching SMS macro with private, noncacheable crede
  const cookie=await admin();
  const response=await macroDownload.GET(req('/api/admin/macrodroid','GET',undefined,cookie));
  assert.equal(response.status,200);
- assert.match(response.headers.get('content-disposition')||'',/attachment; filename="TAZA_MacroDroid_SMS_12000.macro"/);
+ assert.match(response.headers.get('content-disposition')||'',/attachment; filename="TAZA_MacroDroid_SMS_2000_12000.macro"/);
  assert.match(response.headers.get('cache-control')||'',/private.*no-store/);
  assert.equal(response.headers.get('content-type'),'application/octet-stream');
  const macro=(await response.json()).macro;
