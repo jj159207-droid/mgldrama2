@@ -10,7 +10,7 @@ test('mobile TAZA checkout stays in viewport without sideways scrolling',()=>{
  assert.match(css,/\.wallet-single-fullscreen \.wallet-single-copy strong\s*\{[\s\S]*?overflow-wrap:\s*anywhere/);
  assert.ok(!/^\s*width:\s*100vw\s*!important;\s*$/m.test(css));
 });
-test('responsive payment proof images cannot widen their container',()=>{
+test('retired screenshot uploader CSS is absent from TAZA checkout',()=>{
  const css=readFileSync(new URL('../app/globals.css',import.meta.url),'utf8');
- assert.ok(css.includes('.payment-proof-preview img{max-width:100%;'));
+ assert.doesNotMatch(css,/payment-proof-|payment-proof-preview/);
 });

@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { test, beforeEach, after } from 'node:test';
 import { NextRequest } from 'next/server';
-import sharp from 'sharp';
 import {readFileSync} from 'node:fs';
 import { accessFromPayments, canWatch, parseBankSms, paymentExpiry, safeUrl, type Row } from '../lib/domain';
 import { canAdminSite, pinHash, pinMatches } from '../lib/server';
@@ -12,7 +11,6 @@ import * as playback from '../app/api/playback/route';
 import * as sms from '../app/api/sms/route';
 import * as secretChat from '../app/api/secret-chat/route';
 import * as secretOrder from '../app/api/secret-chat/order/route';
-import * as paymentProof from '../app/api/payment-proof/route';
 import * as settings from '../app/api/settings/route';
 import * as access from '../app/api/access/route';
 import * as appearance from '../app/api/appearance/route';
@@ -365,44 +363,20 @@ test('TAZA minimum purchase is two films at 5,000₮, while legacy 2,000₮/3,00
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,cookie))).status,403);
 });
 
-test('5,000₮ screenshot uploads are bound to the purchaser, do not unlock playback and keep bank SMS authoritative', async()=>{
+test('5,000₮ movie access still opens only after authenticated MacroDroid bank SMS, without screenshot', async()=>{
  const buyer=await register();
- const other=await register('99887766');
  tables.films.push({...tables.films[0],id:2,title:'Other movie'});
  const order=legacyPending('741251','pick_2_30d_5000',Number(tables.users[0].id),1);
  assert.equal(order.amount,5000);
-
- const image='data:image/png;base64,'+(await sharp({create:{width:24,height:24,channels:3,background:'#fff'}}).png().toBuffer()).toString('base64');
- const payload={ref_code:'741251',client_id:'123e4567-e89b-42d3-a456-426614174000',image};
-
- assert.equal((await paymentProof.POST(req('/api/payment-proof','POST',payload))).status,401);
- assert.equal((await paymentProof.POST(req('/api/payment-proof','POST',payload,other))).status,404);
- assert.equal((await paymentProof.POST(req('/api/payment-proof','POST',{...payload,image:'bad'},buyer))).status,400);
- assert.equal(tables.support_messages.length,0);
- assert.equal((await paymentProof.POST(req('/api/payment-proof','POST',payload,buyer))).status,200);
- assert.equal(tables.support_messages.length,1);
- assert.match(String(tables.support_messages[0].message),/741251/);
- assert.match(String(tables.support_messages[0].message),/5,000₮/);
- assert.equal(tables.support_messages[0].has_image,true);
- assert.equal(tables.pending_payments[0].status,'pending');
+ assert.equal(order.status,'pending');
+ assert.equal(tables.support_messages.length,0,'no image proof is sent to support chat');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,buyer))).status,403);
-
- // A separate, authenticated incoming-bank SMS verifies actual 5,000₮ receipt.
+ assert.equal((await bankSms('741251','4,000.00')).status,400);
+ assert.equal(tables.pending_payments[0].status,'pending');
  assert.equal((await bankSms('741251','5,000.00')).status,200);
  assert.equal(tables.pending_payments[0].status,'confirmed');
  assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,buyer))).status,200);
  assert.equal((await playback.GET(req('/api/playback?id=2','GET',undefined,buyer))).status,200);
-});
-test('proof screenshot cannot be applied to a different plan, wrong amount or expired order',async()=>{
- const buyer=await register();
- const image='data:image/png;base64,'+(await sharp({create:{width:16,height:16,channels:3,background:'#fff'}}).png().toBuffer()).toString('base64');
- const payload={ref_code:'741252',client_id:'123e4567-e89b-42d3-a456-426614174000',image};
- tables.pending_payments.push({id:20,ref_code:'741252',user_id:tables.users[0].id,site_id:'taza',plan:'pick_5_30d_10000',amount:6000,status:'pending',film_id:null,created_at:now()});
- assert.equal((await paymentProof.POST(req('/api/payment-proof','POST',payload,buyer))).status,404);
- tables.pending_payments[0].plan='single';tables.pending_payments[0].amount=3000;tables.pending_payments[0].film_id=1;
- assert.equal((await paymentProof.POST(req('/api/payment-proof','POST',payload,buyer))).status,404);
- tables.pending_payments[0].amount=2000;tables.pending_payments[0].created_at=new Date(Date.now()-25*3600000).toISOString();
- assert.equal((await paymentProof.POST(req('/api/payment-proof','POST',payload,buyer))).status,409);
  assert.equal(tables.support_messages.length,0);
 });
 test('5-film 10,000₮ plan opens exactly five distinct movies and preserves repeats',async()=>{

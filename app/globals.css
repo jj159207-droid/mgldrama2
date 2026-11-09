@@ -261,25 +261,6 @@
 @media(prefers-reduced-motion:reduce){.wallet-transfer-label-blink{animation:none}}
 
 
-/* Payment proof upload is scoped to the TAZA single-film checkout. */
-.payment-proof-panel{margin:18px 0;padding:18px;border:1px solid #b18a493f;border-radius:16px;background:#171a20;color:#f6f3ed;display:grid;gap:12px}
-.payment-proof-panel h3{font-size:1.05rem;margin:0;font-weight:750}
-.payment-proof-panel p{font-size:.92rem;line-height:1.55;margin:0}
-.payment-proof-order{display:flex;flex-wrap:wrap;gap:12px;color:#d7d9e0;font-size:.9rem}
-.payment-proof-order span{display:grid;gap:3px}
-.payment-proof-order strong{color:#fff;font-size:1rem}
-.payment-proof-file{display:block;border:1px dashed #d6a556;border-radius:12px;text-align:center;padding:14px;background:#27241b;color:#ffdfab;cursor:pointer;font-weight:700}
-.payment-proof-file:focus-within{outline:2px solid #edc27e;outline-offset:2px}
-.payment-proof-file input{display:block;width:100%;max-width:300px;margin:10px auto 0;color:#e8e8e8;font-size:.86rem}
-.payment-proof-preview{display:grid;gap:8px;justify-items:center;min-width:0;color:#b8bdca;font-size:.85rem;word-break:break-word}
-.payment-proof-preview img{max-width:100%;max-height:300px;object-fit:contain;border:1px solid #ffffff1a;border-radius:10px}
-.payment-proof-submit{width:100%;padding:12px}
-.payment-proof-panel .payment-proof-note{font-size:.79rem;color:#bbc2cd}
-.payment-proof-panel .payment-proof-error{color:#ffc1c1}
-.payment-proof-panel .payment-proof-success{color:#a8ecc0;font-weight:700}
-@media(max-width:480px){.payment-proof-panel{padding:14px;margin:16px 0}}
-
-
 /* Secret chat sits before the existing movie package banner; movie plans remain untouched. */
 .secret-room-banner{width:100%;display:flex;align-items:center;gap:18px;text-align:left;margin:20px 0 2px;padding:20px 25px;border:1px solid #ec967080;border-radius:15px;background:linear-gradient(105deg,#421d2d,#251725 62%,#171420);color:#fff;min-height:88px}
 .secret-room-banner:hover{border-color:#ffcfac;background:linear-gradient(105deg,#5d2339,#2d1a2f 68%,#19141f)}
