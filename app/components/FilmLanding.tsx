@@ -24,7 +24,6 @@ type Props = {
   relatedError: string;
   payment: ReactNode;
   onWatch: () => void;
-  onRestoreAccess: () => void;
   onPlan: (plan:string) => void;
   onFilm: (film:FilmDetails) => void;
   onRetry: () => void;
@@ -91,7 +90,7 @@ export default function FilmLanding(props:Props) {
   const movieCount = props.films.length || 45;
 
   return <main className="film-destination catalog-shell film-reference-page">
-    {props.subscriptionCatalog && !props.available && offerOpen && <TazaPlanPicker busy={busy} hasSelectedFilm onSelect={choosePlan} onClose={()=>setOfferOpen(false)} onRestoreAccess={props.onRestoreAccess} />}
+    {props.subscriptionCatalog && !props.available && offerOpen && <TazaPlanPicker busy={busy} hasSelectedFilm onSelect={choosePlan} onClose={()=>setOfferOpen(false)} />}
     <nav className="detail-top" aria-label="Киноны навигац">
       <button className="icon-button film-back" onClick={onBack} aria-label="Нүүр рүү буцах">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m15 4-8 8 8 8"/></svg>
@@ -119,7 +118,6 @@ export default function FilmLanding(props:Props) {
       {props.subscriptionCatalog && !props.available && Number(props.bundleRemaining)>0 && <p className="film-landing-note">Таны багцад {props.bundleRemaining} кино сонгох эрх үлдсэн. Энэ киног нээхэд 1 эрх ашиглагдана.</p>}
       {props.available && <p className="film-landing-note">{props.freeCatalog ? "Бүртгэл, төлбөргүйгээр бүтэн үзэх боломжтой." : "Танд энэ киног үзэх эрх байна."}</p>}
       {props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}
-      {props.subscriptionCatalog && !props.available && <button type="button" className="secondary-button" disabled={busy} onClick={props.onRestoreAccess} style={{marginTop:12,fontSize:13}}>Өмнө төлсөн үү? Эрхээ шалгах</button>}
     </section>
 
     <section className="detail-related detail-related-primary" aria-label="Санал болгох төстэй кино">
