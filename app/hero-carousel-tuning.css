@@ -556,3 +556,65 @@
 @media (prefers-reduced-motion: reduce) {
   .taza-adult-gate-actions button { transition: none; }
 }
+
+
+/* Two equal-sized TAZA feature banners: secret chat first, +21 videos second. */
+.taza-banner-stack {
+  width: min(760px, 100%);
+  max-width: 100%;
+  margin: 20px auto 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.taza-banner-stack > .secret-room-banner,
+.taza-banner-stack > .cinematic-package-cta.cinematic-adult-cta {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  height: 96px;
+  min-height: 96px;
+  margin: 0;
+  padding: 12px 18px;
+  border-radius: 18px;
+}
+.taza-banner-stack > .secret-room-banner {
+  justify-content: space-between;
+  gap: 12px;
+}
+.taza-banner-stack > .secret-room-banner .secret-room-symbol { flex-shrink: 0; }
+.taza-banner-stack > .secret-room-banner .secret-room-banner-go { flex-shrink: 0; }
+@media (max-width: 760px) {
+  .taza-banner-stack {
+    width: 100%;
+    margin: 12px auto 10px;
+    gap: 10px;
+  }
+  .taza-banner-stack > .secret-room-banner,
+  .taza-banner-stack > .cinematic-package-cta.cinematic-adult-cta {
+    width: 100%;
+    height: 116px;
+    min-height: 116px;
+    padding: 11px 12px;
+    border-radius: 17px;
+  }
+}
+@media (max-width: 650px) {
+  .taza-banner-stack > .secret-room-banner { align-content: center; gap: 8px; }
+  .taza-banner-stack > .secret-room-banner .secret-room-banner-go {
+    width: 100%;
+    text-align: right;
+    font-size: 11px;
+  }
+  .taza-banner-stack > .secret-room-banner .secret-room-banner-symbol { font-size: 28px; }
+  .taza-banner-stack > .secret-room-banner .secret-room-banner-text strong { font-size: 17px; line-height: 1.2; }
+  .taza-banner-stack > .secret-room-banner .secret-room-banner-text small { font-size: 11px; line-height: 1.25; }
+}
+@media (max-width: 360px) {
+  .taza-banner-stack > .secret-room-banner,
+  .taza-banner-stack > .cinematic-package-cta.cinematic-adult-cta {
+    height: 124px;
+    min-height: 124px;
+    padding: 9px;
+  }
+}
