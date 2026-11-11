@@ -750,6 +750,31 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   const [tazaOffersOpen,setTazaOffersOpen] = useState(false);
   const [tazaAgePromptOpen,setTazaAgePromptOpen] = useState(false);
+  const openAdultAgePrompt=()=>{
+    if(!freeCatalog)return;
+    // An overlay must have its own history entry: Android/iPhone Back closes
+    // the overlay and stays on TAZA rather than leaving the browser.
+    if(window.history.state?.page!=="taza-adult-age")
+      window.history.pushState({page:"taza-adult-age"},"",window.location.href);
+    setTazaAgePromptOpen(true);
+  };
+  const closeAdultAgePrompt=()=>{
+    setTazaAgePromptOpen(false);
+    if(window.history.state?.page==="taza-adult-age")window.history.back();
+    window.scrollTo?.({top:0,behavior:"instant"});
+  };
+  const acceptAdultAgePrompt=()=>{
+    setTazaAgePromptOpen(false);
+    // Do not leave the age-gate state behind the payment page.
+    if(window.history.state?.page==="taza-adult-age")
+      window.history.replaceState({page:"home"},"",window.location.href);
+    void onMonthly(TAZA_ALL_PLAN);
+  };
+  useEffect(()=>{
+    const onBack=()=>setTazaAgePromptOpen(false);
+    window.addEventListener("popstate",onBack);
+    return()=>window.removeEventListener("popstate",onBack);
+  },[]);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const getExpiry = (filmId: number, category?: string): string | null => {
     if (!user) return null;
@@ -778,15 +803,15 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
     if(!freeCatalog)return;
     const subscribe=()=>setTazaOffersOpen(true);
     // The featured +21 banner must first ask the visitor to confirm their age.
-    const featuredCheckout=()=>setTazaAgePromptOpen(true);
+    const featuredCheckout=()=>openAdultAgePrompt();
     window.addEventListener("tazaSubscribe",subscribe);
     window.addEventListener("tazaFeatured21Checkout",featuredCheckout);
     return()=>{window.removeEventListener("tazaSubscribe",subscribe);window.removeEventListener("tazaFeatured21Checkout",featuredCheckout);};
   },[freeCatalog,onMonthly]);
   return <div className="cinema-site">
     {freeCatalog && tazaAgePromptOpen && <TazaAdultAgePrompt
-      onAdult={()=>{setTazaAgePromptOpen(false);void onMonthly(TAZA_ALL_PLAN);}}
-      onUnderage={()=>{setTazaAgePromptOpen(false);window.scrollTo?.({top:0,behavior:"instant"});}}
+      onAdult={acceptAdultAgePrompt}
+      onUnderage={closeAdultAgePrompt}
     />}
     {freeCatalog && tazaOffersOpen && <TazaPlanPicker onClose={()=>setTazaOffersOpen(false)} onSelect={plan=>{setTazaOffersOpen(false);onMonthly(plan);}} />}
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
@@ -811,7 +836,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           <span className="secret-room-banner-text"><strong>НУУЦ ЧАТ ӨРӨӨ</strong><small>Халуун өрөөнд орох төлбөр · 10,000₮</small></span>
           <span className="secret-room-banner-go">ЭНД ДАРЖ ОРОХ →</span>
         </button>
-        <button type="button" className="cinematic-package-cta cinematic-adult-cta" onClick={()=>setTazaAgePromptOpen(true)} aria-label="монгол охидын нууц бичлэгүүд +21 — нас баталгаажуулаад 15,000 төгрөгийн төлбөрийн хуудас нээх">
+        <button type="button" className="cinematic-package-cta cinematic-adult-cta" onClick={openAdultAgePrompt} aria-label="монгол охидын нууц бичлэгүүд +21 — нас баталгаажуулаад 15,000 төгрөгийн төлбөрийн хуудас нээх">
           <span className="cinematic-adult-copy">
             <strong className="cinematic-adult-title">монгол охидын нууц бичлэгүүд +21</strong>
           </span>
@@ -2401,7 +2426,7 @@ export default function Home() {
     const readLocation = (event?: PopStateEvent) => {
       playRequest.current++;
       pendingActionRef.current=null;setWatching(false);setWatchError("");
-      setShowContact(false);setShowLoginModal(false);setShowPlanModal(false);
+      setShowContact(false);setShowLoginModal(false);setShowPlanModal(false);setShowSecretChat(false);
       setCurFilm(null);setPayFilm(null);setSelectedFilm(null);setFilmError("");
       const target=readFilmDestination(window.location.search);
       setFilmTarget(target);
@@ -2652,8 +2677,15 @@ export default function Home() {
     try{
       const viewer=user || await ensureDeviceUser();
       if(!viewer)throw new Error("Төхөөрөмжийн бүртгэл үүсээгүй.");
+      if(window.history.state?.page!=="secret-chat")
+        window.history.pushState({page:"secret-chat"},"",window.location.href);
       setShowSecretChat(true);
     }catch(error){setAppError(error instanceof Error?error.message:"Чат өрөөг нээсэнгүй.");}
+  };
+  const closeSecretChat=()=>{
+    setShowSecretChat(false);
+    if(window.history.state?.page==="secret-chat")window.history.back();
+    window.scrollTo?.({top:0,behavior:"instant"});
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     if(siteId==="taza"){
@@ -2807,7 +2839,7 @@ export default function Home() {
       {page === "admin" && adminAuth && <AdminPage films={films} onBack={()=>navigateTo("admin-choice")} onRefresh={loadFilms} onAppearanceSaved={applyAppearance} masterAdmin={masterAdmin} brandName={brandName} />}
       {payFilm && page === "payment" && <BankModal key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user} />}
       <PushNotificationSetup key={user?.id||"none"} enabled={siteId!=="taza"&&!!user?.id&&!adminAuth} />
-      {showSecretChat && siteId==="taza" && mounted && createPortal(<SecretChatRoom onClose={()=>setShowSecretChat(false)} />,document.body)}
+      {showSecretChat && siteId==="taza" && mounted && createPortal(<SecretChatRoom onClose={closeSecretChat} />,document.body)}
       {showContact && <ContactModal freeCatalog={siteId==="taza"} onClose={closeContact} user={user} onLogin={handleLogin} admin={adminAuth} onAdmin={() => {setShowContact(false);navigateTo(adminAuth?"admin-choice":"adminlogin");}} />}
 
       {/* ── НЭВТРЭХ/БҮРТГҮҮЛЭХ — дэлгэцийн голд fixed, кино scroll-д саад болохгүй ── */}
