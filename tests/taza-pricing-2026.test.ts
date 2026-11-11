@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {TAZA_2_PLAN,TAZA_10_10000_PLAN,TAZA_45_ALL_13000_PLAN,TAZA_45_ALL_9000_PLAN,TAZA_PUBLIC_PACKS,plans,planLabel,tazaPackQuota,paymentExpiry,accessFromPayments,canWatch} from '../lib/domain';
+import {TAZA_2_PLAN,TAZA_10_10000_PLAN,TAZA_45_ALL_13000_PLAN,TAZA_45_ALL_9000_PLAN,TAZA_ALL_PLAN,TAZA_PUBLIC_PACKS,plans,planLabel,tazaPackQuota,paymentExpiry,accessFromPayments,canWatch} from '../lib/domain';
 const now=Date.parse('2026-11-06T12:00:00Z');
 const paid=(plan:string)=>({plan,status:'confirmed',confirmed_at:new Date(now).toISOString()});
 const read=(name:string)=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
@@ -27,10 +27,16 @@ test('historic 10-film 10k and 45-film 13k rights remain valid',()=>{
  assert.equal(plans[TAZA_45_ALL_13000_PLAN],13000);
  assert.equal(accessFromPayments([paid(TAZA_45_ALL_13000_PLAN)],now).monthly,now+30*86400000);
 });
-test('server accepts only two packages and a six-digit bank reference',()=>{
+test('server accepts two standard packages and the featured 15k checkout with six-digit reference',()=>{
  const api=read('app/api/db/route.ts'),page=read('app/page.tsx');
- assert.ok(api.includes('[TAZA_2_PLAN,TAZA_45_ALL_9000_PLAN].includes(plan)'));
+ assert.ok(api.includes('[TAZA_2_PLAN,TAZA_45_ALL_9000_PLAN,TAZA_ALL_PLAN].includes(plan)'));
  assert.ok(api.includes('PACKAGE_RETIRED'));
  assert.ok(api.includes('!/^\\d{6}$/.test(ref)'));
  assert.ok(page.includes('genRef()')&&page.includes('pending_payments'));
+ assert.equal(plans[TAZA_ALL_PLAN],15000);
+ assert.equal(paymentExpiry(paid(TAZA_ALL_PLAN))-now,30*86400000);
+ assert.equal(accessFromPayments([paid(TAZA_ALL_PLAN)],now).monthly,now+30*86400000);
+ const hero=read('app/components/CinematicHeroMount.tsx');
+ assert.ok(hero.includes('tazaFeatured21Checkout')&&hero.includes('15,000₮'));
+ assert.ok(page.includes('tazaFeatured21Checkout')&&page.includes('plan===TAZA_ALL_PLAN'));
 });
