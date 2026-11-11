@@ -135,6 +135,18 @@ async function handler(req:NextRequest) {
           amount=Number(film.price);
         }
         if(!Number.isSafeInteger(amount)||amount<=0)throw new ApiError(400,'Багц эсвэл үнэ буруу.');
+        // A checkout remount (or returning from a bank app) must show the SAME
+        // reference until the previous order is paid, canceled or 24h old.
+        // Match the authenticated owner, site, package, film and exact amount;
+        // never reuse another member's or another package's payment reference.
+        if(site==='taza'){
+          const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
+          const filmFilter=filmId===null?'is.null':`eq.${filmId}`;
+          const pending=await db(
+            `pending_payments?site_id=eq.taza&user_id=eq.${s.userId}&plan=eq.${encodeURIComponent(plan)}&film_id=${filmFilter}&amount=eq.${amount}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
+          );
+          if(pending.length)return json(pending);
+        }
         b={ref_code:ref,film_id:filmId,amount,status:'pending',user_id:s.userId,phone:owner.phone,plan,site_id:site};
         // Recover a concurrent insert only for the same owner and purchase.
         const lookup=()=>db(`pending_payments?ref_code=eq.${ref}&select=*`);
