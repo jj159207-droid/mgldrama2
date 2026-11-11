@@ -303,9 +303,9 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       }}
     };
     const resume=()=>{if(!document.hidden)void check();};
-    window.addEventListener("focus",resume);window.addEventListener("online",resume);document.addEventListener("visibilitychange",resume);
+    window.addEventListener("focus",resume);window.addEventListener("pageshow",resume);window.addEventListener("online",resume);document.addEventListener("visibilitychange",resume);
     void start();
-    return()=>{window.removeEventListener("focus",resume);window.removeEventListener("online",resume);document.removeEventListener("visibilitychange",resume);cancelled=true;active.current=false;if(intervalRef.current)clearTimeout(intervalRef.current);if(timeoutRef.current)clearTimeout(timeoutRef.current);};
+    return()=>{window.removeEventListener("focus",resume);window.removeEventListener("pageshow",resume);window.removeEventListener("online",resume);document.removeEventListener("visibilitychange",resume);cancelled=true;active.current=false;if(intervalRef.current)clearTimeout(intervalRef.current);if(timeoutRef.current)clearTimeout(timeoutRef.current);};
   },[film.id,film.plan,film.monthly,refCode]);
 
   const revealTransferDetails=()=>{
@@ -806,7 +806,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "2 кино 5,000₮ · 45 кино бүгд 9,000₮ (1 кино 200₮)" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button><AppInstallButton /></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button>{freeCatalog && !admin && (!user || user.guest) && <button type="button" onClick={onOpenLogin}><UiIcon name="user" size={16} />Эрхээ хадгалах / сэргээх</button>}<AppInstallButton /></div></footer>
     </main>
   </div>;
 }
@@ -2213,13 +2213,26 @@ export default function Home() {
   useEffect(() => {
     let active=true;
     try { localStorage.removeItem("kino_session");localStorage.removeItem("kino_access"); } catch {}
-    requestJson("/api/auth", {}, true).then(data=>{
+    requestJson("/api/auth", {}, true).then(async data=>{
       if(!active)return;
       if(data?.admin){
         setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);
         setEntryAllowed(true);setEntryReady(true);
       }
-      else if(data?.user){accessOwner.current=data.user.id;setUser(data.user);void Promise.all([syncAccessFromDB(data.user.id),syncWalletFromDB(data.user.id)]).catch(()=>{});}
+      else if(data?.user){
+        accessOwner.current=data.user.id;setUser(data.user);
+        void Promise.all([syncAccessFromDB(data.user.id),syncWalletFromDB(data.user.id)]).catch(()=>{});
+      }else if(siteFromPathname(window.location.pathname)==="taza"){
+        // A paid iPhone guest can lose a short session while their year-long
+        // HttpOnly recovery cookie remains. Restore without creating a new guest.
+        try{
+          const restored=await requestJson("/api/device?recover=1",{method:"POST",body:"{}"},true);
+          if(active && restored?.user?.id){
+            accessOwner.current=restored.user.id;setUser(restored.user);
+            void Promise.all([syncAccessFromDB(restored.user.id),syncWalletFromDB(restored.user.id)]).catch(()=>{});
+          }
+        }catch{} // Browsing is public; a recovery/network failure must not block the catalog.
+      }
     }).catch(()=>{}).finally(()=>{if(active)setAuthReady(true);});
     return()=>{active=false;};
   }, []);
@@ -2252,11 +2265,12 @@ export default function Home() {
       try { await Promise.all([syncAccessFromDB(user.id),syncWalletFromDB(user.id)]); } catch {} finally {busy=false;}
     };
     window.addEventListener("focus",refresh);
+    window.addEventListener("pageshow",refresh);
     window.addEventListener("online",refresh);
     window.addEventListener("kinoAccessChanged",refresh);
     document.addEventListener("visibilitychange",refresh);
     const timer=setInterval(refresh,30000);
-    return()=>{cancelled=true;clearInterval(timer);window.removeEventListener("focus",refresh);window.removeEventListener("online",refresh);window.removeEventListener("kinoAccessChanged",refresh);document.removeEventListener("visibilitychange",refresh);};
+    return()=>{cancelled=true;clearInterval(timer);window.removeEventListener("focus",refresh);window.removeEventListener("pageshow",refresh);window.removeEventListener("online",refresh);window.removeEventListener("kinoAccessChanged",refresh);document.removeEventListener("visibilitychange",refresh);};
   },[user?.id]);
 
   const hasAccess = (filmId: number, category?: string): boolean => {
@@ -2451,9 +2465,10 @@ export default function Home() {
           if(!owned())return;
           if(error instanceof RequestError && error.status===403 && !adminAuth){
             trackSiteEvent("payment_open",Number(film.id));
-            await syncAccessFromDB(Number(viewer.id));
+            await syncAccessFromDB(Number(viewer.id)).catch(()=>{});
             setPayFilm(null);
-            setWatchError("Энэ киноны эрх дууссан. Багцаа сонгоод 6 оронтой кодоор төлбөрөө баталгаажуулна уу.");
+            setWatchError("Энэ браузерт киноны эрх олдсонгүй. Өмнө нь төлсөн бол дахин шилжүүлэхгүй, эрхээ сэргээх хэсгийг сонгоно уу.");
+            setShowPlanModal(true);
             setPage("film");
           }else throw error;
         }
@@ -2500,15 +2515,13 @@ export default function Home() {
     finally{setWatching(false);}
   };
   const continueFilm = () => {
-    if(!selectedFilm || filmOpening || watching || (siteId!=="taza" && !authReady))return;
+    if(!selectedFilm || filmOpening || watching || !authReady)return;
     trackSiteEvent("watch_click",Number(selectedFilm.id));
     if(siteId==="taza"){
-      if(adminAuth || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)) || bundleRemaining>0){
-        void watchFilm(selectedFilm);
-      }else{
-        setWatchError("");
-        setShowPlanModal(true);
-      }
+      // The server is authoritative: cached UI can be stale after Safari restores
+      // a tab, and phone grants are stored as an HttpOnly cookie, not in accessMap.
+      // Never demand another payment before actually checking /api/playback.
+      void watchFilm(selectedFilm);
       return;
     }
     void watchFilm(selectedFilm);
@@ -2724,7 +2737,7 @@ export default function Home() {
         </main>
       ) : <>
       {(page === "home" || page === "payment") && <HomePage freeCatalog={siteId==="taza"} chatUnread={chatUnread} films={filmsWithUnlock} onFilm={handleFilm} onAdmin={() => navigateTo(adminAuth ? "admin-choice" : "adminlogin")} loading={loading} loadError={loadError} onRetry={loadFilms} user={user} onLogin={handleLogin} onLogout={handleLogout} onOpenLogin={openLoginOverlay} onMonthly={handlePlanSelect} onContact={openContact} onSecretChat={()=>void openSecretChat()} accessMap={accessMap} showPlan={showPlanModal} onPlanClose={() => setShowPlanModal(false)} catalogState={catalogState} onCatalogChange={setCatalogState} brandName={brandName} admin={adminAuth} />}
-      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm && siteId==="taza" ? {...selectedFilm,free:false,locked:!hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)),price:TAZA_SINGLE_PRICE,op:TAZA_SINGLE_PRICE} : selectedFilm} subscriptionCatalog={siteId==="taza"} films={filmsWithUnlock} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={siteId==="taza" || authReady} bundleRemaining={bundleRemaining} available={!!selectedFilm && (adminAuth || (siteId!=="taza" && (selectedFilm.free || selectedFilm.locked===false)) || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
+      {page === "film" && <FilmLanding key={filmTarget.kind==="film"?filmTarget.id:"invalid"} film={selectedFilm && siteId==="taza" ? {...selectedFilm,free:false,locked:!hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)),price:TAZA_SINGLE_PRICE,op:TAZA_SINGLE_PRICE} : selectedFilm} subscriptionCatalog={siteId==="taza"} films={filmsWithUnlock} loading={filmOpening} error={filmError} canRetry={filmTarget.kind==="film"} watching={watching} watchError={watchError} authReady={authReady} bundleRemaining={bundleRemaining} available={!!selectedFilm && (adminAuth || (siteId!=="taza" && (selectedFilm.free || selectedFilm.locked===false)) || hasAccess(selectedFilm.id,decodeCat(selectedFilm.badge)))} relatedLoading={loading} relatedError={loadError} onRetryRelated={loadFilms} onFilm={handleFilm} onWatch={continueFilm} onRestoreAccess={openLoginOverlay} onPlan={plan=>handlePlanSelect(plan,selectedFilm)} onRetry={()=>setFilmTarget({...filmTarget})} onBack={()=>navigateTo("home")} walletBalance={walletBalance} payment={payFilm && <BankModal inline key={`${user?.id}:${payFilm.id}:${payFilm.plan || "single"}`} film={payFilm} onClose={closeCheckout} onPaid={handlePaid} user={user}/>} />}
       {page === "video" && curFilm && <VideoPage key={curFilm.id} film={curFilm} onBack={() => navigateTo("home")} />}
       {page === "adminlogin" && <AdminLogin onEnter={(data:any) => { playRequest.current++;setAdminAuth(true);setMasterAdmin(data?.masterAdmin===true);setEntryAllowed(true);setEntryReady(true);setEntryError(""); accessOwner.current=null;setUser(null); setAccessMap({});setBundleRemaining(0);setWalletBalance(0); navigateTo("admin-choice"); }} onBack={() => navigateTo("home")} />}
       {page === "admin-choice" && adminAuth && <AdminDestinationChoice brandName={brandName} onAdmin={()=>navigateTo("admin")} onMovies={()=>navigateTo("home")} onLogout={handleLogout} />}
@@ -2738,11 +2751,11 @@ export default function Home() {
 
       </>}
 
-      {showLoginModal && siteId!=="taza" && !user && mounted && createPortal(
+      {showLoginModal && !adminAuth && (!user || user.guest) && mounted && createPortal(
         <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} className="login-dialog">
           <div className="dialog-heading"><div><span className="eyebrow">{brandName}</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
           {selectedFilm && <p className="login-note">Үргэлжлүүлэх кино: <strong>{selectedFilm.title}</strong></p>}
-          <p className="login-note">Утасны дугаар, PIN кодоороо нэвтэрнэ үү.</p>
+          <p className="login-note">Өмнө нь бүртгүүлсэн бол утас, PIN-ээрээ нэвтэрнэ үү. Төлбөр хийсэн браузер дээрээ байгаа бол “Бүртгүүлэх” хэсгээр одоогийн эрхээ бүртгэлдээ хадгалж болно. Өөр браузерийн зочин эрх кодоор дангаар сэргээгдэхгүй.</p>
           <LoginModal onLogin={(u:any)=>{handleLogin(u);setShowLoginModal(false);}}/>
         </CinemaDialog>,
         document.body
