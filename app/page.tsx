@@ -2649,7 +2649,6 @@ export default function Home() {
           setAccessMap(currentRights.access);
           setBundleRemaining(Number(currentRights?.bundleRemaining||0));
           setShowPlanModal(false);
-          setTazaOffersOpen(false);
           setPayFilm(null);
           setAppNotice("Таны бүх киноны үзэх эрх идэвхтэй байна. Дахин төлбөр хийхгүйгээр кино сонгож үзээрэй.");
           if(sourceFilm)void watchFilm(sourceFilm);
