@@ -781,7 +781,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
     return()=>{window.removeEventListener("tazaSubscribe",subscribe);window.removeEventListener("tazaFeatured21Checkout",featuredCheckout);};
   },[freeCatalog,onMonthly]);
   return <div className="cinema-site">
-    {freeCatalog && tazaOffersOpen && <TazaPlanPicker onClose={()=>setTazaOffersOpen(false)} onSelect={plan=>{setTazaOffersOpen(false);onMonthly(plan);}} />}
+    {freeCatalog && tazaOffersOpen && <TazaPlanPicker onClose={()=>setTazaOffersOpen(false)} onRestoreAccess={onOpenLogin} onSelect={plan=>{setTazaOffersOpen(false);onMonthly(plan);}} />}
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
     <header className="site-header"><div className="header-inner">
       <div className="brand"><AdminEntryLogo onOpen={onAdmin} /><a href="#catalog" aria-label={`${brandName} нүүр`}>{brandName}</a></div>
@@ -2761,7 +2761,7 @@ export default function Home() {
         document.body
       )}
       {siteId==="taza" && page==="film" && showPlanModal && mounted && createPortal(
-        <TazaPlanPicker onClose={()=>setShowPlanModal(false)} onSelect={plan=>void handlePlanSelect(plan,selectedFilm)} />,
+        <TazaPlanPicker onClose={()=>setShowPlanModal(false)} onRestoreAccess={openLoginOverlay} onSelect={plan=>void handlePlanSelect(plan,selectedFilm)} />,
         document.body
       )}
     </div>
