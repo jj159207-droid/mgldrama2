@@ -630,12 +630,14 @@ function ContactModal({ onClose, user, onLogin, admin, onAdmin, freeCatalog=fals
     {announcement.announcement_image && <img src={announcement.announcement_image} alt="Мэдэгдлийн зураг" />}
     <p>{announcement.message}</p>
   </details>;
+  const phoneContact = <a href="tel:00000000" aria-label="00000000 дугаар руу залгах" style={{display:"block",width:"fit-content",maxWidth:"100%",margin:"12px auto",padding:"10px 14px",border:"1px solid #405067",borderRadius:10,color:"#f0bc62",fontSize:16,fontWeight:750,textAlign:"center",textDecoration:"none"}}>☎️ Холбогдох утас: 00000000</a>;
   return <dialog ref={dialog} className="contact-chat-modal" aria-label="Админтай холбогдох" onCancel={e=>{e.preventDefault();onClose();}}>
-    {user && !freeCatalog ? <ChatPanel key={user.id} onBack={onClose}>{notice}</ChatPanel> : <div className="chat-signin">
+    {user && !freeCatalog ? <ChatPanel key={user.id} onBack={onClose}>{notice}{phoneContact}</ChatPanel> : <div className="chat-signin">
       <button className="chat-icon" onClick={onClose} aria-label="Холбогдох хэсгийг хаах">←</button>
       <h2>Админтай холбогдох</h2><p>{freeCatalog ? "Кино үзэхэд гишүүнээр нэвтрэх шаардлагагүй. Мессеж илгээх бол Messenger холбоосыг ашиглана уу." : "Нэвтрээд мессеж, зураг илгээж, админы хариуг эндээс уншаарай."}</p>
       {admin ? <button className="chat-primary" onClick={onAdmin}>Хэрэглэгчдийн чатыг нээх</button> : freeCatalog ? null : <LoginModal onLogin={onLogin} />}
       {messengerUrl && <a className="chat-messenger" href={messengerUrl} target="_blank" rel="noopener noreferrer">{freeCatalog ? "Messenger-ээр холбогдох ↗" : "PIN мартсан уу? Messenger-ээр холбогдох ↗"}</a>}
+      {phoneContact}
       {notice}
     </div>}
   </dialog>;
