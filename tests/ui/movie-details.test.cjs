@@ -37,6 +37,7 @@ beforeEach(()=>{
   if(url.pathname==='/api/device'){
    if(deviceGate)await deviceGate.promise;
    if(session.admin)return Response.json({admin:true,user:null});
+   if(url.searchParams.get('recover')==='1')return Response.json({user:session.user||null,recovered:!!session.user});
    if(!session.user)session={user:{id:12,phone:'',user_id:'GTESTDEVICE',guest:true}};
    return Response.json(session);
   }
@@ -178,7 +179,7 @@ test('closing package choices creates no payment order',async()=>{
  assert.equal(orders.length,0);
  await click('[aria-label="Сонголт хаах"]');
  assert.equal(document.querySelector('.taza-offer-dialog'),null);
- assert.equal(requests.filter(r=>r.path==='/api/playback').length,0);
+ assert.equal(requests.filter(r=>r.path==='/api/playback').length,1,'server checks rights before opening package choices');
 });
 test('leaving during a full movie request prevents its late result from opening a player',async()=>{
  session={user:{id:12,phone:'99112233'}};entitled=true;await render('/?film=34');playbackGate=defer();await click('.film-hero-watch');await click('.film-back');
@@ -209,11 +210,14 @@ test('Facebook direct film link opens plans and six-digit checkout',async()=>{
  assert.equal(orders[0].amount,9000);
  assert.equal(movie(),undefined);
 });
-test('guest package checkout can work while old login restoration completes',async()=>{
+test('guest checkout waits for Safari identity restoration before opening purchase options',async()=>{
  authGate=defer();await render('/?film=7');
+ assert.equal(document.querySelector('.film-hero-watch').disabled,true);
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,0);
+ await act(async()=>authGate.resolve());
+ assert.equal(document.querySelector('.film-hero-watch').disabled,false);
  await click('.film-hero-watch');
  assert.equal(document.querySelectorAll('.taza-offer-card').length,2);
- await act(async()=>authGate.resolve());
  await choosePlan(0);
  assert.equal(orders.length,1);
  assert.equal(orders[0].amount,5000);
@@ -221,9 +225,9 @@ test('guest package checkout can work while old login restoration completes',asy
 test('guest identity is created only after a package selection',async()=>{
  await render('/?film=7&fbclid=tracking');
  await click('.film-hero-watch');
- assert.equal(requests.some(r=>r.path==='/api/device'),false);
+ assert.equal(requests.some(r=>r.path==='/api/device'&&r.query!=='?recover=1'),false);
  await choosePlan(1);
- assert.equal(requests.some(r=>r.path==='/api/device'),true);
+ assert.equal(requests.some(r=>r.path==='/api/device'&&r.query!=='?recover=1'),true);
  assert.equal(orders.length,1);
  assert.equal(orders[0].plan,'all_30d_9000');
  assert.equal(movie(),undefined);
@@ -246,7 +250,7 @@ test('existing paid member can watch without another order',async()=>{
 test('free movie detail never creates a device identity',async()=>{
  deviceGate=defer();
  await render('/?film=7');
- assert.equal(requests.filter(r=>r.path==='/api/device').length,0);
+ assert.equal(requests.filter(r=>r.path==='/api/device'&&r.query!=='?recover=1').length,0);
  await click('.film-back');
  assert.ok(document.querySelector('.catalog-browser'));
  assert.equal(orders.length,0);
