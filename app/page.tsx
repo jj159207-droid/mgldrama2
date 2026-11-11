@@ -2237,6 +2237,29 @@ export default function Home() {
     return()=>{active=false;};
   }, []);
 
+  // Safari can resume an old tab after the initial auth request failed
+  // (for example when returning from a banking app on a poor connection).
+  // Retry read-only device recovery on foreground / reconnect, never silently
+  // create a fresh guest user or generate a payment order.
+  useEffect(()=>{
+    if(siteId!=="taza"||!siteResolved||!authReady||adminAuth||user?.id)return;
+    let cancelled=false,busy=false;
+    const restore=async()=>{
+      if(cancelled||busy||document.hidden)return;
+      busy=true;
+      try{
+        const data=await requestJson("/api/device?recover=1",{method:"POST",body:"{}"},true);
+        if(cancelled||!data?.user?.id)return;
+        accessOwner.current=data.user.id;setUser(data.user);
+        await Promise.all([syncAccessFromDB(data.user.id),syncWalletFromDB(data.user.id)]).catch(()=>{});
+      }catch{}finally{busy=false;}
+    };
+    window.addEventListener("pageshow",restore);
+    window.addEventListener("online",restore);
+    window.addEventListener("focus",restore);
+    return()=>{cancelled=true;window.removeEventListener("pageshow",restore);window.removeEventListener("online",restore);window.removeEventListener("focus",restore);};
+  },[siteId,siteResolved,authReady,adminAuth,user?.id]);
+
   // Free TAZA mode: a site visit never registers a new guest device or
   // checks a prior bank payment. Admin authentication stays separate.
   useEffect(() => {
