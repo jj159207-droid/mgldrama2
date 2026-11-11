@@ -125,6 +125,19 @@ const confirmSubscription=async()=>{
 
 };
 
+test('featured banners share one container, preserve order and route to confirmation',async()=>{
+ await render('/');
+ const stack=document.querySelector('.taza-banner-stack');
+ assert.ok(stack);
+ assert.equal(stack.children.length,2);
+ assert.ok(stack.children[0].classList.contains('secret-room-banner'));
+ assert.ok(stack.children[1].classList.contains('cinematic-adult-cta'));
+ assert.equal(document.querySelectorAll('.cinematic-adult-cta').length,1);
+ assert.equal(stack.nextElementSibling?.classList.contains('hero-mount-host'),true);
+ await click('.taza-banner-stack > .cinematic-adult-cta');
+ assert.ok(document.querySelector('.taza-adult-gate'));
+ assert.equal(orders.length,0);
+});
 test('the featured +21 banner displays an age warning before opening a payment order',async()=>{
  await render('/');
  await act(async()=>window.dispatchEvent(new dom.window.Event('tazaFeatured21Checkout')));
