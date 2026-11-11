@@ -134,6 +134,32 @@ test('TAZA full watch opens exactly two 2/45 movie options',async()=>{
  assert.equal(document.querySelector('#phone-unlock-input'),null);
  assert.equal(orders.length,0);
 });
+test('TAZA shows no phone registration or PIN when an unpaid visitor checks access',async()=>{
+ await render('/?film=7');
+ assert.equal(document.querySelector('#user-phone'),null);
+ assert.equal(document.querySelector('#user-pin'),null);
+ await click('.film-hero-watch');
+ const restore=document.querySelector('.taza-offer-restore');
+ assert.ok(restore);
+ assert.match(restore.textContent,/Эрхээ шалгах/);
+ await act(async()=>restore.click());
+ assert.equal(document.querySelector('.login-dialog'),null);
+ assert.equal(document.querySelector('#user-pin'),null);
+ assert.match(document.querySelector('.app-alert')?.textContent||'',/төлсөн|браузер/i);
+ assert.equal(requests.filter(r=>r.path==='/api/auth'&&r.method==='POST').length,0);
+ assert.equal(orders.length,0);
+});
+test('paid device checks access without a phone number or PIN',async()=>{
+ session={user:{id:12,phone:'',guest:true}};entitled=true;
+ await render('/');
+ const check=[...document.querySelectorAll('.footer-links button')].find(el=>el.textContent.includes('Төлсөн эрхээ шалгах'));
+ assert.ok(check);
+ await act(async()=>check.click());
+ assert.match(document.querySelector('.app-notice')?.textContent||'',/эрх олдлоо/);
+ assert.equal(document.querySelector('.login-dialog'),null);
+ assert.equal(requests.filter(r=>r.path==='/api/auth'&&r.method==='POST').length,0);
+ assert.equal(orders.length,0);
+});
 test('all 45 films create a 9,000₮ six-digit pending order',async()=>{
  await render('/?film=7');await click('.film-hero-watch');await choosePlan(1);
  assert.equal(orders.length,1);
