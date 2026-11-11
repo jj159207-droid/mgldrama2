@@ -24,7 +24,7 @@ export default function TazaPlanPicker({onSelect,onClose,onRestoreAccess,busy=fa
      {onRestoreAccess && <button type="button" className="taza-offer-restore" disabled={busy}
        onClick={()=>{onClose();onRestoreAccess();}}
        style={{display:'block',width:'100%',marginTop:16,padding:'12px 14px',border:'1px solid #8f9cae',borderRadius:12,background:'#18202a',color:'#f3d9a5',fontWeight:750,fontSize:13,textAlign:'center',cursor:'pointer'}}>
-       Өмнө төлсөн үү? Эрхээ хадгалах / сэргээх
+       Өмнө төлсөн үү? Эрхээ шалгах
      </button>}
    </section>
  </div>;
