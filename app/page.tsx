@@ -2113,6 +2113,7 @@ export default function Home() {
     setSiteResolved(true);
   },[]);
   const [appError,setAppError]=useState("");
+  const [appNotice,setAppNotice]=useState("");
   useEffect(()=>{
     const show=(event:Event)=>setAppError(String((event as CustomEvent).detail||"Алдаа гарлаа."));
     const rejection=(event:PromiseRejectionEvent)=>{setAppError(event.reason instanceof Error?event.reason.message:"Үйлдэл амжилтгүй.");event.preventDefault();};
@@ -2640,6 +2641,21 @@ export default function Home() {
         let viewer=user;
         if(!viewer)viewer=await ensureDeviceUser();
         if(!viewer)throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+        // Already-paid full-library members must not receive a second bank
+        // reference merely because they tapped the promo banner again.
+        const currentRights=await requestJson("/api/access",{},true);
+        const monthlyExpiry=Number(currentRights?.access?.monthly||0);
+        if(monthlyExpiry>Date.now()){
+          setAccessMap(currentRights.access);
+          setBundleRemaining(Number(currentRights?.bundleRemaining||0));
+          setShowPlanModal(false);
+          setTazaOffersOpen(false);
+          setPayFilm(null);
+          setAppNotice("Таны бүх киноны үзэх эрх идэвхтэй байна. Дахин төлбөр хийхгүйгээр кино сонгож үзээрэй.");
+          if(sourceFilm)void watchFilm(sourceFilm);
+          else if(page==="payment")navigateTo("home");
+          return;
+        }
         setShowPlanModal(false);
         openPlanCheckout(plan,sourceFilm);
       }catch(error){setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
@@ -2719,6 +2735,7 @@ export default function Home() {
     <div className="app-shell site-theme" data-layout={appearance.layout} style={{...appearanceStyle(appearance), minHeight: "100vh", background: C.bg, fontFamily: "system-ui,sans-serif" }}>
       <ConnectionStatus />
       {appError && <div className="app-alert" role="alert"><span>{appError}</span><button onClick={()=>setAppError("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
+      {appNotice && <div className="app-alert app-notice" role="status"><span>✅ {appNotice}</span><button onClick={()=>setAppNotice("")} className="icon-button" aria-label="Мэдэгдэл хаах"><UiIcon name="close" /></button></div>}
 
 
       {entryBarrier ? (
