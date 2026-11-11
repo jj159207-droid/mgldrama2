@@ -138,6 +138,37 @@ test('featured banners share one container, preserve order and route to confirma
  assert.ok(document.querySelector('.taza-adult-gate'));
  assert.equal(orders.length,0);
 });
+test('phone Back from +21 age gate returns to catalog instead of leaving the website',async()=>{
+ await render('/');
+ await click('.taza-banner-stack > .cinematic-adult-cta');
+ assert.equal(window.history.state?.page,'taza-adult-age');
+ assert.ok(document.querySelector('.taza-adult-gate'));
+ await pop('/',{page:'home'});
+ assert.equal(document.querySelector('.taza-adult-gate'),null);
+ assert.ok(document.querySelector('.catalog-browser'));
+ assert.equal(orders.length,0);
+});
+test('phone Back from secret chat closes its overlay and returns to catalog',async()=>{
+ await render('/');
+ await click('.taza-banner-stack > .secret-room-banner');
+ assert.equal(window.history.state?.page,'secret-chat');
+ assert.ok(document.querySelector('.secret-room-backdrop'));
+ await pop('/',{page:'home'});
+ assert.equal(document.querySelector('.secret-room-backdrop'),null);
+ assert.ok(document.querySelector('.catalog-browser'));
+ assert.equal(orders.length,0);
+});
+test('phone Back from confirmed-adult checkout goes to the movie homepage',async()=>{
+ await render('/');
+ await click('.taza-banner-stack > .cinematic-adult-cta');
+ await click('.taza-adult-gate-adult');
+ assert.equal(window.history.state?.page,'payment');
+ assert.equal(orders.length,1);
+ await pop('/',{page:'home'});
+ assert.ok(document.querySelector('.catalog-browser'));
+ assert.equal(document.querySelector('.taza-adult-gate'),null);
+ assert.equal(document.querySelector('.checkout-inline'),null);
+});
 test('the featured +21 banner displays an age warning before opening a payment order',async()=>{
  await render('/');
  await act(async()=>window.dispatchEvent(new dom.window.Event('tazaFeatured21Checkout')));
