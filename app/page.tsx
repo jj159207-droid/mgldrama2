@@ -805,7 +805,22 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
       </div>
     </div></header>
     <main className="catalog-shell">
-      {freeCatalog && !preview && <button type="button" className="secret-room-banner" onClick={onSecretChat} aria-label="Нууц чат өрөөний 10,000 төгрөгийн төлбөрийн хуудас нээх"><span className="secret-room-banner-symbol">🔥</span><span className="secret-room-banner-text"><strong>НУУЦ ЧАТ ӨРӨӨ</strong><small>Халуун өрөөнд орох төлбөр · 10,000₮</small></span><span className="secret-room-banner-go">ЭНД ДАРЖ ОРОХ →</span></button>}
+      {freeCatalog && !preview && <div className="taza-banner-stack" aria-label="Нууц өрөө болон +21 бичлэгүүд">
+        <button type="button" className="secret-room-banner" onClick={onSecretChat} aria-label="Нууц чат өрөөний 10,000 төгрөгийн төлбөрийн хуудас нээх">
+          <span className="secret-room-banner-symbol">🔥</span>
+          <span className="secret-room-banner-text"><strong>НУУЦ ЧАТ ӨРӨӨ</strong><small>Халуун өрөөнд орох төлбөр · 10,000₮</small></span>
+          <span className="secret-room-banner-go">ЭНД ДАРЖ ОРОХ →</span>
+        </button>
+        <button type="button" className="cinematic-package-cta cinematic-adult-cta" onClick={()=>window.dispatchEvent(new Event("tazaFeatured21Checkout"))} aria-label="монгол охидын нууц бичлэгүүд +21 — нас баталгаажуулаад 15,000 төгрөгийн төлбөрийн хуудас нээх">
+          <span className="cinematic-adult-copy">
+            <strong className="cinematic-adult-title">монгол охидын нууц бичлэгүүд +21</strong>
+          </span>
+          <span className="cinematic-adult-action">
+            <strong className="cinematic-adult-price">15,000₮</strong>
+            <span className="cinematic-adult-go">ЭНД ДАРЖ ҮЗЭХ <span aria-hidden="true">→</span></span>
+          </span>
+        </button>
+      </div>}
       <section className="package-banner hero-mount-host" aria-label="Онцлох кинонууд" />
       {!preview && !freeCatalog && <PlanModal onSelect={onMonthly} autoOpen={planAutoOpen} onAutoClose={() => {setPlanAutoOpen(false);onPlanClose?.();}} user={user} films={films} countsReady={!loading && !loadError} />}
       <section id="catalog" className="catalog-section" aria-label="Киноны жагсаалт">
