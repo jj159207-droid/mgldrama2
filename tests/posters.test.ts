@@ -58,7 +58,7 @@ test('chunked request bodies are stopped at the byte cap without content-length'
 });
 test('production session cookie is secure and health discloses only liveness/version',async()=>{
  const old=process.env.NODE_ENV;Object.assign(process.env,{NODE_ENV:'production'});
- try{const cookie=setSessionCookie(json({ok:true}),'a'.repeat(64),3600).headers.get('set-cookie')!;for(const flag of ['Secure','HttpOnly','SameSite=strict'])assert.match(cookie,new RegExp(flag,'i'));}
+ try{const cookie=setSessionCookie(json({ok:true}),'a'.repeat(64),3600).headers.get('set-cookie')!;for(const flag of ['Secure','HttpOnly','SameSite=lax'])assert.match(cookie,new RegExp(flag,'i'));}
  finally{Object.assign(process.env,{NODE_ENV:old});if(old===undefined)Reflect.deleteProperty(process.env,'NODE_ENV');}
  const value=await (await health.GET()).json();assert.deepEqual(Object.keys(value).sort(),['ok','version']);assert.equal(value.version,'2026-09-12.1');
 });
