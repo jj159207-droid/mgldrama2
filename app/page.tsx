@@ -806,7 +806,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           renderFilm={(f: any) => <FilmCard film={f} onClick={() => onFilm(f)} expiry={getExpiry(f.id, decodeCat(f.badge))} brandName={brandName} />}
           renderPromotion={() => <button type="button" className="catalog-plan-banner" onClick={openPlans}><span><strong>{freeCatalog ? "2 кино 5,000₮ · 45 кино бүгд 9,000₮ (1 кино 200₮)" : "Сайтын бүх кино 7,900₮"}</strong><span>{freeCatalog ? "30 хоног үзэх эрх" : "72 цаг үзэх эрх"}</span></span><span className="banner-cta">ЭНД ДАРЖ ҮЗЭХ →</span></button>} />
       </section>
-      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button>{freeCatalog && !admin && (!user || user.guest) && <button type="button" onClick={onOpenLogin}><UiIcon name="user" size={16} />Эрхээ хадгалах / сэргээх</button>}<AppInstallButton /></div></footer>
+      <footer className="site-footer"><div><span className="footer-brand-row"><span className="footer-brand">{brandName}</span><span className="footer-admin-entry"><AdminEntryLogo onOpen={onAdmin} /></span></span><span className="footer-note">Киноны цагийг өөртөө.</span></div><div className="footer-links"><button onClick={onContact}><UiIcon name="message" size={16} />Холбогдох<ChatBadge count={chatUnread} /></button>{freeCatalog && !admin && <button type="button" onClick={onOpenLogin}><UiIcon name="check-circle" size={16} />Төлсөн эрхээ шалгах</button>}<AppInstallButton /></div></footer>
     </main>
   </div>;
 }
@@ -2670,7 +2670,37 @@ export default function Home() {
       openPlanCheckout(plan,sourceFilm);
     } catch(error) {setAppError(error instanceof Error?error.message:"Багц авахад алдаа гарлаа.");}
   };
+  const checkDeviceAccess = async () => {
+    if(adminAuth)return;
+    setAppError("");
+    setAppNotice("");
+    try {
+      // No phone, PIN or new guest is required just to verify access.
+      const restored=await requestJson("/api/device?recover=1",{method:"POST",body:"{}"},true);
+      if(!restored?.user?.id){
+        setAppError("Энэ браузерт хадгалсан үзэх эрх олдсонгүй. Өмнө төлсөн бол төлбөр хийсэн Messenger/Safari браузераар нээх эсвэл Холбогдох хэсгээр админд хандана уу. Дахин мөнгө шилжүүлэхгүй.");
+        return;
+      }
+      const ownerId=Number(restored.user.id);
+      accessOwner.current=ownerId;
+      setUser(restored.user);
+      const access=await requestJson("/api/access",{},true);
+      if(accessOwner.current!==ownerId)return;
+      setAccessMap(access?.access||{});
+      setBundleRemaining(Math.max(0,Number(access?.bundleRemaining)||0));
+      const now=Date.now();
+      const hasRights=Object.values(access?.access||{}).some(value=>Number(value)>now)||Number(access?.bundleRemaining)>0;
+      if(hasRights){
+        setAppNotice("Таны төлсөн киноны эрх олдлоо. Киногоо сонгоод шууд үзээрэй.");
+      }else{
+        setAppError("Энэ браузерт идэвхтэй киноны эрх олдсонгүй. Өмнө төлсөн бол анх төлсөн браузераараа нээх эсвэл Холбогдох хэсгээр админд хандана уу. Дахин төлбөр хийх шаардлагагүй.");
+      }
+    }catch(error){
+      setAppError(error instanceof Error ? "Эрхийг шалгахад алдаа гарлаа: "+error.message : "Эрхийг шалгаж чадсангүй. Дахин оролдоно уу.");
+    }
+  };
   const openLoginOverlay = () => {
+    if(siteId==="taza"){void checkDeviceAccess();return;}
     if(window.history.state?.page!=="login")window.history.pushState({page:"login"},"",window.location.href);
     setShowLoginModal(true);
   };
@@ -2791,7 +2821,7 @@ export default function Home() {
 
       </>}
 
-      {showLoginModal && !adminAuth && (!user || user.guest) && mounted && createPortal(
+      {showLoginModal && siteId!=="taza" && !adminAuth && (!user || user.guest) && mounted && createPortal(
         <CinemaDialog title="Нэвтрэх эсвэл бүртгүүлэх" onClose={() => {pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} className="login-dialog">
           <div className="dialog-heading"><div><span className="eyebrow">{brandName}</span><h2>Тавтай морил.</h2></div><button className="icon-button" onClick={()=>{pendingActionRef.current=null;setWatching(false);setWatchError("");closeLoginOverlay();}} aria-label="Нэвтрэх цонх хаах"><UiIcon name="close"/></button></div>
           {selectedFilm && <p className="login-note">Үргэлжлүүлэх кино: <strong>{selectedFilm.title}</strong></p>}
