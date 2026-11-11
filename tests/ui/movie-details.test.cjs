@@ -125,6 +125,49 @@ const confirmSubscription=async()=>{
 
 };
 
+test('the featured +21 banner displays an age warning before opening a payment order',async()=>{
+ await render('/');
+ await act(async()=>window.dispatchEvent(new dom.window.Event('tazaFeatured21Checkout')));
+ const dialog=document.querySelector('.taza-adult-gate');
+ assert.ok(dialog,'age confirmation must be present');
+ assert.equal(dialog.open,true);
+ assert.match(dialog.textContent,/Энд кино байхгүй, зөвхөн \+21 бичлэгүүд байгаа\. Та нэвтрэх үү\?/);
+ assert.ok(dialog.querySelector('.taza-adult-gate-adult').textContent.includes('21 нас хүрсэн'));
+ assert.ok(dialog.querySelector('.taza-adult-gate-underage').textContent.includes('21 нас хүрээгүй'));
+ assert.equal(orders.length,0,'age confirmation must not generate a bank reference');
+});
+test('choosing under 21 returns to the movie homepage without payment',async()=>{
+ await render('/');
+ await act(async()=>window.dispatchEvent(new dom.window.Event('tazaFeatured21Checkout')));
+ await click('.taza-adult-gate-underage');
+ assert.equal(document.querySelector('.taza-adult-gate'),null);
+ assert.ok(document.querySelector('.catalog-browser'));
+ assert.equal(document.querySelector('.checkout-inline'),null);
+ assert.equal(orders.length,0);
+ assert.equal(requests.filter(r=>r.path==='/api/device'&&r.query!=='?recover=1').length,0);
+});
+test('choosing 21 or older opens only the 15,000₮ bank transfer checkout',async()=>{
+ await render('/');
+ await act(async()=>window.dispatchEvent(new dom.window.Event('tazaFeatured21Checkout')));
+ assert.equal(orders.length,0);
+ await click('.taza-adult-gate-adult');
+ assert.equal(document.querySelector('.taza-adult-gate'),null);
+ assert.equal(orders.length,1,'bank order must be created after adult confirmation');
+ assert.equal(orders[0].plan,'all_30d_15000');
+ assert.equal(orders[0].amount,15000);
+ assert.match(orders[0].ref_code,/^\d{6}$/);
+ assert.ok(document.querySelector('.wallet-single-ref'));
+});
+test('closing the +21 dialog with Escape is equivalent to not entering',async()=>{
+ await render('/');
+ await act(async()=>window.dispatchEvent(new dom.window.Event('tazaFeatured21Checkout')));
+ const dialog=document.querySelector('.taza-adult-gate');
+ assert.ok(dialog);
+ await act(async()=>dialog.dispatchEvent(new dom.window.Event('cancel',{cancelable:true,bubbles:false})));
+ assert.equal(document.querySelector('.taza-adult-gate'),null);
+ assert.ok(document.querySelector('.catalog-browser'));
+ assert.equal(orders.length,0);
+});
 test('TAZA full watch opens exactly two 2/45 movie options',async()=>{
  await render('/?film=7&fbclid=tracking');
  assert.equal(title(),'Гэрэл');await click('.film-hero-watch');
