@@ -2492,7 +2492,7 @@ export default function Home() {
             trackSiteEvent("payment_open",Number(film.id));
             if(viewer?.id)await syncAccessFromDB(Number(viewer.id)).catch(()=>{});
             setPayFilm(null);
-            setWatchError("Энэ браузерт киноны эрх олдсонгүй. Өмнө нь төлсөн бол дахин шилжүүлэхгүй, эрхээ сэргээх хэсгийг сонгоно уу.");
+            setWatchError("Энэ браузерт үзэх эрх олдсонгүй. Өмнө төлсөн бол дахин мөнгө шилжүүлэхгүй, төлбөр хийсэн браузераараа нээх эсвэл админтай холбогдоно уу.");
             setShowPlanModal(true);
             setPage("film");
           }else throw error;
