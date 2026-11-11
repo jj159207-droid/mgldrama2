@@ -118,7 +118,6 @@ export default function AppInstallButton() {
             <h3>Эхлээд {ios ? "Safari" : environment.platform === "android" ? "Chrome" : "үндсэн хөтөч"}-д нээгээрэй</h3>
             <ol className="install-steps"><li>Энэ цонхны <strong>⋯</strong> эсвэл <strong>⋮</strong> цэсийг дарна.</li><li><strong>{ios ? "Open in Safari" : "Open in browser"}</strong> — хөтөч дээр нээх сонголтыг сонгоно.</li><li>Сайт нээгдэхэд <strong>Апп суулгах</strong> товчийг дахин дарна.</li></ol>
             <p className="install-note">Хөтөч дээр нээх сонголт харагдахгүй бол холбоосыг хуулаад {ios ? "Safari" : "Chrome"}-д нээгээрэй.</p>
-            <p className="install-note"><strong>Өмнө нь Messenger дотроос төлсөн үү?</strong> Safari болон Messenger тусдаа төхөөрөмжийн эрхийн мэдээлэл хадгалдаг. Төлбөр хийсэн браузертаа буцаж ороод “Төлсөн эрхээ шалгах”-ыг дарна уу. Өөр хөтөч дээр эрх автоматаар шилжихгүй; шаардлагатай бол Холбогдох хэсгээр админд хандаарай. Дахин төлбөр хийх хэрэггүй.</p>
           </> : nativeReady ? <button type="button" className="install-primary" onClick={install}>Суулгах</button> : ios ? <>
             <h3>Safari дээр 3 алхам</h3>
             <ol className="install-steps"><li>Хөтчийн <strong>Хуваалцах (Share)</strong> товчийг дарна. Зарим хувилбарт эхлээд <strong>⋯</strong> цэсийг нээнэ.</li><li><strong>Add to Home Screen</strong> — Нүүр дэлгэцэнд нэмэхийг сонгоно.</li><li><strong>Open as Web App</strong> харагдвал асаагаад <strong>Add</strong> — Нэмэхийг дарна.</li></ol>
