@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ApiError,bodyJson,canAdminSite,clearDeviceCookie,db,equalSecret,fail,issueSession,json,originCheck,passwordMatches,pinHash,pinMatches,publicUser,rateLimit,requestSite,revokeSession,session,setSessionCookie } from '@/lib/server';
+import { ApiError,bindDeviceRecoveryCookie,bodyJson,canAdminSite,clearDeviceCookie,db,equalSecret,fail,issueSession,json,originCheck,passwordMatches,pinHash,pinMatches,publicUser,rateLimit,requestSite,revokeSession,session,setSessionCookie } from '@/lib/server';
 export const runtime='nodejs';
 export async function GET(req:NextRequest) {
   try {
@@ -60,6 +60,12 @@ export async function POST(req:NextRequest) {
     }
   }
   await db('rpc/kino_touch_site_user','POST',{p_site:site,p_user:user.id});
-  const s=await issueSession(req,user.id,false);return setSessionCookie(json({user:publicUser(user),site}),s.token,s.age);
+  const s=await issueSession(req,user.id,false);
+  const res=setSessionCookie(json({user:publicUser(user),site}),s.token,s.age);
+  // A returning Safari visitor can recover their account after the short
+  // session expires. This also binds a fresh browser to a phone/PIN login.
+  // A temporary recovery-token storage failure must not break sign-in.
+  try{return await bindDeviceRecoveryCookie(req,res,user.id);}
+  catch{return res;}
  }catch(e){return fail(e);}
 }
