@@ -37,8 +37,10 @@ test('server accepts two standard packages and the featured 15k checkout with si
  assert.equal(paymentExpiry(paid(TAZA_ALL_PLAN))-now,30*86400000);
  assert.equal(accessFromPayments([paid(TAZA_ALL_PLAN)],now).monthly,now+30*86400000);
  const hero=read('app/components/CinematicHeroMount.tsx');
- assert.ok(hero.includes('tazaFeatured21Checkout')&&hero.includes('15,000₮'));
+ assert.ok(hero.includes('tazaFeatured21Checkout'));
+ assert.ok(page.includes('taza-banner-stack')&&page.includes('cinematic-adult-cta')&&page.includes('15,000₮'));
  assert.ok(page.includes('tazaFeatured21Checkout')&&page.includes('plan===TAZA_ALL_PLAN'));
+ assert.ok(!hero.includes('cinematic-adult-cta'),'The +21 CTA is below secret chat, not duplicated inside the hero carousel');
 });
 
 test('Reopening the same TAZA checkout restores the earliest valid payment reference',()=>{
