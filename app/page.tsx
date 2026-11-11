@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 
-import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, TAZA_2_PLAN, TAZA_5_10000_PLAN, TAZA_40_PLAN, TAZA_40_PRICE, TAZA_SINGLE_PRICE, TAZA_MANUAL_ALL_PLAN, TAZA_10_10000_PLAN, TAZA_45_ALL_13000_PLAN, TAZA_45_ALL_13000_PRICE, TAZA_45_ALL_9000_PLAN, TAZA_45_ALL_9000_PRICE, TAZA_PUBLIC_PACKS } from "@/lib/domain";
+import { paymentExpiry, safeUrl, planLabel, plans as PLAN_PRICES, TAZA_2_PLAN, TAZA_5_10000_PLAN, TAZA_40_PLAN, TAZA_40_PRICE, TAZA_SINGLE_PRICE, TAZA_MANUAL_ALL_PLAN, TAZA_10_10000_PLAN, TAZA_45_ALL_13000_PLAN, TAZA_45_ALL_13000_PRICE, TAZA_45_ALL_9000_PLAN, TAZA_45_ALL_9000_PRICE, TAZA_ALL_PLAN, TAZA_PUBLIC_PACKS } from "@/lib/domain";
 import { normalizeMongolianIban } from "@/lib/iban";
 import { SITES, siteFromPathname, type SiteId } from "@/lib/site";
 
@@ -364,7 +364,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
       {!transferReady&&<p role="alert" className="checkout-error wallet-single-error">IBAN болон дансны дугаар тохироогүй байна. Админ засах хүртэл төлбөр шилжүүлэхгүй байна уу.</p>}
 
       <section className="wallet-single-instructions wallet-entry-auto-open" aria-label="Төлбөр автоматаар баталгаажих мэдээлэл">
-        <p><strong>{film.plan===TAZA_45_ALL_9000_PLAN ? "Төлбөр баталгаажмагц 45 кино бүгд нээгдэнэ" : film.plan===TAZA_45_ALL_13000_PLAN ? "Төлбөр баталгаажмагц 45 кино бүгд нээгдэнэ" : film.plan===TAZA_10_10000_PLAN ? "Төлбөр баталгаажмагц 10 өөр кино сонгож үзэх эрх нээгдэнэ" : film.plan===TAZA_2_PLAN ? "Төлбөр баталгаажмагц 2 өөр кино сонгож үзэх эрх нээгдэнэ" : "Төлбөр баталгаажмагц үзэх эрх нээгдэнэ"}</strong></p>
+        <p><strong>{film.plan===TAZA_45_ALL_9000_PLAN ? "Төлбөр баталгаажмагц 45 кино бүгд нээгдэнэ" : film.plan===TAZA_45_ALL_13000_PLAN ? "Төлбөр баталгаажмагц 45 кино бүгд нээгдэнэ" : film.plan===TAZA_10_10000_PLAN ? "Төлбөр баталгаажмагц 10 өөр кино сонгож үзэх эрх нээгдэнэ" : film.plan===TAZA_ALL_PLAN ? "Төлбөр баталгаажмагц бүх киноны 30 хоногийн эрх нээгдэнэ" : film.plan===TAZA_2_PLAN ? "Төлбөр баталгаажмагц 2 өөр кино сонгож үзэх эрх нээгдэнэ" : "Төлбөр баталгаажмагц үзэх эрх нээгдэнэ"}</strong></p>
       </section>
 
       <button type="button" className={`wallet-single-copy${tazaTransfer ? " wallet-single-iban" : ""}`} disabled={!transferReady||!orderReady} onClick={() => copyText(tazaTransfer?transferIbanDisplay:transferDestination,tazaTransfer?"iban":"account")}>
@@ -378,7 +378,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
 
       <section className="wallet-single-instructions wallet-entry-pricing" aria-label="Кино үзэх үнэ">
         <p><strong>Шилжүүлэх дүн {Number(orderAmount??film.price??TAZA_40_PRICE).toLocaleString("mn-MN")}₮</strong></p>
-        <p><strong>{film.plan===TAZA_45_ALL_9000_PLAN ? "45 кино бүгдийг 30 хоног · 1 кино 200₮" : film.plan===TAZA_45_ALL_13000_PLAN ? "45 кино бүгдийг 30 хоног үзэх эрх" : film.plan===TAZA_2_PLAN ? "2 өөр кино сонгож 30 хоног үзэх эрх" : film.plan===TAZA_10_10000_PLAN ? "10 өөр кино сонгож 30 хоног үзэх эрх" : "Кино үзэх эрх"}</strong></p>
+        <p><strong>{film.plan===TAZA_45_ALL_9000_PLAN ? "45 кино бүгдийг 30 хоног · 1 кино 200₮" : film.plan===TAZA_45_ALL_13000_PLAN ? "45 кино бүгдийг 30 хоног үзэх эрх" : film.plan===TAZA_2_PLAN ? "2 өөр кино сонгож 30 хоног үзэх эрх" : film.plan===TAZA_10_10000_PLAN ? "10 өөр кино сонгож 30 хоног үзэх эрх" : film.plan===TAZA_ALL_PLAN ? "Бүх киноны 30 хоногийн үзэх эрх" : "Кино үзэх эрх"}</strong></p>
       </section>
 
       <button type="button" disabled={!orderReady||!transferReady} className="wallet-single-copy wallet-single-ref" onClick={() => copyText(refCode,"ref")}>
@@ -440,7 +440,7 @@ function BankModal({ film, onClose, onPaid, user, inline = false, onAdmin }: any
         <p className="wallet-spend-note">Сонгосон <strong>{planLabel(film.returnPlan)}</strong> багцыг кино сайтын дансны үлдэгдлээр авна.</p>
         <p className="wallet-credit-note">Гүйлгээний 6 оронтой утга таарч, банкны SMS-д 5,000₮ ба түүнээс дээш дүн ирсэн бол тухайн хэрэглэгчийн үлдэгдэл яг ирсэн дүнгээр цэнэглэгдэнэ.</p>
       </section>}
-      <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : [TAZA_2_PLAN,TAZA_45_ALL_9000_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN].includes(String(film.plan)) ? "30 хоногийн эрх" : film.plan==="single" ? "Нэг кино · 72 цаг" : film.monthly ? "72 цагийн үзэх эрх" : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
+      <div className="checkout-summary"><div><strong>{isWalletTopup ? "Үлдэгдэл цэнэглэх" : film.title}</strong><span>{isWalletTopup ? "Киноны дансны цэнэглэлт" : [TAZA_2_PLAN,TAZA_45_ALL_9000_PLAN,TAZA_5_10000_PLAN,TAZA_40_PLAN,TAZA_ALL_PLAN].includes(String(film.plan)) ? "30 хоногийн эрх" : film.plan==="single" ? "Нэг кино · 72 цаг" : film.monthly ? "72 цагийн үзэх эрх" : "Нэг киноны үзэх эрх"}</span></div><strong>{isWalletTopup ? `${selectedTopup.toLocaleString()}₮` : orderAmount===null ? "Дүнг шалгаж байна…" : `${orderAmount.toLocaleString()}₮`}</strong></div>
       {isWalletTopup && !showTransferDetails && <div className="wallet-topup-preview"><span className="wallet-current-balance">Таны кино сайтын дансны үлдэгдэл <strong>{Number(film.walletBefore||0).toLocaleString()}₮</strong></span>{film.returnPlan ? <><span>Багцын үнэ <strong>{Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0).toLocaleString()}₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд багц авбал <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-Number(film.returnPrice||PLAN_PRICES[film.returnPlan]||0)).toLocaleString()}₮ үлдэнэ</strong></span></> : <><span>Нэг киноны үнэ <strong>{TAZA_SINGLE_PRICE.toLocaleString("mn-MN")}₮</strong></span><span>{selectedTopup.toLocaleString()}₮ цэнэглээд 1 кино үзвэл <strong>{Math.max(0,Number(film.walletBefore||0)+selectedTopup-TAZA_SINGLE_PRICE).toLocaleString()}₮ үлдэнэ</strong></span></>}</div>}
       {isWalletTopup && !showTransferDetails && <button type="button" className="wallet-open-transfer wallet-open-transfer-simple" disabled={!orderReady} onClick={revealTransferDetails}>Данс цэнэглэх</button>}
       {(!isWalletTopup || showTransferDetails) && <div ref={transferPanelRef} className={isWalletTopup ? "wallet-transfer-panel" : undefined}>
@@ -775,9 +775,11 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
   useEffect(()=>{
     if(!freeCatalog)return;
     const subscribe=()=>setTazaOffersOpen(true);
+    const featuredCheckout=()=>void onMonthly(TAZA_ALL_PLAN);
     window.addEventListener("tazaSubscribe",subscribe);
-    return()=>window.removeEventListener("tazaSubscribe",subscribe);
-  },[freeCatalog]);
+    window.addEventListener("tazaFeatured21Checkout",featuredCheckout);
+    return()=>{window.removeEventListener("tazaSubscribe",subscribe);window.removeEventListener("tazaFeatured21Checkout",featuredCheckout);};
+  },[freeCatalog,onMonthly]);
   return <div className="cinema-site">
     {freeCatalog && tazaOffersOpen && <TazaPlanPicker onClose={()=>setTazaOffersOpen(false)} onSelect={plan=>{setTazaOffersOpen(false);onMonthly(plan);}} />}
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
@@ -2579,10 +2581,10 @@ export default function Home() {
       window.history.pushState({ page: "planmodal" }, "");setShowPlanModal(true);return;
     }
     if (!Object.prototype.hasOwnProperty.call(PLAN_PRICES,plan)) return;
-    if(siteId==='taza' ? !TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]) : !!sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
+    if(siteId==='taza' ? !(TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]) || plan===TAZA_ALL_PLAN) : !!sourceFilm && !filmPlans(sourceFilm).some(item=>item.id===plan))return;
     if(sourceFilm){setPage("film");}
     else navigateTo("payment");
-    setPayFilm({id:plan==='single'?Number(sourceFilm?.id||0):0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:plan!=='single',plan,locked:true,entryGate:siteId==="taza"&&TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]),returnFilm:sourceFilm});
+    setPayFilm({id:plan==='single'?Number(sourceFilm?.id||0):0,title:planLabel(plan),price:PLAN_PRICES[plan],monthly:plan!=='single',plan,locked:true,entryGate:siteId==="taza"&&(TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]) || plan===TAZA_ALL_PLAN),returnFilm:sourceFilm});
   };
   const openSecretChat = async () => {
     if(siteId!=="taza")return;
@@ -2595,7 +2597,7 @@ export default function Home() {
   };
   const handlePlanSelect = async (plan: string, sourceFilm: FilmDetails | null = null) => {
     if(siteId==="taza"){
-      if(!TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]))return;
+      if(!(TAZA_PUBLIC_PACKS.includes(plan as typeof TAZA_PUBLIC_PACKS[number]) || plan===TAZA_ALL_PLAN))return;
       if(adminAuth){setAppError("Багц авахын тулд админ горимоос гарна уу.");return;}
       try {
         let viewer=user;
