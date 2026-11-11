@@ -192,6 +192,11 @@
     white-space: nowrap;
   }
 
+  .cinematic-package-cta.cinematic-adult-cta > span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
   .cinematic-package-icon {
     width: 28px;
     height: 28px;
@@ -292,4 +297,18 @@
   .cinematic-wallet-balance {
     animation: none !important;
   }
+}
+
+/* TAZA featured +21 purchase invitation: visible pulse without hiding its text. */
+.cinematic-package-cta.cinematic-adult-cta {
+  border-color: #e7b76c;
+  animation: taza-adult-banner-pulse 2.1s ease-in-out infinite;
+}
+.cinematic-package-cta.cinematic-adult-cta > span { white-space: normal; text-wrap: balance; }
+@keyframes taza-adult-banner-pulse {
+  0%,100% { box-shadow: 0 0 0 1px #ffffff12 inset,0 0 12px #e7b76c28,0 16px 32px #0007; }
+  50% { box-shadow: 0 0 0 1px #ffffff19 inset,0 0 30px #e7b76c85,0 16px 32px #0007; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cinematic-package-cta.cinematic-adult-cta { animation: none; }
 }
