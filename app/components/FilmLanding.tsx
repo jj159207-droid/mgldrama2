@@ -119,7 +119,7 @@ export default function FilmLanding(props:Props) {
       {props.subscriptionCatalog && !props.available && Number(props.bundleRemaining)>0 && <p className="film-landing-note">Таны багцад {props.bundleRemaining} кино сонгох эрх үлдсэн. Энэ киног нээхэд 1 эрх ашиглагдана.</p>}
       {props.available && <p className="film-landing-note">{props.freeCatalog ? "Бүртгэл, төлбөргүйгээр бүтэн үзэх боломжтой." : "Танд энэ киног үзэх эрх байна."}</p>}
       {props.watchError && <p role="alert" className="detail-watch-error">{props.watchError}</p>}
-      {props.subscriptionCatalog && !props.available && <button type="button" className="secondary-button" disabled={busy} onClick={props.onRestoreAccess} style={{marginTop:12,fontSize:13}}>Өмнө төлсөн үү? Эрхээ хадгалах / сэргээх</button>}
+      {props.subscriptionCatalog && !props.available && <button type="button" className="secondary-button" disabled={busy} onClick={props.onRestoreAccess} style={{marginTop:12,fontSize:13}}>Өмнө төлсөн үү? Эрхээ шалгах</button>}
     </section>
 
     <section className="detail-related detail-related-primary" aria-label="Санал болгох төстэй кино">
