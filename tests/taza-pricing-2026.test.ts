@@ -40,3 +40,14 @@ test('server accepts two standard packages and the featured 15k checkout with si
  assert.ok(hero.includes('tazaFeatured21Checkout')&&hero.includes('15,000₮'));
  assert.ok(page.includes('tazaFeatured21Checkout')&&page.includes('plan===TAZA_ALL_PLAN'));
 });
+
+test('Reopening the same TAZA checkout restores the earliest valid payment reference',()=>{
+ const api=read('app/api/db/route.ts');
+ const page=read('app/page.tsx');
+ assert.ok(api.includes("if(site==='taza'){"));
+ assert.ok(api.includes("const filmFilter=filmId===null?'is.null':`eq.${filmId}`"));
+ assert.ok(api.includes("site_id=eq.taza&user_id=eq.${s.userId}&plan=eq.${encodeURIComponent(plan)}&film_id=${filmFilter}&amount=eq.${amount}&status=eq.pending&created_at=gte.${since}&order=created_at.asc,id.asc&limit=1&select=*"));
+ assert.ok(api.includes('if(pending.length)return json(pending);'));
+ assert.ok(api.includes('new Date(Date.now()-24*3600000).toISOString()'));
+ assert.ok(page.includes('if(savedRef && savedRef!==refCode){if(!cancelled)setRefCode(savedRef);return;}'));
+});
