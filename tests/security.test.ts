@@ -230,6 +230,47 @@ test('anonymous device keeps its identity but cannot buy retired public TAZA pac
  assert.equal(forbidden.status,409);assert.equal((await forbidden.json()).code,'PACKAGE_RETIRED');
  assert.equal(tables.pending_payments.length,0);
 });
+test('iPhone same-browser recovery restores paid guest without creating a new user',async()=>{
+ const silent=await device.POST(req('/api/device?recover=1','POST',{}));
+ assert.equal(silent.status,200);
+ assert.equal((await silent.json()).user,null);
+ assert.equal(tables.users.length,0,'silent startup must never create a new guest account');
+
+ const original=await device.POST(req('/api/device','POST',{}));
+ assert.equal(original.status,200);
+ const originalUser=(await original.json()).user;
+ const recoveryToken=original.cookies.get('taza_device_v1')?.value;
+ assert.match(recoveryToken||'',/^[a-f0-9]{64}$/);
+ tables.pending_payments.push({
+   id:876,site_id:'taza',user_id:originalUser.id,film_id:null,plan:'all_30d_9000',
+   amount:9000,status:'confirmed',created_at:now(),confirmed_at:now()
+ });
+
+ // iOS may discard the 7-day session cookie but retain the durable device cookie.
+ const restored=await device.POST(req('/api/device?recover=1','POST',{},`taza_device_v1=${recoveryToken}`));
+ assert.equal(restored.status,200);
+ const body=await restored.json();
+ assert.equal(body.user.id,originalUser.id);
+ assert.equal(body.recovered,true);
+ assert.equal(tables.users.length,1);
+ const sessionToken=restored.cookies.get('kino_session_v2')?.value;
+ assert.match(sessionToken||'',/^[a-f0-9]{64}$/);
+ const sessionCookie=`kino_session_v2=${sessionToken}`;
+ assert.equal((await playback.GET(req('/api/playback?id=1','GET',undefined,sessionCookie))).status,200);
+ assert.equal((await auth.GET(req('/api/auth','GET',undefined,sessionCookie))).status,200);
+});
+test('phone/PIN sign-in binds a device-recovery cookie for a later Safari visit',async()=>{
+ const login=await auth.POST(req('/api/auth','POST',{action:'register',phone:'99112233',pin:'1234'}));
+ assert.equal(login.status,200);
+ const deviceToken=login.cookies.get('taza_device_v1')?.value;
+ assert.match(deviceToken||'',/^[a-f0-9]{64}$/);
+ const restored=await device.POST(req('/api/device?recover=1','POST',{},`taza_device_v1=${deviceToken}`));
+ assert.equal(restored.status,200);
+ const body=await restored.json();
+ assert.equal(body.recovered,true);
+ assert.equal(body.user.phone,'99112233');
+ assert.equal(tables.users.length,1);
+});
 test('cross-origin mutation is rejected',async()=>{const r=await auth.POST(req('/api/auth','POST',{action:'register',phone:'99112233',pin:'1234'},undefined,{origin:'https://evil.test'}));assert.equal(r.status,403);});
 test('Taza movie catalog is publicly available but does not reveal full video URL',async()=>{
   const r=await api.GET(dbReq('films?select=*'));
