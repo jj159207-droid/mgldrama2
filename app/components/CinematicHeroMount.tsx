@@ -155,11 +155,8 @@ function Carousel({ films, onOpenPlans, packageFilmCount, brandName, taza }: { f
 
       <button type="button" className={`cinematic-package-cta${taza ? " cinematic-adult-cta" : ""}`} onClick={onOpenPlans} aria-label={taza ? "монгол охидын нууц бичлэгүүд +21 — 15,000 төгрөгийн төлбөрийн хуудас нээх" : `Сайтын бүх ${packageFilmCount} киног 12,000 төгрөгөөр 30 хоног үзэх эрх`}>
         {taza ? <>
-          <span className="cinematic-adult-mark" aria-hidden="true">✦</span>
           <span className="cinematic-adult-copy">
-            <span className="cinematic-adult-eyebrow"><span className="cinematic-adult-indicator" aria-hidden="true" />ОНЦЛОХ · +21</span>
             <strong className="cinematic-adult-title">монгол охидын нууц бичлэгүүд +21</strong>
-            <span className="cinematic-adult-subtitle">30 хоногийн үзэх эрх · Төлбөрийг автоматаар баталгаажуулна</span>
           </span>
           <span className="cinematic-adult-action">
             <strong className="cinematic-adult-price">15,000₮</strong>
