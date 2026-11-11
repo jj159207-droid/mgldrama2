@@ -138,7 +138,7 @@ export async function issueSession(
   return {token,age};
 }
 export function setSessionCookie(res:NextResponse,token:string,age:number) {
-  res.cookies.set(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'strict',path:'/',maxAge:age});return res;
+  res.cookies.set(COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:age});return res;
 }
 export function setDeviceCookie(res:NextResponse,token:string,age=365*24*60*60) {
   res.cookies.set(DEVICE_COOKIE,token,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:age});return res;
@@ -146,6 +146,31 @@ export function setDeviceCookie(res:NextResponse,token:string,age=365*24*60*60) 
 export function clearDeviceCookie(res:NextResponse) {
   res.cookies.set(DEVICE_COOKIE,'',{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/',maxAge:0});return res;
 }
+
+/** Bind a long-lived, server-issued recovery cookie to the authenticated user.
+ * Never expose this token to JavaScript or use it across different browsers. */
+export async function bindDeviceRecoveryCookie(req:NextRequest,res:NextResponse,userId:number) {
+  const age=365*24*60*60;
+  const expiresAt=new Date(Date.now()+age*1000).toISOString();
+  const previous=req.cookies.get(DEVICE_COOKIE)?.value || '';
+  if(/^[a-f0-9]{64}$/.test(previous)){
+    const hashed=digest(previous);
+    const [saved]=await db(`guest_device_tokens?token_hash=eq.${hashed}&select=token_hash,user_id,expires_at&limit=1`);
+    if(saved){
+      const expires=Date.parse(String(saved.expires_at || ''));
+      if(Number(saved.user_id)!==userId || !Number.isFinite(expires) || expires<Date.now()+7*86400000){
+        await db(`guest_device_tokens?token_hash=eq.${hashed}`,'PATCH',{
+          user_id:userId,expires_at:expiresAt,updated_at:new Date().toISOString(),
+        });
+      }
+      return setDeviceCookie(res,previous,age);
+    }
+  }
+  const token=randomBytes(32).toString('hex');
+  await db('guest_device_tokens','POST',{token_hash:digest(token),user_id:userId,expires_at:expiresAt});
+  return setDeviceCookie(res,token,age);
+}
+
 export async function revokeSession(req:NextRequest) {const token=req.cookies.get(COOKIE)?.value;if(token)await db(`app_sessions?token_hash=eq.${digest(token)}`,'DELETE');}
 export async function rateLimit(key:string) {
   // Atomic DB counter works across serverless instances, unlike an in-memory Map.
