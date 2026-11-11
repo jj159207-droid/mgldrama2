@@ -25,6 +25,7 @@ import CopyFilmLink from "@/app/components/CopyFilmLink";
 import FilmLanding from "@/app/components/FilmLanding";
 import PhoneGrantsAdminTab from "@/app/components/PhoneGrantsAdminTab";
 import TazaPlanPicker from "@/app/components/TazaPlanPicker";
+import TazaAdultAgePrompt from "@/app/components/TazaAdultAgePrompt";
 import SecretChatRoom from "@/app/components/SecretChatRoom";
 import SecretChatAdminTab from "@/app/components/SecretChatAdminTab";
 import TrailerPosterFrame from "@/app/components/TrailerPosterFrame";
@@ -748,6 +749,7 @@ function PlanModal({ onSelect, autoOpen, onAutoClose, user, films = [], countsRe
 function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRetry, user, onLogin, onLogout, onMonthly, onContact, onSecretChat, accessMap, onOpenLogin, showPlan, onPlanClose, catalogState, onCatalogChange, preview=false, brandName="ТАЗА САЙТ", admin=false, freeCatalog=false }: any) {
   const [planAutoOpen, setPlanAutoOpen] = useState(false);
   const [tazaOffersOpen,setTazaOffersOpen] = useState(false);
+  const [tazaAgePromptOpen,setTazaAgePromptOpen] = useState(false);
   useEffect(() => { if (showPlan) setPlanAutoOpen(true); }, [showPlan]);
   const getExpiry = (filmId: number, category?: string): string | null => {
     if (!user) return null;
@@ -775,12 +777,17 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
   useEffect(()=>{
     if(!freeCatalog)return;
     const subscribe=()=>setTazaOffersOpen(true);
-    const featuredCheckout=()=>void onMonthly(TAZA_ALL_PLAN);
+    // The featured +21 banner must first ask the visitor to confirm their age.
+    const featuredCheckout=()=>setTazaAgePromptOpen(true);
     window.addEventListener("tazaSubscribe",subscribe);
     window.addEventListener("tazaFeatured21Checkout",featuredCheckout);
     return()=>{window.removeEventListener("tazaSubscribe",subscribe);window.removeEventListener("tazaFeatured21Checkout",featuredCheckout);};
   },[freeCatalog,onMonthly]);
   return <div className="cinema-site">
+    {freeCatalog && tazaAgePromptOpen && <TazaAdultAgePrompt
+      onAdult={()=>{setTazaAgePromptOpen(false);void onMonthly(TAZA_ALL_PLAN);}}
+      onUnderage={()=>{setTazaAgePromptOpen(false);window.scrollTo?.({top:0,behavior:"instant"});}}
+    />}
     {freeCatalog && tazaOffersOpen && <TazaPlanPicker onClose={()=>setTazaOffersOpen(false)} onSelect={plan=>{setTazaOffersOpen(false);onMonthly(plan);}} />}
     <a className="skip-link" href="#catalog">Киноны жагсаалт руу</a>
     <header className="site-header"><div className="header-inner">
