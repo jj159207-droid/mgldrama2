@@ -143,7 +143,7 @@ async function handler(req:NextRequest) {
           const since=encodeURIComponent(new Date(Date.now()-24*3600000).toISOString());
           const filmFilter=filmId===null?'is.null':`eq.${filmId}`;
           const pending=await db(
-            `pending_payments?site_id=eq.taza&user_id=eq.${s.userId}&plan=eq.${encodeURIComponent(plan)}&film_id=${filmFilter}&amount=eq.${amount}&status=eq.pending&created_at=gte.${since}&order=created_at.desc&limit=1&select=*`
+            `pending_payments?site_id=eq.taza&user_id=eq.${s.userId}&plan=eq.${encodeURIComponent(plan)}&film_id=${filmFilter}&amount=eq.${amount}&status=eq.pending&created_at=gte.${since}&order=created_at.asc,id.asc&limit=1&select=*`
           );
           if(pending.length)return json(pending);
         }
