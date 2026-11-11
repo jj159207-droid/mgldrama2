@@ -7,6 +7,7 @@ import { normalizeMongolianIban } from "@/lib/iban";
 import { SITES, siteFromPathname, type SiteId } from "@/lib/site";
 
 import { dbFetch, dbAll, requestJson, RequestError } from "@/lib/client";
+import {loadTazaPublicCatalog} from "@/lib/public-catalog";
 import PosterUpload from "@/app/components/PosterUpload";
 import TrailerEditor, { type TrailerEditorHandle } from "@/app/components/TrailerEditor";
 import ReadinessCheck from "@/app/components/ReadinessCheck";
@@ -2271,7 +2272,12 @@ export default function Home() {
     const request=++filmLoadRequest.current;
     setLoading(true);setLoadError("");
     try {
-      const data = await dbAll("films?select=*", {signal: controller.signal}, true);
+      // Public viewers share one request with the featured carousel. The server
+      // returns only sanitized fields, cached briefly at the edge. Admins still
+      // fetch their full film data via the authenticated DB endpoint.
+      const data = siteId==="taza" && !adminAuth
+        ? await loadTazaPublicCatalog()
+        : await dbAll("films?select=*", {signal: controller.signal}, true);
       if(request!==filmLoadRequest.current || controller.signal.aborted)return;
       setFilms(Array.isArray(data) ? data : []);
     } catch(e) {
@@ -2280,7 +2286,7 @@ export default function Home() {
     } finally {
       if(request===filmLoadRequest.current && !controller.signal.aborted)setLoading(false);
     }
-  }, []);
+  }, [siteId,adminAuth]);
   useEffect(() => {
     if(!siteResolved)return;
     const mayLoad=siteResolved;

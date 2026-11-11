@@ -71,6 +71,11 @@ beforeEach(()=>{
     }
    return Response.json({...film,locked:false});
   }
+  if(url.pathname==='/api/public-catalog'){
+   if(failCatalog)return Response.json({message:'Unavailable'},{status:503});
+   // A public catalog must never expose private/full film playback URLs.
+   return Response.json(films.map(({url,...film})=>film));
+  }
   if(url.pathname==='/api/db'){
    const [table,search='']=url.searchParams.get('path').split('?'),q=new URLSearchParams(search);
    if(table==='films'){

@@ -3,6 +3,7 @@
 import { createPortal } from "react-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { dbAll } from "@/lib/client";
+import { loadTazaPublicCatalog } from "@/lib/public-catalog";
 import { mediaRank } from "@/lib/catalog";
 import { safeUrl } from "@/lib/domain";
 import { SITES, siteFromPathname } from "@/lib/site";
@@ -113,8 +114,11 @@ function Carousel({ films, onOpenPlans, packageFilmCount, brandName, taza }: { f
                   <img
                     src={film.img}
                     alt=""
-                    loading={Math.abs(offset) <= 1 ? "eager" : "lazy"}
+                    loading={offset === 0 ? "eager" : "lazy"}
+                    fetchPriority={offset === 0 ? "high" : "low"}
                     decoding="async"
+                    width={360}
+                    height={540}
                     onError={() => setFailed(value => ({ ...value, [film.id]: true }))}
                   />
                 ) : (
@@ -182,8 +186,11 @@ export default function CinematicHeroMount() {
 
   useEffect(() => {
     let cancelled = false;
-    dbAll("films?select=id,title,img,badge,preview_url&order=id.desc", {}, true)
-      .then(rows => {
+    const isTaza = siteFromPathname(window.location.pathname) === "taza";
+    const request=isTaza
+      ? loadTazaPublicCatalog()
+      : dbAll("films?select=id,title,img,badge,preview_url&order=id.desc", {}, true);
+    request.then(rows => {
         if (cancelled || !Array.isArray(rows)) return;
         const clean = rows
           .filter((film: any) => Number.isSafeInteger(Number(film?.id)) && String(film?.title || "").trim())

@@ -111,9 +111,22 @@ export default function CatalogCardTuning() {
     };
 
     tuneCards();
-    const observer = new MutationObserver(tuneCards);
-    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    return () => observer.disconnect();
+    // Do not re-scan all cards for each React text mutation. Batch actual DOM
+    // insertions into one microtask, so slow phones avoid excessive main-thread
+    // work when 24 cards and the carousel first appear.
+    let scheduled = false;
+    let active = true;
+    const onMutation = () => {
+      if (scheduled || !active) return;
+      scheduled = true;
+      queueMicrotask(() => {
+        scheduled = false;
+        if (active) tuneCards();
+      });
+    };
+    const observer = new MutationObserver(onMutation);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => { active = false; observer.disconnect(); };
   }, []);
 
   return null;

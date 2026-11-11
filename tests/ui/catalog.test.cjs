@@ -43,6 +43,11 @@ beforeEach(()=>{
   if(url.pathname==='/api/settings')return Response.json({});
   if(url.pathname==='/api/appearance')return Response.json({appearance:{layout:1,tone:25,revision:0}});
   if(url.pathname==='/api/chat')return Response.json({unread:0,threads:[]});
+  if(url.pathname==='/api/public-catalog'){
+   filmRequests++;
+   if(failed)return Response.json({message:'Catalog unavailable',code:'DB_ERROR'},{status:502});
+   return Response.json(films);
+  }
   if(url.pathname==='/api/db'){
    filmRequests++;
    if(failed)return Response.json({message:'SETUP-MN.md SQL',code:'DB_ERROR'},{status:502});
@@ -116,7 +121,7 @@ test('reconnection retries only a failed catalog and clears the offline notice',
  await act(async()=>{Object.defineProperty(navigator,'onLine',{value:false,configurable:true});window.dispatchEvent(new dom.window.Event('offline'));});
  assert.ok(document.querySelector('.connection-status'));
  failed=false;await act(async()=>{Object.defineProperty(navigator,'onLine',{value:true,configurable:true});window.dispatchEvent(new dom.window.Event('online'));});
- assert.equal(filmRequests,previous+2);assert.equal(cardCount(),24);assert.equal(document.querySelector('.connection-status'),null);
+ assert.equal(filmRequests,previous+1);assert.equal(cardCount(),24);assert.equal(document.querySelector('.connection-status'),null);
  const complete=filmRequests;await act(async()=>window.dispatchEvent(new dom.window.Event('online')));assert.equal(filmRequests,complete);
 });
 
