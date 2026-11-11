@@ -2454,9 +2454,10 @@ export default function Home() {
       // Public catalog, paid full playback. A guest device is created only when
       // the viewer requests a movie/subscription; no phone/PIN registration.
       try {
-        let viewer=user;
-        if (!viewer && !adminAuth) viewer=await ensureDeviceUser();
-        if (!viewer && !adminAuth) throw new Error("Төхөөрөмжийг таньж чадсангүй.");
+        const viewer=user;
+        // Check the server (including a valid HttpOnly phone entitlement) before
+        // making a guest account. A new guest is needed only when buying a plan.
+        // This also avoids creating phantom visitors on every "full watch" tap.
         if (startedAt!==playRequest.current) return;
         const owned=()=>!viewer || accessOwner.current===Number(viewer.id);
         try {
@@ -2465,7 +2466,7 @@ export default function Home() {
           if(!owned())return;
           if(error instanceof RequestError && error.status===403 && !adminAuth){
             trackSiteEvent("payment_open",Number(film.id));
-            await syncAccessFromDB(Number(viewer.id)).catch(()=>{});
+            if(viewer?.id)await syncAccessFromDB(Number(viewer.id)).catch(()=>{});
             setPayFilm(null);
             setWatchError("Энэ браузерт киноны эрх олдсонгүй. Өмнө нь төлсөн бол дахин шилжүүлэхгүй, эрхээ сэргээх хэсгийг сонгоно уу.");
             setShowPlanModal(true);
