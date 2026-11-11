@@ -811,7 +811,7 @@ function HomePage({ chatUnread, films, onFilm, onAdmin, loading, loadError, onRe
           <span className="secret-room-banner-text"><strong>НУУЦ ЧАТ ӨРӨӨ</strong><small>Халуун өрөөнд орох төлбөр · 10,000₮</small></span>
           <span className="secret-room-banner-go">ЭНД ДАРЖ ОРОХ →</span>
         </button>
-        <button type="button" className="cinematic-package-cta cinematic-adult-cta" onClick={()=>window.dispatchEvent(new Event("tazaFeatured21Checkout"))} aria-label="монгол охидын нууц бичлэгүүд +21 — нас баталгаажуулаад 15,000 төгрөгийн төлбөрийн хуудас нээх">
+        <button type="button" className="cinematic-package-cta cinematic-adult-cta" onClick={()=>setTazaAgePromptOpen(true)} aria-label="монгол охидын нууц бичлэгүүд +21 — нас баталгаажуулаад 15,000 төгрөгийн төлбөрийн хуудас нээх">
           <span className="cinematic-adult-copy">
             <strong className="cinematic-adult-title">монгол охидын нууц бичлэгүүд +21</strong>
           </span>
