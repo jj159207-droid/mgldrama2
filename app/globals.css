@@ -276,3 +276,10 @@
 .secret-room-messages{min-height:180px;max-height:48dvh;overflow:auto;display:flex;flex-direction:column;gap:9px;padding:12px;background:#080d14;border:1px solid #ffffff1a;border-radius:12px}.secret-room-message{align-self:flex-start;background:#222835;padding:9px 12px;border-radius:12px;max-width:88%;min-width:0;overflow-wrap:anywhere}.secret-room-message.mine{align-self:flex-end;background:#542b39}.secret-room-message small{color:#e0b6c0;font-size:10px}.secret-room-message p{font-size:14px;white-space:pre-wrap;line-height:1.5}.secret-room-send{display:flex;gap:8px;margin-top:10px}.secret-room-send input{min-width:0;flex:1;background:#141a23;color:#fff;border:1px solid #ffffff30;border-radius:10px;padding:12px}.secret-room-send button{background:#f0aa90;color:#1b1015;padding:10px 13px;border:0;border-radius:10px;font-weight:700}
 .secret-room-admin{max-width:980px;margin:14px auto;padding:18px;color:var(--foreground)}.secret-room-admin>p{margin:12px 0;color:#b9bdca}.secret-room-admin>label{display:grid;gap:8px;margin:15px 0}.secret-room-member-list,.secret-room-admin-messages{display:grid;gap:9px;margin:15px 0 25px}.secret-room-admin-card{background:#18202b;border:1px solid #ffffff23;border-radius:10px;padding:12px;display:grid;gap:8px;overflow-wrap:anywhere}.secret-room-admin-card small{color:#afb3bf}.secret-room-admin-card button{justify-self:start;border:1px solid #9b6c70;background:#3a2636;border-radius:8px;padding:8px 11px}
 @media(max-width:650px){.secret-room-banner{padding:15px;gap:10px;flex-wrap:wrap}.secret-room-banner-text strong{font-size:17px}.secret-room-banner-go{width:100%;text-align:right}.secret-room-dialog{padding:16px}.secret-room-price{align-items:flex-start;flex-direction:column}.secret-room-code strong{font-size:27px}}
+
+/* Clear, non-error feedback for visitors whose purchased access is still active. */
+.app-alert.app-notice {
+  border-color: #5caa83;
+  background: #173629;
+  color: #e2fbea;
+}
