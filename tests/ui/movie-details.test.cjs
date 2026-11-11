@@ -238,6 +238,16 @@ test('normal catalog movie selection also creates a reloadable direct link',asyn
  await act(async()=>root.unmount());root=createRoot(document.getElementById('root'));await act(async()=>root.render(React.createElement(App)));
  assert.equal(title(),'Гэрэл');assert.equal(orders.length,0);
 });
+test('already-paid visitor clicking the package banner never gets a second bank order',async()=>{
+ session={user:{id:12,phone:'99112233'}};entitled=true;
+ await render();
+ await click('.header-nav button');
+ assert.equal(document.querySelectorAll('.taza-offer-card').length,2);
+ await choosePlan(1);
+ assert.equal(orders.length,0,'active all-film entitlement should skip checkout');
+ assert.match(document.querySelector('.app-notice')?.textContent||'',/эрх идэвхтэй.*Дахин төлбөр/);
+ assert.equal(document.querySelector('.checkout-dialog'),null);
+});
 test('existing paid member can watch without another order',async()=>{
  session={user:{id:12,phone:'99112233'}};entitled=true;
  await render('/?film=7');
