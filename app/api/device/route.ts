@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { NextRequest } from 'next/server';
 import {
   ApiError, DEVICE_COOKIE, bindDeviceRecoveryCookie, canAdminSite, db, fail, issueSession, json, originCheck,
@@ -7,6 +7,7 @@ import {
 
 export const runtime='nodejs';
 const DEVICE_SESSION_AGE=365*24*60*60;
+const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 
 async function readUser(userId:number) {
   const [user]=await db(`users?id=eq.${userId}&select=id,phone,user_id,is_guest,browser_no&limit=1`);
